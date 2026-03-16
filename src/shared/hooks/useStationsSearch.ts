@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import { PathSet, Station } from "@/shared/types/map";
 
-const API_BASE_URL = import.meta.env.DEV ? "http://localhost:8080/api" : "/api";
+const API_BASE_URL = import.meta.env.DEV ? "http://localhost:8080/api" : `${import.meta.env.VITE_API_URL}/api`;
 
 export function useStationsSearch(onSuccess: (stations: Station[]) => void) {
     const [isLoading, setIsLoading] = useState(false);
