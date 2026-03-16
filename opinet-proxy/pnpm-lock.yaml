@@ -11,9 +11,6 @@ importers:
       axios:
         specifier: ^1.13.6
         version: 1.13.6
-      cord:
-        specifier: ^1.0.1
-        version: 1.0.1
       cors:
         specifier: ^2.8.6
         version: 2.8.6
@@ -74,9 +71,6 @@ packages:
   cookie@0.7.2:
     resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
     engines: {node: '>= 0.6'}
-
-  cord@1.0.1:
-    resolution: {integrity: sha512-t56g3YbmUYrEd9wp4VNNY27SoNa8Xm0F9GfT+BZpXG+hNO2LJRgzLYQKgZpFiKkld8MWWuQptydD9dk//5Fe4A==}
 
   cors@2.8.6:
     resolution: {integrity: sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==}
@@ -407,8 +401,6 @@ snapshots:
   cookie-signature@1.2.2: {}
 
   cookie@0.7.2: {}
-
-  cord@1.0.1: {}
 
   cors@2.8.6:
     dependencies:
