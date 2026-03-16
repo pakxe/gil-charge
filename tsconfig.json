@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "module": "preserve",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "target": "esnext",
+        "jsx": "react-jsx",
+        "baseUrl": "./src",
+        "skipLibCheck": true,
+        "paths": {
+            "@/shared/*": ["shared/*"],
+            "@/assets/*": ["assets/*"],
+            "@/utils/*": ["utils/*"],
+            "@/icons/*": ["assets/icons/*"],
+            "@/features/*": ["features/*"],
+            "@/constants/*": ["constants/*"]
+        },
+        "outDir": "./dist",
+        "noUncheckedIndexedAccess": true
+    }
+}
