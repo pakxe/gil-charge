@@ -3,7 +3,7 @@ import { useState } from "react";
 
 export function useMapDrawing() {
     const [tool, setTool] = useState<Tool>("waypoint");
-    const [radius, setRadius] = useState<number>(1.7);
+    const [radius, setRadius] = useState<number>(0.1);
     const [paths, setPaths] = useState<PathSet[]>([]);
     const [currentPath, setCurrentPath] = useState<LatLng[]>([]);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -11,7 +11,6 @@ export function useMapDrawing() {
     const handleMouseDown = () => {
         if (tool === "pen") {
             setIsDrawing(true);
-            // setCurrentPath([{ lat: mouseEvent.latLng.getLat(), lng: mouseEvent.latLng.getLng() }]);
         }
     };
 
@@ -51,11 +50,16 @@ export function useMapDrawing() {
     };
 
     const handleChangeTool = (newTool: Tool) => {
-        commitWaypointPath();
+        if (newTool === "eraser") {
+            commitWaypointPath();
+        } else {
+            setPaths([]);
+            setCurrentPath([]);
+        }
+
         setTool(newTool);
     };
 
-    // 현재까지 그린 모든 경로(미완성 포함)를 반환하는 헬퍼 함수
     const getAllPaths = () => {
         const allPaths = [...paths];
         if (currentPath.length > 0) {
