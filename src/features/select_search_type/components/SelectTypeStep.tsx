@@ -2,18 +2,18 @@ import Box from "@/shared/components/Box/Box";
 import { Top } from "@/shared/components/Top/Top";
 
 const SEARCH_TYPES = [
-    {
-        title: "1. 지도를 움직여 정하기",
-        description: "설명설명...",
-    },
+    // {
+    //     title: "1. 지도를 움직여 정하기",
+    //     description: "설명설명...",
+    // },
     {
         title: "2. 지도에 그려서 정하기",
         description: "설명설명...",
     },
-    {
-        title: "3. 현재 위치로 정하기",
-        description: "설명설명...",
-    },
+    // {
+    //     title: "3. 현재 위치로 정하기",
+    //     description: "설명설명...",
+    // },
 ] as const;
 
 export function SelectTypeStep({ onNext }: { onNext: () => void }) {
