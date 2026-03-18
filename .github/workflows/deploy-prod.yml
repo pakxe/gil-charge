@@ -8,8 +8,35 @@ on:
 jobs:
     deploy:
         runs-on: ubuntu-latest
+
         steps:
-            - name: Run deploy script on Oracle VM
+            - name: Checkout source
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Create frontend env file
+              run: |
+                  cat > .env.production <<'EOF'
+                  ${{ secrets.FRONTEND_ENV_PROD }}
+                  EOF
+
+            - name: Install and build frontend
+              run: |
+                  npm ci
+                  npm run build
+
+            - name: Copy frontend dist to server
+              uses: appleboy/scp-action@v0.1.7
+              with:
+                  host: ${{ secrets.OCI_HOST }}
+                  username: ${{ secrets.OCI_USER }}
+                  key: ${{ secrets.OCI_SSH_KEY }}
+                  port: ${{ secrets.OCI_PORT }}
+                  source: "dist/*"
+                  target: "/var/www/pakxe-frontend"
+
+            - name: Deploy backend on server
               uses: appleboy/ssh-action@v1.2.0
               with:
                   host: ${{ secrets.OCI_HOST }}
@@ -17,4 +44,23 @@ jobs:
                   key: ${{ secrets.OCI_SSH_KEY }}
                   port: ${{ secrets.OCI_PORT }}
                   script: |
-                      /opt/pakxe-repo/deploy.sh ${GITHUB_REF#refs/tags/}
+                      set -e
+
+                      cd /opt/pakxe-repo
+                      git fetch --all --tags
+                      git checkout ${GITHUB_REF#refs/tags/}
+
+                      cat > /opt/pakxe-repo/opinet-proxy/.env <<'EOF'
+                      ${{ secrets.BACKEND_ENV_PROD }}
+                      EOF
+
+                      cd /opt/pakxe-repo/opinet-proxy
+                      npm ci
+
+                      if pm2 describe pakxe-api > /dev/null; then
+                        pm2 restart pakxe-api --update-env
+                      else
+                        pm2 start "node src/app.js" --name pakxe-api
+                      fi
+
+                      pm2 save
