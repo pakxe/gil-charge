@@ -1,0 +1,20 @@
+name: Deploy Prod
+
+on:
+    push:
+        tags:
+            - "v*"
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Run deploy script on Oracle VM
+              uses: appleboy/ssh-action@v1.2.0
+              with:
+                  host: ${{ secrets.OCI_HOST }}
+                  username: ${{ secrets.OCI_USER }}
+                  key: ${{ secrets.OCI_SSH_KEY }}
+                  port: ${{ secrets.OCI_PORT }}
+                  script: |
+                      /opt/pakxe-repo/deploy.sh ${GITHUB_REF#refs/tags/}
