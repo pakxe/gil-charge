@@ -33,7 +33,7 @@ jobs:
             - name: Build frontend
               run: npm run build
 
-            - name: Upload frontend build to server
+            - name: Upload frontend build to temp directory
               uses: appleboy/scp-action@v0.1.7
               with:
                   host: ${{ secrets.OCI_HOST }}
@@ -41,9 +41,9 @@ jobs:
                   key: ${{ secrets.OCI_SSH_KEY }}
                   port: ${{ secrets.OCI_PORT }}
                   source: "dist/*"
-                  target: "/var/www/pakxe-frontend"
+                  target: "/tmp/pakxe-frontend-dist"
 
-            - name: Deploy backend on server
+            - name: Deploy frontend and backend on server
               uses: appleboy/ssh-action@v1.2.0
               env:
                   BACKEND_ENV_PROD: ${{ secrets.BACKEND_ENV_PROD }}
@@ -59,14 +59,17 @@ jobs:
 
                       echo "Deploying tag: $TAG_NAME"
 
+                      # backend code checkout
                       cd /opt/pakxe-repo
                       git fetch --all --tags
                       git checkout "$TAG_NAME"
 
+                      # backend env
                       cat > /opt/pakxe-repo/opinet-proxy/.env <<'EOF'
                       $BACKEND_ENV_PROD
                       EOF
 
+                      # backend install + restart
                       cd /opt/pakxe-repo/opinet-proxy
                       npm ci
 
@@ -77,3 +80,10 @@ jobs:
                       fi
 
                       pm2 save
+
+                      # frontend deploy
+                      rm -rf /var/www/pakxe-frontend/*
+                      cp -r /tmp/pakxe-frontend-dist/dist/* /var/www/pakxe-frontend/
+
+                      # cleanup
+                      rm -rf /tmp/pakxe-frontend-dist
