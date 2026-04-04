@@ -15,8 +15,14 @@ async function fetchStationsAlongPaths(paths, radiusKm) {
     const fetchPromises = targetPoints.map(async (point) => {
         const { x, y } = toKatech(point.lat, point.lng);
         const opinetUrl = `${config.OPINET_BASE_URL}?code=${config.OPINET_API_KEY}&x=${x}&y=${y}&radius=${safeRadius}&out=json`;
+        console.log("요청 URL:", opinetUrl); // 생성된 URL 출력
 
         const response = await axios.get(opinetUrl);
+        if (response.data.RESULT && response.data.RESULT.OIL) {
+            console.log(`${point.lat}, ${point.lng} 근처 주유소 발견: ${response.data.RESULT.OIL.length}개`);
+        } else {
+            console.log("API 응답에 OIL 데이터 없음:", response.data);
+        }
         return response.data.RESULT?.OIL || [];
     });
 
