@@ -1,8 +1,8 @@
-import { Fragment, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { Map, Polyline, CustomOverlayMap } from "react-kakao-maps-sdk";
 
 import { ToolButton } from "./ToolButton";
-import { Station } from "@/shared/types/map";
+import { Station, LatLng } from "@/shared/types/map";
 import { useMapDrawing } from "@/shared/hooks/useMapDrawing";
 import { useStationsSearch } from "@/shared/hooks/useStationsSearch";
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
@@ -11,15 +11,24 @@ interface DrawPathStepProps {
     onNext: (stations: Station[]) => void;
 }
 
-// ✨ 핵심: 반경(km)과 현재 지도 레벨을 바탕으로 픽셀 두께를 계산하는 함수
+type LocationStatus = "loading" | "granted" | "denied" | "unavailable" | "error";
+
+const GEOLOCATION_OPTIONS: PositionOptions = {
+    enableHighAccuracy: true,
+    timeout: 7000,
+    maximumAge: 1000 * 60 * 5,
+};
+
+const isGeolocationSupported = () => {
+    return typeof navigator !== "undefined" && "geolocation" in navigator;
+};
+
 const calculateStrokeWeight = (radiusKm: number, level: number) => {
     const radiusMeters = radiusKm * 1000;
-    const diameterMeters = radiusMeters * 2; // 선의 두께는 반경의 2배(지름)가 되어야 함
+    const diameterMeters = radiusMeters * 2;
 
-    // 카카오맵의 레벨별 해상도 공식 (위도 37도 부근 기준: 1레벨 = 약 0.25m/px)
     const resolution = 0.25 * Math.pow(2, level - 1);
 
-    // 실제 미터 지름을 현재 해상도로 나누어 픽셀 두께를 구함
     return Math.round(diameterMeters / resolution);
 };
 
@@ -27,15 +36,87 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
     const drawing = useMapDrawing();
     const { fetchStations, isLoading } = useStationsSearch(onNext);
 
-    // ✨ 지도 확대/축소 레벨을 추적하는 State 추가 (초기값 5)
+    const mapRef = useRef<kakao.maps.Map | null>(null);
+    const hasRequestedLocationRef = useRef(false);
+
     const [zoomLevel, setZoomLevel] = useState(5);
+
+    const [mapCenter, setMapCenter] = useState<LatLng>(DEFAULT_MAP_CENTER);
+
+    const [currentPosition, setCurrentPosition] = useState<LatLng | null>(null);
+
+    const [locationStatus, setLocationStatus] = useState<LocationStatus>(() =>
+        isGeolocationSupported() ? "loading" : "unavailable",
+    );
+
+    const moveToPosition = useCallback((position: LatLng) => {
+        const nextPosition = {
+            lat: position.lat,
+            lng: position.lng,
+        };
+
+        setMapCenter(nextPosition);
+
+        if (mapRef.current && typeof kakao !== "undefined") {
+            mapRef.current.panTo(new kakao.maps.LatLng(nextPosition.lat, nextPosition.lng));
+        }
+    }, []);
+
+    const handleLocationSuccess = useCallback(
+        (position: GeolocationPosition) => {
+            const nextPosition = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+            };
+
+            setCurrentPosition(nextPosition);
+            setLocationStatus("granted");
+            moveToPosition(nextPosition);
+        },
+        [moveToPosition],
+    );
+
+    const handleLocationError = useCallback((error: GeolocationPositionError) => {
+        if (error.code === error.PERMISSION_DENIED) {
+            setLocationStatus("denied");
+            return;
+        }
+
+        setLocationStatus("error");
+    }, []);
+
+    useEffect(() => {
+        if (hasRequestedLocationRef.current) return;
+        hasRequestedLocationRef.current = true;
+
+        if (!isGeolocationSupported()) {
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, GEOLOCATION_OPTIONS);
+    }, [handleLocationSuccess, handleLocationError]);
+
+    const handleReturnToCurrentLocation = () => {
+        if (currentPosition) {
+            moveToPosition(currentPosition);
+            return;
+        }
+
+        if (!isGeolocationSupported()) {
+            setLocationStatus("unavailable");
+            return;
+        }
+
+        setLocationStatus("loading");
+
+        navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, GEOLOCATION_OPTIONS);
+    };
 
     const handleSubmit = () => {
         drawing.commitWaypointPath();
         fetchStations(drawing.getAllPaths(), drawing.radius);
     };
 
-    // 현재 반경과 줌 레벨에 맞는 정확한 선 굵기 계산
     const dynamicStrokeWeight = calculateStrokeWeight(drawing.radius, zoomLevel);
 
     return (
@@ -48,10 +129,14 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
             )}
 
             <Map
-                center={DEFAULT_MAP_CENTER}
+                center={mapCenter}
+                isPanto={true}
                 style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }}
-                level={zoomLevel} // ✨ State 연결
-                onZoomChanged={(map) => setZoomLevel(map.getLevel())} // ✨ 줌 레벨 변경 시 상태 업데이트
+                level={zoomLevel}
+                onCreate={(map) => {
+                    mapRef.current = map;
+                }}
+                onZoomChanged={(map) => setZoomLevel(map.getLevel())}
                 draggable={drawing.tool !== "pen"}
                 onMouseDown={drawing.handleMouseDown}
                 onMouseMove={drawing.handleMouseMove}
@@ -60,6 +145,12 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
                 onTouchStart={drawing.handleMouseDown}
                 onTouchEnd={drawing.handleMouseUp}
             >
+                {currentPosition && (
+                    <CustomOverlayMap position={currentPosition} zIndex={10}>
+                        <div className="w-4 h-4 bg-gil-blue-500 rounded-full border-2 border-white shadow-lg transform -translate-x-1/2 -translate-y-1/2" />
+                    </CustomOverlayMap>
+                )}
+
                 {drawing.paths.map((path) => (
                     <Fragment key={path.id}>
                         <Polyline
@@ -79,7 +170,6 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
                             onClick={() => drawing.handlePolylineClick(path.id)}
                         />
 
-                        {/* 웨이포인트 동그라미 */}
                         {path.type === "waypoint" &&
                             path.points.map((p, i) => (
                                 <CustomOverlayMap key={i} position={p}>
@@ -92,7 +182,6 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
                     </Fragment>
                 ))}
 
-                {/* 2. 현재 작업 중인 경로 렌더링 */}
                 {drawing.currentPath.length > 0 && (
                     <>
                         <Polyline
@@ -119,10 +208,38 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
                 )}
             </Map>
 
-            {/* 하단 컨트롤러 영역 (기존과 완벽히 동일하므로 생략) */}
+            <button
+                type="button"
+                onClick={handleReturnToCurrentLocation}
+                disabled={locationStatus === "loading"}
+                aria-label="내 위치로 돌아가기"
+                title="내 위치로 돌아가기"
+                className="absolute top-4 right-4 z-30 flex items-center gap-1.5 rounded-full bg-gray-900/85 px-3 py-2 text-sm font-bold text-white shadow-lg backdrop-blur-sm border border-white/10 disabled:opacity-60"
+            >
+                <span>{locationStatus === "loading" ? "…" : "📍"}</span>
+                <span>내 위치</span>
+            </button>
+
+            {locationStatus === "denied" && (
+                <div className="absolute top-16 left-4 right-4 z-30 rounded-xl bg-gray-900/85 px-4 py-3 text-sm text-white shadow-lg backdrop-blur-sm">
+                    위치 권한이 거부되어 현재 위치로 이동할 수 없습니다.
+                </div>
+            )}
+
+            {locationStatus === "unavailable" && (
+                <div className="absolute top-16 left-4 right-4 z-30 rounded-xl bg-gray-900/85 px-4 py-3 text-sm text-white shadow-lg backdrop-blur-sm">
+                    이 브라우저에서는 현재 위치를 사용할 수 없습니다.
+                </div>
+            )}
+
+            {locationStatus === "error" && (
+                <div className="absolute top-16 left-4 right-4 z-30 rounded-xl bg-gray-900/85 px-4 py-3 text-sm text-white shadow-lg backdrop-blur-sm">
+                    현재 위치를 가져오지 못했습니다. 다시 시도해주세요.
+                </div>
+            )}
+
             <div className="z-20 w-full px-6 pb-6 flex flex-col gap-6 pointer-events-none">
                 <div className="flex items-center justify-between w-full pointer-events-auto">
-                    {/* 반경 슬라이더 */}
                     <div className="flex flex-col gap-1 w-2/3 max-w-50 bg-gray-900/80 p-3 rounded-2xl backdrop-blur-sm shadow-lg">
                         <span className="text-white text-sm font-bold ml-1">{drawing.radius.toFixed(1)}km</span>
                         <input
