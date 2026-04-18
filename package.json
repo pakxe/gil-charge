@@ -7,7 +7,8 @@
         "lint": "eslint .",
         "preview": "vite preview",
         "dev": "vite --config vite.development.ts --host --host",
-        "build": "tsc && vite build --config vite.production.ts"
+        "build": "tsc && vite build --config vite.production.ts",
+        "dev:all": "concurrently \"pnpm run dev\" \"pnpm --dir ./opinet-proxy run dev\""
     },
     "dependencies": {
         "@tailwindcss/vite": "^4.2.1",
@@ -29,6 +30,7 @@
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
         "@vitejs/plugin-react": "^6.0.0",
+        "concurrently": "^9.2.1",
         "esbuild": "^0.27.4",
         "eslint": "^9.39.4",
         "eslint-plugin-react-hooks": "^7.0.1",
