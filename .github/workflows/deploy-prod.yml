@@ -66,9 +66,7 @@ jobs:
                       git fetch --all --tags
                       git checkout "$TAG_NAME"
 
-                      cat > /opt/pakxe-repo/opinet-proxy/.env <<'EOF'
-                      $BACKEND_ENV_PROD
-                      EOF
+                      printf '%s\n' "$BACKEND_ENV_PROD" > /opt/pakxe-repo/opinet-proxy/.env
 
                       cd /opt/pakxe-repo/opinet-proxy
                       pnpm install --frozen-lockfile
