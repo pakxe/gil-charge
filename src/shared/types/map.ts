@@ -1,20 +1,24 @@
-import { PointerEventHandler } from "react";
-
 export type LatLng = {
     // 가로 세로
     lat: number;
     lng: number;
 };
 
-export type MapInterface<EventElement extends HTMLDivElement = HTMLDivElement> = {
+/**
+ * Map관련 도메인 용어 정의
+ * zoomLevel: 지도의 확대 정도
+ * center: 카카오지도에서 말하는 center. default 위치라고 생각하면 됨
+ * currentLocation: 실제 사용자 GPS 위치
+ */
+export type MapInterface = {
     center: LatLng;
+    currentLocation?: LatLng;
     zoomLevel?: number;
-
     isDraggable?: boolean;
+    isTracking?: boolean;
 
-    onPointerDown?: PointerEventHandler<EventElement>;
-    onPointerMove?: PointerEventHandler<EventElement>;
-    onPointerUp?: PointerEventHandler<EventElement>;
+    onZoomLevelChange?: (zoomLevel: number) => void;
+    onDragStart?: () => void;
 };
 // 넘사벽
 

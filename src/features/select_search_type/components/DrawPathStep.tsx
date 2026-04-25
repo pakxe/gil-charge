@@ -1,7 +1,7 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ToolButton } from "./ToolButton";
-import { Station, LatLng } from "@/shared/types/map";
+import { Station } from "@/shared/types/map";
 import { useMapDrawing } from "@/shared/hooks/useMapDrawing";
 import { useStationsSearch } from "@/shared/hooks/useStationsSearch";
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
@@ -25,42 +25,33 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
     const drawing = useMapDrawing();
     const { fetchStations, isLoading } = useStationsSearch(onNext);
 
-    const mapRef = useRef<kakao.maps.Map | null>(null);
     const hasRequestedLocationRef = useRef(false);
 
     const [zoomLevel, setZoomLevel] = useState(5);
 
-    const [mapCenter, setMapCenter] = useState<LatLng>(DEFAULT_MAP_CENTER);
-
-    const moveToLocation = useCallback((location: LatLng) => {
-        setMapCenter(location);
-
-        if (mapRef.current && typeof kakao !== "undefined") {
-            mapRef.current.panTo(new kakao.maps.LatLng(nextPosition.lat, nextPosition.lng));
-        }
-    }, []);
-
     const { requestLocation, location, locationAcceptStatus } = useCurrentLocation();
+
+    const [isTracking, setIsTracking] = useState(false);
 
     useEffect(() => {
         if (hasRequestedLocationRef.current === true) return;
 
         requestLocation({
-            onSuccess: (location) => {
-                moveToLocation(location);
+            onSuccess: () => {
+                setIsTracking(true);
             },
             onFinally: () => {
                 hasRequestedLocationRef.current = true;
             },
         });
-    }, [requestLocation, moveToLocation]);
+    }, [requestLocation]);
 
     const handleSubmit = () => {
         drawing.commitWaypointPath();
         fetchStations(drawing.getAllPaths(), drawing.radius);
     };
 
-    const dynamicStrokeWeight = calculateStrokeWeight(drawing.radius, zoomLevel);
+    // const dynamicStrokeWeight = calculateStrokeWeight(drawing.radius, zoomLevel);
 
     return (
         <div className="relative w-full h-150 bg-gi-gray-900 rounded-lg overflow-hidden flex flex-col items-center justify-end touch-none">
@@ -71,18 +62,33 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
                 </div>
             )}
 
-            <KakaoMap center={location ?? DEFAULT_MAP_CENTER} zoomLevel={5} />
-            {/* <button
+            <KakaoMap
+                center={location ?? DEFAULT_MAP_CENTER}
+                currentLocation={location ?? undefined}
+                zoomLevel={zoomLevel}
+                isTracking={isTracking}
+                onZoomLevelChange={(zoomLevel) => setZoomLevel(zoomLevel)}
+                onDragStart={() => setIsTracking(false)}
+            />
+
+            <button
                 type="button"
-                onClick={handleReturnToCurrentLocation}
-                disabled={locationStatus === "loading"}
+                onClick={() => setIsTracking(true)}
+                disabled={
+                    locationAcceptStatus === "loading" ||
+                    locationAcceptStatus === "unavailable" ||
+                    locationAcceptStatus === "denied" ||
+                    locationAcceptStatus === "error" ||
+                    !!location
+                }
                 aria-label="내 위치로 돌아가기"
                 title="내 위치로 돌아가기"
                 className="absolute top-4 right-4 z-30 flex items-center gap-1.5 rounded-full bg-gray-900/85 px-3 py-2 text-sm font-bold text-white shadow-lg backdrop-blur-sm border border-white/10 disabled:opacity-60"
             >
-                <span>{locationStatus === "loading" ? "…" : "📍"}</span>
+                <span>{locationAcceptStatus === "loading" ? "…" : isTracking ? "🟡" : "🟥"}</span>
                 <span>내 위치</span>
             </button>
+            {/* 
 
             {locationStatus === "denied" && (
                 <div className="absolute top-16 left-4 right-4 z-30 rounded-xl bg-gray-900/85 px-4 py-3 text-sm text-white shadow-lg backdrop-blur-sm">
