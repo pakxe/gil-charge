@@ -6,18 +6,11 @@ import { Station, LatLng } from "@/shared/types/map";
 import { useMapDrawing } from "@/shared/hooks/useMapDrawing";
 import { useStationsSearch } from "@/shared/hooks/useStationsSearch";
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
+import { useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
 
 interface DrawPathStepProps {
     onNext: (stations: Station[]) => void;
 }
-
-type LocationStatus = "loading" | "granted" | "denied" | "unavailable" | "error";
-
-const GEOLOCATION_OPTIONS: PositionOptions = {
-    enableHighAccuracy: true,
-    timeout: 7000,
-    maximumAge: 1000 * 60 * 5,
-};
 
 const isGeolocationSupported = () => {
     return typeof navigator !== "undefined" && "geolocation" in navigator;
@@ -43,74 +36,28 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
 
     const [mapCenter, setMapCenter] = useState<LatLng>(DEFAULT_MAP_CENTER);
 
-    const [currentPosition, setCurrentPosition] = useState<LatLng | null>(null);
-
-    const [locationStatus, setLocationStatus] = useState<LocationStatus>(() =>
-        isGeolocationSupported() ? "loading" : "unavailable",
-    );
-
-    const moveToPosition = useCallback((position: LatLng) => {
-        const nextPosition = {
-            lat: position.lat,
-            lng: position.lng,
-        };
-
-        setMapCenter(nextPosition);
+    const moveToLocation = useCallback((location: LatLng) => {
+        setMapCenter(location);
 
         if (mapRef.current && typeof kakao !== "undefined") {
             mapRef.current.panTo(new kakao.maps.LatLng(nextPosition.lat, nextPosition.lng));
         }
     }, []);
 
-    const handleLocationSuccess = useCallback(
-        (position: GeolocationPosition) => {
-            const nextPosition = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-            };
-
-            setCurrentPosition(nextPosition);
-            setLocationStatus("granted");
-            moveToPosition(nextPosition);
-        },
-        [moveToPosition],
-    );
-
-    const handleLocationError = useCallback((error: GeolocationPositionError) => {
-        if (error.code === error.PERMISSION_DENIED) {
-            setLocationStatus("denied");
-            return;
-        }
-
-        setLocationStatus("error");
-    }, []);
+    const { requestLocation, location, locationAcceptStatus } = useCurrentLocation();
 
     useEffect(() => {
-        if (hasRequestedLocationRef.current) return;
-        hasRequestedLocationRef.current = true;
+        if (hasRequestedLocationRef.current === true) return;
 
-        if (!isGeolocationSupported()) {
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, GEOLOCATION_OPTIONS);
-    }, [handleLocationSuccess, handleLocationError]);
-
-    const handleReturnToCurrentLocation = () => {
-        if (currentPosition) {
-            moveToPosition(currentPosition);
-            return;
-        }
-
-        if (!isGeolocationSupported()) {
-            setLocationStatus("unavailable");
-            return;
-        }
-
-        setLocationStatus("loading");
-
-        navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, GEOLOCATION_OPTIONS);
-    };
+        requestLocation({
+            onSuccess: (location) => {
+                moveToLocation(location);
+            },
+            onFinally: () => {
+                hasRequestedLocationRef.current = true;
+            },
+        });
+    }, [requestLocation, moveToLocation]);
 
     const handleSubmit = () => {
         drawing.commitWaypointPath();
@@ -145,8 +92,8 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
                 onTouchStart={drawing.handleMouseDown}
                 onTouchEnd={drawing.handleMouseUp}
             >
-                {currentPosition && (
-                    <CustomOverlayMap position={currentPosition} zIndex={10}>
+                {location && (
+                    <CustomOverlayMap position={location} zIndex={10}>
                         <div className="w-4 h-4 bg-gil-blue-500 rounded-full border-2 border-white shadow-lg transform -translate-x-1/2 -translate-y-1/2" />
                     </CustomOverlayMap>
                 )}
