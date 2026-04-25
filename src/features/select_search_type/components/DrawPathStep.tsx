@@ -12,10 +12,6 @@ interface DrawPathStepProps {
     onNext: (stations: Station[]) => void;
 }
 
-const isGeolocationSupported = () => {
-    return typeof navigator !== "undefined" && "geolocation" in navigator;
-};
-
 const calculateStrokeWeight = (radiusKm: number, level: number) => {
     const radiusMeters = radiusKm * 1000;
     const diameterMeters = radiusMeters * 2;

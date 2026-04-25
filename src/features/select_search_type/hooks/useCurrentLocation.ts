@@ -29,8 +29,14 @@ export function useCurrentLocation() {
         setAcceptStatus("loading");
 
         navigator.geolocation.getCurrentPosition(
-            (position) => handleRequestLocationSuccess({ position, onSuccess }),
-            (error) => handleRequestLocationError({ error, onError }),
+            (position) => {
+                handleRequestLocationSuccess({ position, onSuccess });
+                onFinally?.();
+            },
+            (error) => {
+                handleRequestLocationError({ error, onError });
+                onFinally?.();
+            },
             GEOLOCATION_OPTIONS,
         );
 
