@@ -1,5 +1,4 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import { Map, Polyline, CustomOverlayMap } from "react-kakao-maps-sdk";
 
 import { ToolButton } from "./ToolButton";
 import { Station, LatLng } from "@/shared/types/map";
@@ -7,6 +6,7 @@ import { useMapDrawing } from "@/shared/hooks/useMapDrawing";
 import { useStationsSearch } from "@/shared/hooks/useStationsSearch";
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
 import { useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
+import { KakaoMap } from "@/features/select_search_type/components/KakaoMap";
 
 interface DrawPathStepProps {
     onNext: (stations: Station[]) => void;
@@ -71,87 +71,8 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
                 </div>
             )}
 
-            <Map
-                center={mapCenter}
-                isPanto={true}
-                style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }}
-                level={zoomLevel}
-                onCreate={(map) => {
-                    mapRef.current = map;
-                }}
-                onZoomChanged={(map) => setZoomLevel(map.getLevel())}
-                draggable={drawing.tool !== "pen"}
-                onMouseDown={drawing.handleMouseDown}
-                onMouseMove={drawing.handleMouseMove}
-                onMouseUp={drawing.handleMouseUp}
-                onClick={drawing.handleMapClick}
-                onTouchStart={drawing.handleMouseDown}
-                onTouchEnd={drawing.handleMouseUp}
-            >
-                {location && (
-                    <CustomOverlayMap position={location} zIndex={10}>
-                        <div className="w-4 h-4 bg-gil-blue-500 rounded-full border-2 border-white shadow-lg transform -translate-x-1/2 -translate-y-1/2" />
-                    </CustomOverlayMap>
-                )}
-
-                {drawing.paths.map((path) => (
-                    <Fragment key={path.id}>
-                        <Polyline
-                            path={path.points}
-                            strokeWeight={dynamicStrokeWeight}
-                            strokeColor="#EAB308"
-                            strokeOpacity={0.3}
-                            onClick={() => drawing.handlePolylineClick(path.id)}
-                        />
-
-                        <Polyline
-                            path={path.points}
-                            strokeWeight={4}
-                            strokeColor="#EAB308"
-                            strokeOpacity={1}
-                            strokeStyle="solid"
-                            onClick={() => drawing.handlePolylineClick(path.id)}
-                        />
-
-                        {path.type === "waypoint" &&
-                            path.points.map((p, i) => (
-                                <CustomOverlayMap key={i} position={p}>
-                                    <div
-                                        className="w-3 h-3 bg-yellow-500 rounded-full border-2 border-gray-900 shadow-sm transform -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-                                        onClick={() => drawing.handlePolylineClick(path.id)}
-                                    />
-                                </CustomOverlayMap>
-                            ))}
-                    </Fragment>
-                ))}
-
-                {drawing.currentPath.length > 0 && (
-                    <>
-                        <Polyline
-                            path={drawing.currentPath}
-                            strokeWeight={dynamicStrokeWeight}
-                            strokeColor="#EAB308"
-                            strokeOpacity={0.3}
-                            strokeStyle="solid"
-                        />
-                        <Polyline
-                            path={drawing.currentPath}
-                            strokeWeight={4}
-                            strokeColor="#EAB308"
-                            strokeOpacity={1}
-                            strokeStyle="solid"
-                        />
-                        {drawing.tool === "waypoint" &&
-                            drawing.currentPath.map((p, i) => (
-                                <CustomOverlayMap key={i} position={p}>
-                                    <div className="w-3 h-3 bg-yellow-500 rounded-full border-2 border-gray-900 shadow-sm transform -translate-x-1/2 -translate-y-1/2" />
-                                </CustomOverlayMap>
-                            ))}
-                    </>
-                )}
-            </Map>
-
-            <button
+            <KakaoMap center={location ?? DEFAULT_MAP_CENTER} zoomLevel={5} />
+            {/* <button
                 type="button"
                 onClick={handleReturnToCurrentLocation}
                 disabled={locationStatus === "loading"}
@@ -179,7 +100,7 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
                 <div className="absolute top-16 left-4 right-4 z-30 rounded-xl bg-gray-900/85 px-4 py-3 text-sm text-white shadow-lg backdrop-blur-sm">
                     현재 위치를 가져오지 못했습니다. 다시 시도해주세요.
                 </div>
-            )}
+            )} */}
 
             <div className="z-20 w-full px-6 pb-6 flex flex-col gap-6 pointer-events-none">
                 <div className="flex items-center justify-between w-full pointer-events-auto">
