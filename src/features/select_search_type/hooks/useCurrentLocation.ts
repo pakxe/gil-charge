@@ -39,8 +39,6 @@ export function useCurrentLocation() {
             },
             GEOLOCATION_OPTIONS,
         );
-
-        onFinally?.();
     }
 
     function handleRequestLocationSuccess({
