@@ -175,8 +175,7 @@ export function KakaoMap({
             style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }}
             level={zoomLevel}
             onZoomChanged={(map) => onZoomLevelChange?.(map.getLevel())}
-            // draggable={drawing.tool !== "pen"}
-            draggable={false}
+            draggable={isDraggable}
             zoomable={true}
             isPanto={true}
             onDragEnd={() => {

@@ -69,6 +69,7 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
                 currentLocation={location ?? undefined}
                 zoomLevel={zoomLevel}
                 isTracking={isTracking}
+                isDraggable={state.mode !== "pen"}
                 onZoomLevelChange={(zoomLevel) => setZoomLevel(zoomLevel)}
                 onClick={(latLng) => {
                     setIsTracking(false);
