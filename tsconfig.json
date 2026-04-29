@@ -16,6 +16,7 @@
             "@/constants/*": ["constants/*"]
         },
         "outDir": "./dist",
-        "noUncheckedIndexedAccess": true
+        "noUncheckedIndexedAccess": true,
+        "types": ["kakao.maps.d.ts"]
     }
 }

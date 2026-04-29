@@ -1,33 +1,34 @@
 import { useEffect, useRef, useState } from "react";
-
 import { ToolButton } from "./ToolButton";
+
 import { Station } from "@/shared/types/map";
-import { useMapDrawing } from "@/shared/hooks/useMapDrawing";
 import { useStationsSearch } from "@/shared/hooks/useStationsSearch";
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
 import { useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
 import { KakaoMap } from "@/features/select_search_type/components/KakaoMap";
+import { useEditArea } from "@/shared/hooks/useEditArea";
+import { KakaoPoints } from "@/features/select_search_type/components/LatLngPathPoints";
+import { KakaoWaypoints } from "@/features/select_search_type/components/WaypointMarkers";
+import { KakaoProjectedRadiusPath } from "@/features/select_search_type/components/RadiusPath";
+
+const DEFAULT_RADIUS_KM = 5.0;
+const MIN_RADIUS_KM = 0.1;
+const MAX_RADIUS_KM = 5.0;
+const RADIUS_STEP_KM = 0.1;
 
 interface DrawPathStepProps {
     onNext: (stations: Station[]) => void;
 }
 
-const calculateStrokeWeight = (radiusKm: number, level: number) => {
-    const radiusMeters = radiusKm * 1000;
-    const diameterMeters = radiusMeters * 2;
-
-    const resolution = 0.25 * Math.pow(2, level - 1);
-
-    return Math.round(diameterMeters / resolution);
-};
-
 export function DrawPathStep({ onNext }: DrawPathStepProps) {
-    const drawing = useMapDrawing();
+    // const drawing = useMapDrawing();
+    const { state, data, getSubmitValue, actions, canRedo, canUndo } = useEditArea();
     const { fetchStations, isLoading } = useStationsSearch(onNext);
 
     const hasRequestedLocationRef = useRef(false);
 
-    const [zoomLevel, setZoomLevel] = useState(5);
+    const [zoomLevel, setZoomLevel] = useState(8);
+    const [radiusKm, setRadiusKm] = useState(1.0);
 
     const { requestLocation, location, locationAcceptStatus } = useCurrentLocation();
 
@@ -46,13 +47,13 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
         });
     }, [requestLocation]);
 
-    const handleSubmit = () => {
-        drawing.commitWaypointPath();
-        fetchStations(drawing.getAllPaths(), drawing.radius);
+    const handleSubmit = async () => {
+        const payload = getSubmitValue();
+
+        await fetchStations(payload, radiusKm);
     };
 
-    // const dynamicStrokeWeight = calculateStrokeWeight(drawing.radius, zoomLevel);
-
+    const radiusPathPoints = data.penPaths.length > 0 ? data.penPaths : Array.from(data.waypoints.values());
     return (
         <div className="relative w-full h-150 bg-gi-gray-900 rounded-lg overflow-hidden flex flex-col items-center justify-end touch-none">
             {isLoading && (
@@ -64,12 +65,63 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
 
             <KakaoMap
                 center={location ?? DEFAULT_MAP_CENTER}
+                isGeneralDraggable={true}
                 currentLocation={location ?? undefined}
                 zoomLevel={zoomLevel}
                 isTracking={isTracking}
                 onZoomLevelChange={(zoomLevel) => setZoomLevel(zoomLevel)}
-                onDragStart={() => setIsTracking(false)}
-            />
+                onClick={(latLng) => {
+                    setIsTracking(false);
+                    actions.onMapClick(latLng);
+                }}
+                onDragStart={(latLng) => {
+                    setIsTracking(false);
+                    actions.onMapDragStart(latLng);
+                }}
+                onDragMove={(latLng) => {
+                    actions.onMapDragMove(latLng);
+                }}
+                onDragEnd={() => {
+                    if (state.mode !== "pen") return;
+
+                    actions.onMapDragEnd();
+                }}
+            >
+                <KakaoProjectedRadiusPath points={radiusPathPoints} radiusKm={radiusKm} />
+
+                {state.mode === "pen" && (
+                    <KakaoPoints
+                        points={data.penPaths.length > 0 ? data.penPaths : Array.from(data.waypoints.values())}
+                    />
+                )}
+                {state.mode === "waypoint" && (
+                    <KakaoWaypoints
+                        isDraggable={true}
+                        waypoints={data.waypoints}
+                        selectedIndex={state.selectedWaypointIndex}
+                        onWaypointDragStart={(index, latLng) => actions.onWaypointDragStart(index, latLng)}
+                        onWaypointDragMove={(index, latLng) => actions.onWaypointDragMove(index, latLng)}
+                        onWaypointDragEnd={() => actions.onWaypointDragEnd()}
+                        onWaypointClick={(index) => actions.onWaypointClick(index)}
+                        onWaypointDelete={(index) => actions.deleteWaypoint(index)}
+                    />
+                )}
+            </KakaoMap>
+
+            <button
+                className="absolute top-4 left-4 z-30 flex items-center gap-1.5 rounded-full bg-gray-900/85 px-3 py-2 text-sm font-bold text-white shadow-lg backdrop-blur-sm border border-white/10 disabled:opacity-60"
+                onClick={() => actions.undo()}
+                disabled={!canUndo}
+            >
+                ⬅️
+            </button>
+            <button
+                className="absolute top-4 left-16 z-30 flex items-center gap-1.5 rounded-full bg-gray-900/85 px-3 py-2 text-sm font-bold text-white shadow-lg backdrop-blur-sm border border-white/10 disabled:opacity-60"
+                onClick={() => actions.redo()}
+                disabled={!canRedo}
+            >
+                ➡️
+            </button>
 
             <button
                 type="button"
@@ -78,14 +130,13 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
                     locationAcceptStatus === "loading" ||
                     locationAcceptStatus === "unavailable" ||
                     locationAcceptStatus === "denied" ||
-                    locationAcceptStatus === "error" ||
-                    !!location
+                    locationAcceptStatus === "error"
                 }
                 aria-label="내 위치로 돌아가기"
                 title="내 위치로 돌아가기"
                 className="absolute top-4 right-4 z-30 flex items-center gap-1.5 rounded-full bg-gray-900/85 px-3 py-2 text-sm font-bold text-white shadow-lg backdrop-blur-sm border border-white/10 disabled:opacity-60"
             >
-                <span>{locationAcceptStatus === "loading" ? "…" : isTracking ? "🟡" : "🟥"}</span>
+                <span>{locationAcceptStatus === "loading" ? "…" : isTracking ? "따라가는중" : "안따라가는중"}</span>
                 <span>내 위치</span>
             </button>
             {/* 
@@ -111,34 +162,43 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
             <div className="z-20 w-full px-6 pb-6 flex flex-col gap-6 pointer-events-none">
                 <div className="flex items-center justify-between w-full pointer-events-auto">
                     <div className="flex flex-col gap-1 w-2/3 max-w-50 bg-gray-900/80 p-3 rounded-2xl backdrop-blur-sm shadow-lg">
-                        <span className="text-white text-sm font-bold ml-1">{drawing.radius.toFixed(1)}km</span>
+                        <span className="text-white text-sm font-bold ml-1">{radiusKm.toFixed(1)}km</span>
                         <input
                             type="range"
-                            min="0.1"
-                            max="5.0"
-                            step="0.1"
-                            value={drawing.radius}
-                            onChange={(e) => drawing.setRadius(parseFloat(e.target.value))}
+                            min={MIN_RADIUS_KM}
+                            max={MAX_RADIUS_KM}
+                            step={RADIUS_STEP_KM}
+                            value={radiusKm}
+                            onChange={(e) => setRadiusKm(Number(e.target.value))}
                             className="w-full accent-yellow-500"
                         />
                     </div>
 
                     <div className="flex gap-2 bg-gray-900/80 p-2 rounded-full backdrop-blur-sm shadow-lg">
-                        <ToolButton
-                            isActive={drawing.tool === "pen"}
+                        {/* <ToolButton
+                            isActive={state.mode === "pen"}
                             icon="✏️"
-                            onClick={() => drawing.handleChangeTool("pen")}
-                        />
+                            onClick={() => {
+                                setIsTracking(false);
+                                actions.selectMode("pen");
+                            }}
+                        /> */}
                         <ToolButton
-                            isActive={drawing.tool === "waypoint"}
+                            isActive={state.mode === "waypoint"}
                             icon="📍"
-                            onClick={() => drawing.handleChangeTool("waypoint")}
+                            onClick={() => {
+                                setIsTracking(false);
+                                actions.selectMode("waypoint");
+                            }}
                         />
-                        <ToolButton
+                        {/* <ToolButton
                             isActive={drawing.tool === "eraser"}
                             icon="🧽"
-                            onClick={() => drawing.handleChangeTool("eraser")}
-                        />
+                            onClick={() => {
+                                setIsTracking(false);
+                                drawing.handleChangeTool("eraser");
+                            }}
+                        /> */}
                     </div>
                 </div>
 

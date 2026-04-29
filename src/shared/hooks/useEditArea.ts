@@ -125,6 +125,7 @@ export function editAreaReducer(state: EditAreaState, action: Action): EditAreaS
                 isPenDrawing: false,
                 penDrawModeDraft: [],
                 penEraseModeDraft: [],
+                history: history.create(createEmptySnapshot(), 20),
             };
 
         case "dragStart":
@@ -222,10 +223,6 @@ export function editAreaReducer(state: EditAreaState, action: Action): EditAreaS
                 return { ...state };
             }
 
-            /**
-             * 해당 웨이포인트에 대해서만 임시로 움직여줘야한다.
-             * 그리고 move동안은 커밋하지 않는다.
-             */
             return {
                 ...state,
                 waypointDraft: {
@@ -308,7 +305,7 @@ export function useEditArea() {
     const visibleSnapshot = getResolvedSnapshot(state);
 
     if (state.waypointDraft) {
-        // visibleWaypoints.set(state.waypointDraft.id, state.waypointDraft.latLng);
+        visibleWaypoints[state.waypointDraft.index] = state.waypointDraft.latLng;
     }
 
     const getSubmitValue = (): EditAreaSubmitValue => {
@@ -402,6 +399,7 @@ export function useEditArea() {
             mode: state.mode,
             penMode: state.penMode,
             waypointMode: state.waypointMode,
+            selectedWaypointIndex: state.selectedWaypointIndex,
             isPenDrawing: state.isPenDrawing,
         },
 
@@ -411,6 +409,9 @@ export function useEditArea() {
         },
 
         getSubmitValue,
+
+        canUndo: history.canUndo(state.history),
+        canRedo: history.canRedo(state.history),
 
         actions: {
             selectMode,

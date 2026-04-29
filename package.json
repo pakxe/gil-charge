@@ -9,7 +9,7 @@
         "dev": "vite --config vite.development.ts --host --host",
         "build": "tsc && vite build --config vite.production.ts",
         "dev:all": "concurrently \"pnpm run dev\" \"pnpm --dir ./opinet-proxy run dev\"",
-        "test": "vitest",
+        "test": "vitest --config vite.base.ts",
         "test:run": "vitest run"
     },
     "dependencies": {

@@ -94,7 +94,7 @@ describe("grid", () => {
     });
 
     it("create 이후 add한 item도 조회할 수 있다", () => {
-        const state = grid.create<TestItem>([], 10);
+        const state = grid.create<string>([], 10);
         const item = { id: "added", point: { x: 12, y: 13 }, data: "added" };
 
         grid.add(state, item);

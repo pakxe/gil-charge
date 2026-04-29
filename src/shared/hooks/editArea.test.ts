@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { createEditAreaInitialState, editAreaReducer, EditAreaState } from "./useEditArea";
 import { LatLng } from "@/shared/types/map";
+import { history } from "@/shared/models/history";
 
 const latLngA: LatLng = {
     lat: 37.5665,
@@ -10,7 +11,7 @@ const latLngA: LatLng = {
 
 describe("editAreaReducer", () => {
     describe("selectMode", () => {
-        it("모드 변경 시 draft/selection 상태를 초기화한다", () => {
+        it("모드 변경 시 draft/selection/history 상태를 초기화한다", () => {
             const prev: EditAreaState = {
                 ...createEditAreaInitialState(),
                 mode: "pen",
@@ -28,9 +29,11 @@ describe("editAreaReducer", () => {
             expect(next.selectedWaypointIndex).toBeNull();
             expect(next.penDrawModeDraft).toEqual([]);
             expect(next.penEraseModeDraft).toEqual([]);
+            expect(history.getCurrent(next.history).penPaths).toEqual([]);
+            expect(history.getCurrent(next.history).waypoints).toEqual([]);
         });
 
-        it("모드 변경 시 draft/selection 상태를 초기화한다", () => {
+        it("모드 변경 시 draft/selection/history 상태를 초기화한다", () => {
             const prev: EditAreaState = {
                 ...createEditAreaInitialState(),
                 mode: "waypoint",
@@ -48,12 +51,14 @@ describe("editAreaReducer", () => {
             expect(next.selectedWaypointIndex).toBeNull();
             expect(next.penDrawModeDraft).toEqual([]);
             expect(next.penEraseModeDraft).toEqual([]);
+            expect(history.getCurrent(next.history).penPaths).toEqual([]);
+            expect(history.getCurrent(next.history).waypoints).toEqual([]);
         });
     });
 
     describe("click", () => {
-        it("waypoint모드가 아닐 때 지도를 클릭하면 아무 것도 하지 않는다", () => {});
-        it("waypoint모드일 때 지도를 클릭하면 현재 스냅샷에 추가된다.", () => {});
+        it("waypoint모드가 아닐 때 지도를 클릭해도 history가 추가되지 않는다", () => {});
+        it("waypoint모드일 때 지도를 클릭하면 현재 history에 스냅샷이 추가된다.", () => {});
     });
 
     describe("dragStart", () => {
@@ -90,8 +95,6 @@ describe("editAreaReducer", () => {
             expect(prev.penDrawModeDraft).toEqual([]);
         });
 
-        it("dragStart는 pen 모드에서 스냅샷을 남기지는 않는다", () => {});
+        it("dragStart는 pen 모드에서 history에 스냅샷을 남기지는 않는다", () => {});
     });
-
-    describe(() => {});
 });

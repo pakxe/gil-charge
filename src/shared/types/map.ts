@@ -18,7 +18,10 @@ export type MapInterface = {
     isTracking?: boolean;
 
     onZoomLevelChange?: (zoomLevel: number) => void;
-    onDragStart?: () => void;
+    onClick?: (latLng: LatLng) => void;
+    onDragStart?: (latLng: LatLng) => void;
+    onDragMove?: (latLng: LatLng) => void;
+    onDragEnd?: () => void;
 };
 // 넘사벽
 
