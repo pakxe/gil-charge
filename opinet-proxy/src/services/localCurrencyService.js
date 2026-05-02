@@ -57,6 +57,10 @@ function extractGyeonggiRows(responseData) {
     return rowSection?.row || [];
 }
 
+function getMatchedLocalCurrencyStore(cache) {
+    return extractGyeonggiRows(cache?.localCurrencyRaw)[0] || null;
+}
+
 async function mapWithConcurrency(items, concurrency, callback) {
     const results = [];
     let nextIndex = 0;
@@ -245,12 +249,15 @@ function toLocalCurrencyResponse(cache) {
         };
     }
 
+    const matchedStore = getMatchedLocalCurrencyStore(cache);
+
     return {
         accepted: cache.isLocalCurrencyAccepted,
         status: cache.lookupStatus,
         checkedAt: cache.localCurrencyCheckedAt,
         expiresAt: cache.localCurrencyExpiresAt,
         storeName: cache.localCurrencyStoreName,
+        currencyName: matchedStore?.REGION_MNY_NM || null,
         roadAddress: cache.roadAddress,
     };
 }
