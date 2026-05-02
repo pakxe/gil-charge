@@ -1,4 +1,5 @@
 const opinetService = require("../services/opinetService");
+const localCurrencyService = require("../services/localCurrencyService");
 
 async function getStationsByPath(req, res) {
     const { paths, radiusKm = 3.0 } = req.body;
@@ -11,16 +12,11 @@ async function getStationsByPath(req, res) {
         const finalStations = await opinetService.fetchStationsAlongPaths(paths, radiusKm);
         console.log(`중복 제거 후 총 ${finalStations.length}개의 주유소를 찾았습니다.`);
 
-        if (finalStations.length > 0) {
-            console.log("데이터 형태입니다====");
-            console.log(finalStations[0]);
+        const stationsWithLocalCurrency = await localCurrencyService.attachLocalCurrencyInfo(finalStations, {
+            fetchStationDetailById: opinetService.fetchStationDetailById,
+        });
 
-            const detailResponse = await opinetService.fetchStationDetailById(finalStations[0].id);
-            console.log("상세정보 응답입니다====");
-            console.dir(detailResponse, { depth: null });
-            console.log("================");
-        }
-        res.json({ stations: finalStations });
+        res.json({ stations: stationsWithLocalCurrency });
     } catch (error) {
         console.error("오피넷 API 처리 중 에러:", error.message);
         res.status(500).json({ error: "주유소 데이터를 가져오는 데 실패했습니다." });
