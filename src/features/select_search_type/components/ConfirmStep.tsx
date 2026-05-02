@@ -32,12 +32,14 @@ export function ConfirmStep({ stations, onPrev }: { stations: Station[]; onPrev:
                             </div>
                             <div className="flex justify-between w-full items-center">
                                 <span className="text-content">{station.localCurrency.roadAddress}</span>
-                                {station.localCurrency.accepted && (
-                                    <div className="text-sub text-gil-dark-text font-bold bg-yellow-600 py-0.5 px-2 rounded-full">
+                            </div>
+                            {station.localCurrency.accepted && (
+                                <div className="flex justify-end w-full">
+                                    <div className="shrink-0 whitespace-nowrap text-sub text-gil-dark-text font-bold bg-yellow-600 py-0.5 px-2 rounded-full">
                                         지역화폐 허용
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </Box>
                     ))}
             </div>
