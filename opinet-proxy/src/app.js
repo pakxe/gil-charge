@@ -9,6 +9,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get("/", (req, res) => {
+    res.json({
+        ok: true,
+        service: "opinet-proxy",
+        health: "/health",
+        stationsPath: "POST /api/stations/path",
+    });
+});
+
 // 라우터 연결
 app.use("/api/stations", stationRoutes);
 
