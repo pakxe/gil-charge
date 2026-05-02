@@ -114,14 +114,14 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
                 onClick={() => actions.undo()}
                 disabled={!canUndo}
             >
-                ⬅️
+                ←
             </button>
             <button
                 className="absolute top-4 left-16 z-30 flex items-center gap-1.5 rounded-full bg-gray-900/85 px-3 py-2 text-sm font-bold text-white shadow-lg backdrop-blur-sm border border-white/10 disabled:opacity-60"
                 onClick={() => actions.redo()}
                 disabled={!canRedo}
             >
-                ➡️
+                →
             </button>
 
             <button
