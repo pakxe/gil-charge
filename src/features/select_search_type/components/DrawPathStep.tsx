@@ -11,7 +11,7 @@ import { KakaoPoints } from "@/features/select_search_type/components/LatLngPath
 import { KakaoWaypoints } from "@/features/select_search_type/components/WaypointMarkers";
 import { KakaoProjectedRadiusPath } from "@/features/select_search_type/components/RadiusPath";
 
-const DEFAULT_RADIUS_KM = 5.0;
+const DEFAULT_RADIUS_KM = 1.0;
 const MIN_RADIUS_KM = 0.1;
 const MAX_RADIUS_KM = 5.0;
 const RADIUS_STEP_KM = 0.1;
@@ -28,7 +28,7 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
     const hasRequestedLocationRef = useRef(false);
 
     const [zoomLevel, setZoomLevel] = useState(8);
-    const [radiusKm, setRadiusKm] = useState(1.0);
+    const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
 
     const { requestLocation, location, locationAcceptStatus } = useCurrentLocation();
 
