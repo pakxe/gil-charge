@@ -16,7 +16,7 @@ export function ConfirmStep({ stations, onPrev }: { stations: Station[]; onPrev:
                 />
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:display-none">
+            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:display-none">
                 {stations
                     .sort((a, b) => a.price - b.price)
                     .map((station) => (
