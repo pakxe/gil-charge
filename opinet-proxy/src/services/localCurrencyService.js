@@ -1,6 +1,7 @@
 const axios = require("axios");
 const config = require("../config");
 const localCurrencyCacheRepository = require("../repositories/localCurrencyCacheRepository");
+const jusoAddressService = require("./jusoAddressService");
 
 const CACHE_REFRESH_MONTHS = 1;
 const REFRESH_CONCURRENCY = 5;
@@ -125,11 +126,12 @@ async function refreshStationCache(station, fetchStationDetailById) {
     const detailResponse = await fetchStationDetailById(station.id);
     const oil = getOpinetDetailOil(detailResponse);
 
-    const roadAddress = oil?.NEW_ADR || null;
+    const originalRoadAddress = oil?.NEW_ADR || null;
     const lotAddress = oil?.VAN_ADR || null;
-    const sigunName = oil?.SIGUN_NM || extractSigunName(roadAddress || lotAddress);
+    let roadAddress = originalRoadAddress;
+    let sigunName = oil?.SIGUN_NM || extractSigunName(originalRoadAddress || lotAddress);
 
-    if (!roadAddress && !lotAddress) {
+    if (!originalRoadAddress && !lotAddress) {
         const checkedAt = new Date();
         const cache = {
             stationUid: station.id,
@@ -153,7 +155,7 @@ async function refreshStationCache(station, fetchStationDetailById) {
         return localCurrencyCacheRepository.upsertCache(cache);
     }
 
-    if (!roadAddress) {
+    if (!originalRoadAddress) {
         const checkedAt = new Date();
         const cache = {
             stationUid: station.id,
@@ -175,6 +177,21 @@ async function refreshStationCache(station, fetchStationDetailById) {
         };
 
         return localCurrencyCacheRepository.upsertCache(cache);
+    }
+
+    try {
+        const standardizedAddress = await jusoAddressService.standardizeRoadAddress(originalRoadAddress);
+        roadAddress = standardizedAddress.roadAddress || originalRoadAddress;
+
+        if (!sigunName) {
+            sigunName = extractSigunName(roadAddress || lotAddress);
+        }
+
+        if (standardizedAddress.source === "juso" && roadAddress !== originalRoadAddress) {
+            console.log(`도로명주소 정제: ${originalRoadAddress} -> ${roadAddress}`);
+        }
+    } catch (error) {
+        console.error(`도로명주소 API 조회 실패 (${station.id}):`, error.message);
     }
 
     if (!isGyeonggiAddress(roadAddress)) {
