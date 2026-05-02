@@ -51,4 +51,12 @@ async function fetchStationsAlongPaths(paths, radiusKm) {
     return Array.from(uniqueStationsMap.values());
 }
 
-module.exports = { fetchStationsAlongPaths };
+async function fetchStationDetailById(id) {
+    const opinetUrl = `${config.OPINET_DETAIL_BY_ID_URL}?code=${config.OPINET_API_KEY}&id=${id}&out=json`;
+    console.log("상세정보 요청 URL:", opinetUrl);
+
+    const response = await axios.get(opinetUrl);
+    return response.data;
+}
+
+module.exports = { fetchStationsAlongPaths, fetchStationDetailById };
