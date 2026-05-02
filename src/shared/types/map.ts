@@ -31,7 +31,11 @@ export interface Station {
     price: number;
     lat: number;
     lng: number;
-    brand: string;
+    localCurrency: {
+        accepted: boolean;
+        status: "NOT_ACCEPTED" | "ACCEPTED";
+        roadAddress: string;
+    };
 }
 
 export type DrawingType = "pen" | "waypoint";

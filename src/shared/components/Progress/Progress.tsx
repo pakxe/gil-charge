@@ -37,7 +37,7 @@ export function Progress({ variant = "glass", value, max, onPrev, onNext }: Prop
     );
 }
 
-const style = cva("rounded-full p-2.5 flex flex-row justify-between items-center gap-2.5", {
+const style = cva("flex-none rounded-full flex flex-row justify-between items-center gap-2.5", {
     variants: {
         variant: {
             glass: "shadow-lg backdrop-blur-md bg-gil-bg/60",

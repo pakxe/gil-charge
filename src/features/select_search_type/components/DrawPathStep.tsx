@@ -55,7 +55,7 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
 
     const radiusPathPoints = data.penPaths.length > 0 ? data.penPaths : Array.from(data.waypoints.values());
     return (
-        <div className="relative w-full h-150 bg-gi-gray-900 rounded-lg overflow-hidden flex flex-col items-center justify-end touch-none">
+        <div className="relative flex min-h-0 flex-1 flex-col items-center justify-end overflow-hidden rounded-t-lg bg-gi-gray-900 touch-none">
             {isLoading && (
                 <div className="absolute inset-0 z-50 bg-black/60 flex flex-col items-center justify-center backdrop-blur-sm">
                     <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
