@@ -32,9 +32,11 @@ export interface Station {
     lat: number;
     lng: number;
     localCurrency: {
-        accepted: boolean;
-        status: "NOT_ACCEPTED" | "ACCEPTED";
-        roadAddress: string;
+        accepted: boolean | null;
+        status: "UNKNOWN" | "ACCEPTED" | "NOT_ACCEPTED" | "OUT_OF_SCOPE" | "MISSING_ROAD_ADDRESS" | "ERROR";
+        roadAddress?: string | null;
+        storeName?: string | null;
+        currencyName?: string | null;
     };
 }
 
