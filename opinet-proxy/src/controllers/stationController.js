@@ -11,6 +11,11 @@ async function getStationsByPath(req, res) {
         const finalStations = await opinetService.fetchStationsAlongPaths(paths, radiusKm);
         console.log(`중복 제거 후 총 ${finalStations.length}개의 주유소를 찾았습니다.`);
 
+        if (finalStations.length >= 0) {
+            console.log("데이터 형태입니다====");
+            console.log(finalStations[0]);
+            console.log("================");
+        }
         res.json({ stations: finalStations });
     } catch (error) {
         console.error("오피넷 API 처리 중 에러:", error.message);
