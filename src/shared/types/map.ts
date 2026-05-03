@@ -37,6 +37,7 @@ export interface Station {
         roadAddress?: string | null;
         storeName?: string | null;
         currencyName?: string | null;
+        industryCode?: string | null;
     };
 }
 

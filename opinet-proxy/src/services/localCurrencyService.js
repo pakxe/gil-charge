@@ -5,6 +5,7 @@ const jusoAddressService = require("./jusoAddressService");
 
 const CACHE_REFRESH_MONTHS = 1;
 const REFRESH_CONCURRENCY = 5;
+const GAS_STATION_INDUSTRY_CODES = new Set(["6601", "2601", "13"]);
 
 function addMonths(date, months) {
     const next = new Date(date);
@@ -58,8 +59,16 @@ function extractGyeonggiRows(responseData) {
     return rowSection?.row || [];
 }
 
+function getIndustryCode(row) {
+    return String(row?.INDUTYPE_CD ?? "").trim();
+}
+
+function isGasStationIndustry(row) {
+    return GAS_STATION_INDUSTRY_CODES.has(getIndustryCode(row));
+}
+
 function getMatchedLocalCurrencyStore(cache) {
-    return extractGyeonggiRows(cache?.localCurrencyRaw)[0] || null;
+    return extractGyeonggiRows(cache?.localCurrencyRaw).find(isGasStationIndustry) || null;
 }
 
 async function mapWithConcurrency(items, concurrency, callback) {
@@ -108,8 +117,8 @@ async function lookupLocalCurrencyByRoadAddress(roadAddress) {
     });
 
     const rows = extractGyeonggiRows(response.data);
-    const matchedStore = rows[0] || null;
-    const accepted = rows.length > 0;
+    const matchedStore = rows.find(isGasStationIndustry) || null;
+    const accepted = Boolean(matchedStore);
 
     return {
         isLocalCurrencyAccepted: accepted,
@@ -267,14 +276,19 @@ function toLocalCurrencyResponse(cache) {
     }
 
     const matchedStore = getMatchedLocalCurrencyStore(cache);
+    const rows = extractGyeonggiRows(cache.localCurrencyRaw);
+    const hasLocalCurrencyRows = rows.length > 0;
+    const accepted = hasLocalCurrencyRows ? Boolean(matchedStore) : cache.isLocalCurrencyAccepted;
+    const status = hasLocalCurrencyRows ? (matchedStore ? "ACCEPTED" : "NOT_ACCEPTED") : cache.lookupStatus;
 
     return {
-        accepted: cache.isLocalCurrencyAccepted,
-        status: cache.lookupStatus,
+        accepted,
+        status,
         checkedAt: cache.localCurrencyCheckedAt,
         expiresAt: cache.localCurrencyExpiresAt,
-        storeName: cache.localCurrencyStoreName,
+        storeName: hasLocalCurrencyRows ? matchedStore?.CMPNM_NM || null : cache.localCurrencyStoreName,
         currencyName: matchedStore?.REGION_MNY_NM || null,
+        industryCode: matchedStore ? getIndustryCode(matchedStore) : null,
         roadAddress: cache.roadAddress,
     };
 }
