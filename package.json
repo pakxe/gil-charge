@@ -10,7 +10,7 @@
         "build": "tsc && vite build --config vite.production.ts",
         "dev:all": "concurrently \"pnpm run dev\" \"pnpm --dir ./opinet-proxy run dev\"",
         "test": "vitest --config vite.base.ts",
-        "test:run": "vitest run"
+        "test:run": "vitest run --config vite.base.ts"
     },
     "dependencies": {
         "@tailwindcss/vite": "^4.2.1",
