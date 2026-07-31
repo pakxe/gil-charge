@@ -1,0 +1,48 @@
+{
+    "name": "gil-charge",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "lint": "eslint .",
+        "preview": "vite preview",
+        "dev": "vite --config vite.development.ts --host --host",
+        "build": "tsc && vite build --config vite.production.ts",
+        "dev:all": "concurrently \"pnpm run dev\" \"pnpm --dir ./opinet-proxy run dev\"",
+        "test": "vitest --config vite.base.ts",
+        "test:run": "vitest run --config vite.base.ts"
+    },
+    "dependencies": {
+        "@tailwindcss/vite": "^4.2.1",
+        "axios": "^1.13.6",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "proj4": "^2.20.4",
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4",
+        "react-kakao-maps-sdk": "^1.2.1",
+        "react-router": "^7.13.1",
+        "tailwind-merge": "^3.5.0"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.39.4",
+        "@tailwindcss/cli": "^4.2.1",
+        "@types/node": "^24.12.0",
+        "@types/proj4": "^2.19.0",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
+        "@vitejs/plugin-react": "^6.0.0",
+        "concurrently": "^9.2.1",
+        "esbuild": "^0.27.4",
+        "eslint": "^9.39.4",
+        "eslint-plugin-react-hooks": "^7.0.1",
+        "eslint-plugin-react-refresh": "^0.5.2",
+        "globals": "^17.4.0",
+        "kakao.maps.d.ts": "^0.1.40",
+        "tailwindcss": "^4.2.1",
+        "typescript": "~5.9.3",
+        "typescript-eslint": "^8.56.1",
+        "vite": "^8.0.0",
+        "vitest": "^4.1.5"
+    }
+}

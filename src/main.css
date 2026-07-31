@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+    --color-gil-yellow-400: #f0c243;
+
+    --color-gil-brown-600: #693c24;
+    --color-gil-brown-800: #373021;
+    --color-gil-brown-900: #2a2218;
+
+    --color-gil-green-400: #69dd98;
+
+    --color-gil-blue-500: #4160ff;
+
+    --color-gil-gray-200: #d9d9d9;
+    --color-gil-gray-600: #838388;
+    --color-gil-gray-700: #4c4c51;
+    --color-gil-gray-800: #2a2b2f;
+    --color-gil-gray-850: #1a1a1d;
+    --color-gil-gray-900: #141518;
+    --color-gil-gray-950: #0a0a0a;
+
+    --color-gil-primary: var(--color-gil-yellow-400);
+    --color-gil-notification: var(--color-gil-green-400);
+    --color-gil-confirm: var(--color-gil-blue-500);
+    --color-gil-bg: var(--color-gil-gray-950);
+
+    --color-gil-light-text: var(--color-gil-gray-200);
+    --color-gil-dark-text: var(--color-gil-gray-950);
+    --color-gil-sub-text: var(--color-gil-gray-700);
+
+    --text-title: 1.375rem; /* 22px */
+    --text-subtitle: 1.25rem; /* 20px */
+    --text-section: 1.125rem; /* 18px */
+    --text-body: 1rem; /* 16px */
+    --text-content: 0.875rem; /* 14px */
+    --text-sub: 0.75rem; /* 12px */
+    --text-tiny: 0.625rem; /* 10px */
+}
+
+@utility typo-title-bold {
+    @apply text-title font-bold;
+}
+
+@utility typo-subtitle-bold {
+    @apply text-subtitle font-bold;
+}
+
+@utility typo-section-bold {
+    @apply text-section font-bold;
+}
+
+@utility typo-body-bold {
+    @apply text-body font-bold;
+}
+
+@utility typo-content-medium {
+    @apply text-content font-medium;
+}
+
+@utility typo-sub-semibold {
+    @apply text-sub font-semibold;
+}
+
+@utility typo-tiny-bold {
+    @apply text-tiny font-bold;
+}
+
+@layer base {
+    button:not(:disabled) {
+        cursor: pointer;
+    }
+}
