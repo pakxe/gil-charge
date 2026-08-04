@@ -26,6 +26,10 @@ export function KakaoMapAdapter(props: Props) {
         };
 
         setMap(mapInstance);
+
+        return () => {
+            setMap(null);
+        };
     }, [kakaoMap]);
 
     if (loading) {
@@ -39,12 +43,42 @@ export function KakaoMapAdapter(props: Props) {
     return (
         <Map
             center={props.center}
+            level={props.zoomLevel}
+            draggable={props.isDraggable}
+            zoomable={props.isZoomable}
+            className={props.className}
             onCreate={setKakaoMap}
+            onZoomChanged={(map) => props.onZoomLevelChange?.(map.getLevel())}
+            onClick={(_, mouseEvent) => {
+                props.onClick?.({
+                    lat: mouseEvent.latLng.getLat(),
+                    lng: mouseEvent.latLng.getLng(),
+                });
+            }}
+            onDragStart={(_, mouseEvent) => {
+                props.onDragStart?.({
+                    lat: mouseEvent.latLng.getLat(),
+                    lng: mouseEvent.latLng.getLng(),
+                });
+            }}
+            onDrag={(_, mouseEvent) => {
+                props.onDragMove?.({
+                    lat: mouseEvent.latLng.getLat(),
+                    lng: mouseEvent.latLng.getLng(),
+                });
+            }}
+            onDragEnd={(map) => {
+                const center = map.getCenter();
+
+                props.onDragEnd?.({
+                    lat: center.getLat(),
+                    lng: center.getLng(),
+                });
+            }}
             style={{
                 width: "100%",
                 height: "100%",
             }}
-            {...props}
         >
             {props.children}
         </Map>

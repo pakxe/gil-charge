@@ -11,9 +11,9 @@ export function ShowMapPocPage() {
             errorFallback={<div>error</div>}
             className="w-full h-full min-h-[300px] min-w-[300px]"
         >
-            <Map.Marker position={INITIAL_POSITION}>
+            <Map.CustomOverlay position={INITIAL_POSITION}>
                 <div>안녕</div>
-            </Map.Marker>
+            </Map.CustomOverlay>
         </Map>
     );
 }

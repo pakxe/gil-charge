@@ -1,7 +1,7 @@
 import { env } from "@/shared/config/env";
 import { MapInterface } from "@/shared/model/map";
 import { KakaoMapAdapter } from "@/shared/ui/Map/KakaoMapAdapter";
-import { Marker } from "@/shared/ui/Map/Marker";
+import { CustomOverlay } from "@/shared/ui/Map/CustomOverlay";
 
 type Props = MapInterface;
 
@@ -13,5 +13,5 @@ function MapComponent(props: Props) {
 }
 
 export const Map = Object.assign(MapComponent, {
-    Marker: Marker,
+    CustomOverlay: CustomOverlay,
 });
