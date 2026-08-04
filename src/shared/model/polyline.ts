@@ -17,5 +17,5 @@ export type MapPolylineInterface = {
     strokeOpacity?: number;
     strokeStyle?: StrokeStyle;
     zIndex?: number;
-    onClick?: () => void;
+    onClick?: (latLng: LatLng) => void;
 };
