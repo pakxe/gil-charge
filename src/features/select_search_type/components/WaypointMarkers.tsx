@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef } from "react";
-import { CustomOverlayMap, Polyline, useMap } from "react-kakao-maps-sdk";
+import { CustomOverlayMap, useMap } from "react-kakao-maps-sdk";
 
 import type { LatLng } from "@/shared/types/map";
 import { cn } from "@/shared/utils/cn";
 import { MAP_Z_INDEX } from "@/shared/constants/map";
+import { Polyline } from "@/shared/ui/Map/Polyline";
 
 interface props {
     waypoints: LatLng[];
