@@ -12,7 +12,12 @@ export function KakaoPolylineAdapter(props: Props) {
             strokeOpacity={props.strokeOpacity}
             strokeStyle={props.strokeStyle}
             zIndex={props.zIndex}
-            onClick={() => props.onClick?.()}
+            onClick={(_, mouseEvent) =>
+                props.onClick?.({
+                    lat: mouseEvent.latLng.getLat(),
+                    lng: mouseEvent.latLng.getLng(),
+                })
+            }
         />
     );
 }
