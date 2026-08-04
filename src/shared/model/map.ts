@@ -20,6 +20,7 @@ export type MapInterface = {
     // UI
     loadingFallback: ReactNode;
     errorFallback: ReactNode;
+    children?: ReactNode;
 
     // style
     className?: string;

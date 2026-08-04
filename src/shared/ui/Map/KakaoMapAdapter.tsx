@@ -1,10 +1,10 @@
 import { env } from "@/shared/config/env";
 import { MapInstance, MapInterface } from "@/shared/model/map";
 import { setMap } from "@/shared/model/useMap";
-import { PropsWithChildren, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Map, useKakaoLoader } from "react-kakao-maps-sdk";
 
-type Props = MapInterface & PropsWithChildren;
+type Props = MapInterface;
 
 export function KakaoMapAdapter(props: Props) {
     const [loading, error] = useKakaoLoader({
