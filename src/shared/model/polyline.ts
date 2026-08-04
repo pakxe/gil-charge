@@ -1,18 +1,14 @@
 import { LatLng } from "@/shared/model/map";
 
-export type StrokeStyle =
-    | "solid"
-    | "shortdash"
-    | "shortdot"
-    | "shortdashdot"
-    | "shortdashdotdot"
-    | "dot"
-    | "dash"
-    | "dashed"
-    | "dashdot"
-    | "longdash"
-    | "longdashdot"
-    | "longdashdotdot";
+export type StrokeStyle = "solid" | "dot" | "dash" | "dashed";
+// | "dashdot"
+// | "longdash"
+// | "longdashdot"
+// | "longdashdotdot";
+// | "shortdash"
+// | "shortdot"
+// | "shortdashdot"
+// | "shortdashdotdot"
 
 export type MapPolylineInterface = {
     path: LatLng[];
