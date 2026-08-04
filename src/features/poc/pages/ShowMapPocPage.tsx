@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { CustomOverlayMap, Map, useKakaoLoader } from "react-kakao-maps-sdk";
+import { CustomOverlayMap, Map, Polyline, useKakaoLoader } from "react-kakao-maps-sdk";
 
 type LatLng = {
     lat: number;
@@ -106,6 +106,13 @@ export function ShowMapPocPage() {
                     zoomable
                     onCreate={setMap}
                 >
+                    <Polyline
+                        path={[INITIAL_POSITION, overlayPosition]}
+                        strokeWeight={4}
+                        strokeColor={"#111827"}
+                        strokeOpacity={0.7}
+                        strokeStyle={"solid"}
+                    />
                     <CustomOverlayMap position={overlayPosition} clickable zIndex={10}>
                         <div
                             className="touch-none cursor-grab select-none rounded border border-gray-950 bg-yellow-400 px-3 py-2 text-sm font-bold text-gray-950 shadow-lg active:cursor-grabbing"
