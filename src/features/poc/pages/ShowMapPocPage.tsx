@@ -14,6 +14,7 @@ export function ShowMapPocPage() {
             <Map.CustomOverlay position={INITIAL_POSITION}>
                 <div>안녕</div>
             </Map.CustomOverlay>
+            <Map.Polyline path={[INITIAL_POSITION, { lat: INITIAL_POSITION.lat, lng: INITIAL_POSITION.lng - 4 }]} />
         </Map>
     );
 }
