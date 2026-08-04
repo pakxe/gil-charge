@@ -23,6 +23,9 @@ export function KakaoMapAdapter(props: Props) {
             setZoom(level) {
                 kakaoMap.setLevel(level);
             },
+            getLevel() {
+                return kakaoMap.getLevel();
+            },
         };
 
         setMap(mapInstance);

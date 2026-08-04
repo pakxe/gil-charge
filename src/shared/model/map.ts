@@ -30,4 +30,5 @@ export type MapInterface = {
 export type MapInstance = {
     setCenter(latLng: LatLng): void;
     setZoom(level: number): void;
+    getLevel(): number;
 };
