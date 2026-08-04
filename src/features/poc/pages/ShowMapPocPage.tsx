@@ -1,3 +1,4 @@
+import { env } from "@/shared/config/env";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { CustomOverlayMap, Map, Polyline, useKakaoLoader } from "react-kakao-maps-sdk";
 
@@ -17,7 +18,7 @@ const INITIAL_POSITION: LatLng = { lat: 33.450701, lng: 126.57066 };
 
 export function ShowMapPocPage() {
     const [loading, error] = useKakaoLoader({
-        appkey: import.meta.env.VITE_KAKAO_APP_KEY,
+        appkey: env.VITE_KAKAO_APP_KEY,
     });
     const [map, setMap] = useState<kakao.maps.Map | null>(null);
     const [overlayPosition, setOverlayPosition] = useState<LatLng>(INITIAL_POSITION);
