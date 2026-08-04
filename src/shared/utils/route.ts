@@ -26,6 +26,7 @@ type Path = string;
 export const PATHS = {
     home: "/",
     pomo: "/pomo",
+    showMapPoc: "/poc/show-map",
     selectSearchType: "/select-search-type",
 
     // TODO: 아래는 예시를 위한 path이므로 익숙해지면 제거해라.
@@ -53,6 +54,7 @@ export const linkTo: {
 } = {
     home: () => PATHS.home,
     pomo: () => PATHS.pomo,
+    showMapPoc: () => PATHS.showMapPoc,
     selectSearchType: () => PATHS.selectSearchType,
     userDetail: (args) => generateLink(PATHS.userDetail, args),
     postComment: (args) => generateLink(PATHS.postComment, args),
