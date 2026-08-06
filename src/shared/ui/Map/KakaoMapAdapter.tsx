@@ -26,6 +26,16 @@ export function KakaoMapAdapter(props: Props) {
             getLevel() {
                 return kakaoMap.getLevel();
             },
+            clientPointToLatLng(clientX, clientY) {
+                const rect = kakaoMap.getNode().getBoundingClientRect();
+                const containerPoint = new kakao.maps.Point(clientX - rect.left, clientY - rect.top);
+                const latLng = kakaoMap.getProjection().coordsFromContainerPoint(containerPoint);
+
+                return {
+                    lat: latLng.getLat(),
+                    lng: latLng.getLng(),
+                };
+            },
         };
 
         setMap(mapInstance);
