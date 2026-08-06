@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Map } from "@/shared/ui/Map/Map";
 import type { LatLng } from "@/shared/model/map";
+import { MAP_Z_INDEX } from "@/shared/constants/map";
 import {
     MAX_WAYPOINT_COUNT,
     type AddWaypointResult,
@@ -32,7 +33,16 @@ export function WaypointEditorPage() {
                 }}
             >
                 {data.waypoints.map((waypoint, index) => (
-                    <Map.CustomOverlay key={waypoint.id} position={waypoint.latLng} zIndex={30}>
+                    <Map.CustomOverlay
+                        key={waypoint.id}
+                        position={waypoint.latLng}
+                        clickable
+                        zIndex={
+                            isSelectedWaypoint(state, waypoint.id)
+                                ? MAP_Z_INDEX.selectedWaypoint
+                                : MAP_Z_INDEX.waypoint
+                        }
+                    >
                         <div
                             className="relative"
                             onClick={(event) => {
