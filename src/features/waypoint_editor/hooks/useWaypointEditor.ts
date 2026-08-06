@@ -2,6 +2,9 @@ import { useCallback, useMemo, useState } from "react";
 import {
     createWaypointEditor,
     type AddWaypointResult,
+    type DeleteAllWaypointResult,
+    type DeleteWaypointResult,
+    type SelectWaypointResult,
     type WaypointNodeId,
 } from "@/features/waypoint_editor/model/waypointEditor";
 import type { LatLng } from "@/shared/model/map";
@@ -35,6 +38,36 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
         [editor, editorState],
     );
 
+    const selectWaypoint = useCallback(
+        (id: WaypointNodeId): SelectWaypointResult => {
+            const next = editor.selectWaypoint(editorState, id);
+
+            setEditorState(next.state);
+
+            return next.result;
+        },
+        [editor, editorState],
+    );
+
+    const deleteWaypoint = useCallback(
+        (id: WaypointNodeId): DeleteWaypointResult => {
+            const next = editor.deleteWaypoint(editorState, id);
+
+            setEditorState(next.state);
+
+            return next.result;
+        },
+        [editor, editorState],
+    );
+
+    const deleteAllWaypoint = useCallback((): DeleteAllWaypointResult => {
+        const next = editor.deleteAllWaypoint(editorState);
+
+        setEditorState(next.state);
+
+        return next.result;
+    }, [editor, editorState]);
+
     return {
         state: editorState.status,
         data: {
@@ -42,6 +75,9 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
         },
         actions: {
             addWaypoint,
+            selectWaypoint,
+            deleteWaypoint,
+            deleteAllWaypoint,
         },
     };
 }
