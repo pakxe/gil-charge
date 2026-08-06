@@ -3,7 +3,6 @@ import {
     type AddWaypointResult,
     type BeginWaypointMoveResult,
     type CommitWaypointMoveResult,
-    type DeleteAllWaypointResult,
     type DeleteWaypointResult,
     type SelectWaypointResult,
     type WaypointEditorState,
@@ -18,117 +17,109 @@ type UseWaypointEditorOptions = {
     maxWaypointCount?: number;
 };
 
+type WaypointEditorCommandResult =
+    | AddWaypointResult
+    | BeginWaypointMoveResult
+    | CommitWaypointMoveResult
+    | DeleteWaypointResult
+    | SelectWaypointResult;
+
+type WaypointEditorHookState = {
+    editorState: WaypointEditorState;
+    result: WaypointEditorCommandResult | null;
+};
+
 const defaultCreateId = () => crypto.randomUUID();
 
 export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount }: UseWaypointEditorOptions = {}) {
-    const [editorState, setEditorState] = useState(() => waypointEditor.createInitialState());
+    const [hookState, setHookState] = useState<WaypointEditorHookState>(() => ({
+        editorState: waypointEditor.createInitialState(),
+        result: null,
+    }));
 
     const addWaypoint = useCallback(
-        (latLng: LatLng): AddWaypointResult => {
-            let result: AddWaypointResult = { code: 1, reason: "OVERFLOW" };
-
-            setEditorState((prev) => {
-                const next = waypointEditor.addWaypoint(prev, latLng, {
+        (latLng: LatLng): void => {
+            setHookState((prev) => {
+                const next = waypointEditor.addWaypoint(prev.editorState, latLng, {
                     createId,
                     maxWaypointCount,
                 });
 
-                result = next.result;
-
-                return next.state;
+                return {
+                    editorState: next.state,
+                    result: next.result,
+                };
             });
-
-            return result;
         },
         [createId, maxWaypointCount],
     );
 
-    const selectWaypoint = useCallback(
-        (id: WaypointNodeId): SelectWaypointResult => {
-            let result: SelectWaypointResult = { code: 2, reason: "INVALID_INPUT" };
+    const selectWaypoint = useCallback((id: WaypointNodeId): void => {
+        setHookState((prev) => {
+            const next = waypointEditor.selectWaypoint(prev.editorState, id);
 
-            setEditorState((prev) => {
-                const next = waypointEditor.selectWaypoint(prev, id);
-
-                result = next.result;
-
-                return next.state;
-            });
-
-            return result;
-        },
-        [],
-    );
-
-    const deleteWaypoint = useCallback(
-        (id: WaypointNodeId): DeleteWaypointResult => {
-            let result: DeleteWaypointResult = { code: 2, reason: "INVALID_INPUT" };
-
-            setEditorState((prev) => {
-                const next = waypointEditor.deleteWaypoint(prev, id);
-
-                result = next.result;
-
-                return next.state;
-            });
-
-            return result;
-        },
-        [],
-    );
-
-    const deleteAllWaypoint = useCallback((): DeleteAllWaypointResult => {
-        let result: DeleteAllWaypointResult;
-
-        setEditorState((prev) => {
-            const next = waypointEditor.deleteAllWaypoint(prev);
-
-            result = next.result;
-
-            return next.state;
+            return {
+                ...prev,
+                editorState: next.state,
+                result: next.result,
+            };
         });
-
-        return result;
     }, []);
 
-    const beginWaypointMove = useCallback(
-        (id: WaypointNodeId, latLng: LatLng): BeginWaypointMoveResult => {
-            let result: BeginWaypointMoveResult = { code: 2, reason: "INVALID_INPUT" };
+    const deleteWaypoint = useCallback((id: WaypointNodeId): void => {
+        setHookState((prev) => {
+            const next = waypointEditor.deleteWaypoint(prev.editorState, id);
 
-            setEditorState((prev) => {
-                const next = waypointEditor.beginWaypointMove(prev, id, latLng);
-
-                result = next.result;
-
-                return next.state;
-            });
-
-            return result;
-        },
-        [],
-    );
-
-    const updateWaypointMove = useCallback(
-        (id: WaypointNodeId, latLng: LatLng): void => {
-            setEditorState((prev) => waypointEditor.updateWaypointMove(prev, id, latLng));
-        },
-        [],
-    );
-
-    const commitWaypointMove = useCallback((): CommitWaypointMoveResult => {
-        let result: CommitWaypointMoveResult = { code: 2, reason: "INVALID_INPUT" };
-
-        setEditorState((prev) => {
-            const next = waypointEditor.commitWaypointMove(prev);
-
-            result = next.result;
-
-            return next.state;
+            return {
+                editorState: next.state,
+                result: next.result,
+            };
         });
-
-        return result;
     }, []);
 
+    const deleteAllWaypoint = useCallback((): void => {
+        setHookState((prev) => {
+            const next = waypointEditor.deleteAllWaypoint(prev.editorState);
+
+            return {
+                editorState: next.state,
+                result: { code: 0 },
+            };
+        });
+    }, []);
+
+    const beginWaypointMove = useCallback((id: WaypointNodeId, latLng: LatLng): void => {
+        setHookState((prev) => {
+            const next = waypointEditor.beginWaypointMove(prev.editorState, id, latLng);
+
+            return {
+                ...prev,
+                editorState: next.state,
+                result: next.result,
+            };
+        });
+    }, []);
+
+    const updateWaypointMove = useCallback((id: WaypointNodeId, latLng: LatLng): void => {
+        setHookState((prev) => ({
+            ...prev,
+            editorState: waypointEditor.updateWaypointMove(prev.editorState, id, latLng),
+        }));
+    }, []);
+
+    const commitWaypointMove = useCallback((): void => {
+        setHookState((prev) => {
+            const next = waypointEditor.commitWaypointMove(prev.editorState);
+
+            return {
+                ...prev,
+                editorState: next.state,
+                result: next.result,
+            };
+        });
+    }, []);
+
+    const editorState = hookState.editorState;
     const visibleWaypoints = useMemo(() => getVisibleWaypoints(editorState), [editorState]);
 
     return {
@@ -136,6 +127,7 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
         data: {
             waypoints: editorState.nodes,
             visibleWaypoints,
+            result: hookState.result,
         },
         actions: {
             addWaypoint,

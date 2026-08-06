@@ -1,7 +1,6 @@
-import { useState } from "react";
 import { Map } from "@/shared/ui/Map/Map";
 import type { LatLng } from "@/shared/model/map";
-import { MAX_WAYPOINT_COUNT, type AddWaypointResult } from "@/features/waypoint_editor/model/waypointEditor";
+import { MAX_WAYPOINT_COUNT } from "@/features/waypoint_editor/model/waypointEditor";
 import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
 import { WaypointMarkers } from "@/features/waypoint_editor/components/WaypointMarkers";
 
@@ -12,7 +11,6 @@ const INITIAL_CENTER: LatLng = {
 
 export function WaypointEditorPage() {
     const { state, data, actions } = useWaypointEditor();
-    const [lastResult, setLastResult] = useState<AddWaypointResult | null>(null);
 
     return (
         <main className="relative min-h-dvh bg-gil-gray-950 text-gil-light-text">
@@ -25,7 +23,7 @@ export function WaypointEditorPage() {
                 loadingFallback={<div className="flex min-h-dvh items-center justify-center">loading</div>}
                 errorFallback={<div className="flex min-h-dvh items-center justify-center">error</div>}
                 onClick={(latLng) => {
-                    setLastResult(actions.addWaypoint(latLng));
+                    actions.addWaypoint(latLng);
                 }}
             >
                 <WaypointMarkers
@@ -49,12 +47,11 @@ export function WaypointEditorPage() {
                     disabled={data.waypoints.length === 0}
                     onClick={() => {
                         actions.deleteAllWaypoint();
-                        setLastResult(null);
                     }}
                 >
                     전체 삭제
                 </button>
-                {lastResult?.code === 1 && <p className="mt-1 text-gil-yellow-400">{lastResult.reason}</p>}
+                {data.result?.code === 1 && <p className="mt-1 text-gil-yellow-400">{data.result.reason}</p>}
             </section>
         </main>
     );
