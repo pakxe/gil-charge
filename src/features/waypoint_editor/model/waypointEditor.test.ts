@@ -12,6 +12,11 @@ const latLngB: LatLng = {
     lng: 129.0756,
 };
 
+const latLngC: LatLng = {
+    lat: 37.4563,
+    lng: 126.7052,
+};
+
 describe("waypointEditor", () => {
     it("idle 상태에서 좌표를 추가하면 웨이포인트 목록 끝에 추가한다", () => {
         const editor = createWaypointEditor({ createId: () => "waypoint-1" });
@@ -145,4 +150,203 @@ describe("waypointEditor", () => {
 
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-2", "waypoint-3"]);
     });
+
+    it("존재하는 웨이포인트 id를 선택하면 selected 상태가 된다", () => {
+        const editor = createWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([
+            ["waypoint-1", latLngA],
+        ]);
+
+        const next = editor.selectWaypoint(state, "waypoint-1");
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.status).toEqual({
+            state: "selected",
+            selectedNodeId: "waypoint-1",
+        });
+    });
+
+    it("이미 선택된 웨이포인트 id를 다시 선택하면 idle 상태가 된다", () => {
+        const editor = createWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [["waypoint-1", latLngA]],
+            {
+                state: "selected",
+                selectedNodeId: "waypoint-1",
+            },
+        );
+
+        const next = editor.selectWaypoint(state, "waypoint-1");
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.status).toEqual({ state: "idle" });
+    });
+
+    it("다른 웨이포인트 id를 선택하면 selectedNodeId를 변경한다", () => {
+        const editor = createWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+            ],
+            {
+                state: "selected",
+                selectedNodeId: "waypoint-1",
+            },
+        );
+
+        const next = editor.selectWaypoint(state, "waypoint-2");
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.status).toEqual({
+            state: "selected",
+            selectedNodeId: "waypoint-2",
+        });
+    });
+
+    it("존재하지 않는 웨이포인트 id를 선택하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
+        const editor = createWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([
+            ["waypoint-1", latLngA],
+        ]);
+
+        const next = editor.selectWaypoint(state, "missing-waypoint");
+
+        expect(next.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(next.state).toBe(state);
+    });
+
+    it("웨이포인트가 3개 있을 때 2번 id로 삭제하면 1번과 3번의 상대 순서를 유지한다", () => {
+        const editor = createWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([
+            ["waypoint-1", latLngA],
+            ["waypoint-2", latLngB],
+            ["waypoint-3", latLngC],
+        ]);
+
+        const next = editor.deleteWaypoint(state, "waypoint-2");
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-3"]);
+    });
+
+    it("선택된 웨이포인트를 삭제하면 상태가 idle이 된다", () => {
+        const editor = createWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+            ],
+            {
+                state: "selected",
+                selectedNodeId: "waypoint-2",
+            },
+        );
+
+        const next = editor.deleteWaypoint(state, "waypoint-2");
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1"]);
+        expect(next.state.status).toEqual({ state: "idle" });
+    });
+
+    it("선택되지 않은 웨이포인트를 삭제하면 기존 선택 상태를 유지한다", () => {
+        const editor = createWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+                ["waypoint-3", latLngC],
+            ],
+            {
+                state: "selected",
+                selectedNodeId: "waypoint-1",
+            },
+        );
+
+        const next = editor.deleteWaypoint(state, "waypoint-2");
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-3"]);
+        expect(next.state.status).toEqual({
+            state: "selected",
+            selectedNodeId: "waypoint-1",
+        });
+    });
+
+    it("존재하지 않는 웨이포인트 id로 삭제하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
+        const editor = createWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([
+            ["waypoint-1", latLngA],
+        ]);
+
+        const next = editor.deleteWaypoint(state, "missing-waypoint");
+
+        expect(next.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(next.state).toBe(state);
+    });
+
+    it("웨이포인트가 여러 개 있을 때 전체 삭제하면 nodes는 빈 배열이 되고 상태는 idle이 된다", () => {
+        const editor = createWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([
+            ["waypoint-1", latLngA],
+            ["waypoint-2", latLngB],
+        ]);
+
+        const next = editor.deleteAllWaypoint(state);
+
+        expect(next.result).toBeUndefined();
+        expect(next.state.nodes).toEqual([]);
+        expect(next.state.status).toEqual({ state: "idle" });
+    });
+
+    it("selected 상태에서 전체 삭제하면 nodes는 빈 배열이 되고 상태는 idle이 된다", () => {
+        const editor = createWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+            ],
+            {
+                state: "selected",
+                selectedNodeId: "waypoint-1",
+            },
+        );
+
+        const next = editor.deleteAllWaypoint(state);
+
+        expect(next.result).toBeUndefined();
+        expect(next.state.nodes).toEqual([]);
+        expect(next.state.status).toEqual({ state: "idle" });
+    });
+
+    it("빈 목록에서 전체 삭제하면 nodes는 빈 배열이고 상태는 idle이다", () => {
+        const editor = createWaypointEditor({ createId: () => "unused" });
+        const state = editor.createInitialState();
+
+        const next = editor.deleteAllWaypoint(state);
+
+        expect(next.result).toBeUndefined();
+        expect(next.state.nodes).toEqual([]);
+        expect(next.state.status).toEqual({ state: "idle" });
+    });
 });
+
+function createStateWithWaypoints(
+    waypoints: [string, LatLng][],
+    status: WaypointEditorState["status"] = { state: "idle" },
+): WaypointEditorState {
+    return {
+        nodes: waypoints.map(([id, latLng]) => ({
+            id,
+            latLng,
+        })),
+        status,
+    };
+}
