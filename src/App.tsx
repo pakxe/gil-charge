@@ -4,6 +4,7 @@ import { PATHS } from "@/shared/utils/route";
 import { SelectSearchTypePage } from "@/features/select_search_type/pages/SelectSearchTypePage";
 import { MobileLayout } from "@/shared/components/MobileLayout/MobileLayout";
 import { ShowMapPocPage } from "@/features/poc/pages/ShowMapPocPage";
+import { WaypointEditorPage } from "@/features/waypoint_editor/pages/WaypointEditorPage";
 import PomoGame from "./game/src/App";
 
 const router = createBrowserRouter([
@@ -14,6 +15,10 @@ const router = createBrowserRouter([
     {
         path: PATHS.showMapPoc,
         element: <ShowMapPocPage />,
+    },
+    {
+        path: PATHS.waypointEditorPoc,
+        element: <WaypointEditorPage />,
     },
     {
         element: <MobileLayout />,

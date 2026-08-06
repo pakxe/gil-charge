@@ -27,6 +27,7 @@ export const PATHS = {
     home: "/",
     pomo: "/pomo",
     showMapPoc: "/poc/show-map",
+    waypointEditorPoc: "/poc/waypoint-editor",
     selectSearchType: "/select-search-type",
 
     // TODO: 아래는 예시를 위한 path이므로 익숙해지면 제거해라.
@@ -55,6 +56,7 @@ export const linkTo: {
     home: () => PATHS.home,
     pomo: () => PATHS.pomo,
     showMapPoc: () => PATHS.showMapPoc,
+    waypointEditorPoc: () => PATHS.waypointEditorPoc,
     selectSearchType: () => PATHS.selectSearchType,
     userDetail: (args) => generateLink(PATHS.userDetail, args),
     postComment: (args) => generateLink(PATHS.postComment, args),
