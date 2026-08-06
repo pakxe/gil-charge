@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { createWaypointEditor, type WaypointEditorState } from "@/features/waypoint_editor/model/waypointEditor";
+import {
+    type AddWaypointResult,
+    type BeginWaypointMoveResult,
+    type CommitWaypointMoveResult,
+    type DeleteAllWaypointResult,
+    type DeleteWaypointResult,
+    type SelectWaypointResult,
+    waypointEditor,
+    type WaypointEditorState,
+    type WaypointNodeId,
+} from "@/features/waypoint_editor/model/waypointEditor";
 import type { LatLng } from "@/shared/model/map";
 
 const latLngA: LatLng = {
@@ -24,7 +34,7 @@ const latLngD: LatLng = {
 
 describe("waypointEditor", () => {
     it("idle 상태에서 좌표를 추가하면 웨이포인트 목록 끝에 추가한다", () => {
-        const editor = createWaypointEditor({ createId: () => "waypoint-1" });
+        const editor = createTestWaypointEditor({ createId: () => "waypoint-1" });
         const state = editor.createInitialState();
 
         const next = editor.addWaypoint(state, latLngA);
@@ -46,7 +56,7 @@ describe("waypointEditor", () => {
     });
 
     it("selected 상태에서 좌표를 추가하면 웨이포인트를 추가하고 idle 상태로 변경한다", () => {
-        const editor = createWaypointEditor({ createId: () => "waypoint-2" });
+        const editor = createTestWaypointEditor({ createId: () => "waypoint-2" });
         const state: WaypointEditorState = {
             nodes: [
                 {
@@ -77,7 +87,7 @@ describe("waypointEditor", () => {
 
     it("웨이포인트가 19개일 때 1개를 추가하면 총 20개가 되고 성공 결과를 반환한다", () => {
         const id = 20;
-        const editor = createWaypointEditor({ createId: () => `waypoint-${id}` });
+        const editor = createTestWaypointEditor({ createId: () => `waypoint-${id}` });
         const state: WaypointEditorState = {
             nodes: Array.from({ length: 19 }, (_, index) => ({
                 id: `waypoint-${index + 1}`,
@@ -99,7 +109,7 @@ describe("waypointEditor", () => {
     });
 
     it("웨이포인트가 20개일 때 추가하면 OVERFLOW를 반환하고 상태를 변경하지 않는다", () => {
-        const editor = createWaypointEditor({ createId: () => "waypoint-21" });
+        const editor = createTestWaypointEditor({ createId: () => "waypoint-21" });
         const state: WaypointEditorState = {
             nodes: Array.from({ length: 20 }, (_, index) => ({
                 id: `waypoint-${index + 1}`,
@@ -118,7 +128,7 @@ describe("waypointEditor", () => {
     });
 
     it("생성된 노드 id는 주입한 id 생성기의 반환값을 사용한다", () => {
-        const editor = createWaypointEditor({ createId: () => "fixed-id" });
+        const editor = createTestWaypointEditor({ createId: () => "fixed-id" });
         const state = editor.createInitialState();
 
         const next = editor.addWaypoint(state, latLngA);
@@ -133,7 +143,7 @@ describe("waypointEditor", () => {
     });
 
     it("기존 노드가 있을 때 새 좌표를 추가하면 기존 순서를 유지하고 새 노드를 끝에 추가한다", () => {
-        const editor = createWaypointEditor({ createId: () => "waypoint-3" });
+        const editor = createTestWaypointEditor({ createId: () => "waypoint-3" });
         const state: WaypointEditorState = {
             nodes: [
                 {
@@ -157,7 +167,7 @@ describe("waypointEditor", () => {
     });
 
     it("존재하는 웨이포인트 id를 선택하면 selected 상태가 된다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints([
             ["waypoint-1", latLngA],
         ]);
@@ -172,7 +182,7 @@ describe("waypointEditor", () => {
     });
 
     it("이미 선택된 웨이포인트 id를 다시 선택하면 idle 상태가 된다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints(
             [["waypoint-1", latLngA]],
             {
@@ -188,7 +198,7 @@ describe("waypointEditor", () => {
     });
 
     it("다른 웨이포인트 id를 선택하면 selectedNodeId를 변경한다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints(
             [
                 ["waypoint-1", latLngA],
@@ -210,7 +220,7 @@ describe("waypointEditor", () => {
     });
 
     it("존재하지 않는 웨이포인트 id를 선택하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints([
             ["waypoint-1", latLngA],
         ]);
@@ -225,7 +235,7 @@ describe("waypointEditor", () => {
     });
 
     it("존재하는 웨이포인트 id로 이동을 시작하면 moving 상태가 된다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints([
             ["waypoint-1", latLngA],
         ]);
@@ -243,7 +253,7 @@ describe("waypointEditor", () => {
     });
 
     it("존재하지 않는 웨이포인트 id로 이동을 시작하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints([
             ["waypoint-1", latLngA],
         ]);
@@ -258,7 +268,7 @@ describe("waypointEditor", () => {
     });
 
     it("이미 moving 상태이면 이동 시작 요청을 실패시키고 상태를 변경하지 않는다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints(
             [["waypoint-1", latLngA]],
             {
@@ -279,7 +289,7 @@ describe("waypointEditor", () => {
     });
 
     it("이동 중 좌표를 변경하면 draft 좌표만 변경하고 확정 nodes는 변경하지 않는다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints(
             [["waypoint-1", latLngA]],
             {
@@ -307,7 +317,7 @@ describe("waypointEditor", () => {
     });
 
     it("moving 상태가 아니거나 이동 중인 id가 다르면 이동 중 좌표 변경 요청을 무시한다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const idleState = createStateWithWaypoints([
             ["waypoint-1", latLngA],
         ]);
@@ -329,7 +339,7 @@ describe("waypointEditor", () => {
     });
 
     it("이동을 확정하면 draft 좌표를 확정 nodes에 반영하고 idle 상태가 된다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints(
             [
                 ["waypoint-1", latLngA],
@@ -360,7 +370,7 @@ describe("waypointEditor", () => {
     });
 
     it("선택된 웨이포인트를 이동하면 확정 후 선택 상태를 유지한다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const selectedState = createStateWithWaypoints(
             [["waypoint-1", latLngA]],
             {
@@ -386,7 +396,7 @@ describe("waypointEditor", () => {
     });
 
     it("선택되지 않은 웨이포인트를 이동하면 확정 후 기존 선택을 해제한다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const selectedState = createStateWithWaypoints(
             [
                 ["waypoint-1", latLngA],
@@ -416,7 +426,7 @@ describe("waypointEditor", () => {
     });
 
     it("moving 상태가 아닐 때 이동 확정을 요청하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints([
             ["waypoint-1", latLngA],
         ]);
@@ -431,7 +441,7 @@ describe("waypointEditor", () => {
     });
 
     it("유효하지 않은 위치로 이동을 확정하면 기존 좌표를 유지하고 선택 상태를 복원한다", () => {
-        const editor = createWaypointEditor({
+        const editor = createTestWaypointEditor({
             createId: () => "unused",
             isValidLatLng: () => false,
         });
@@ -464,7 +474,7 @@ describe("waypointEditor", () => {
     });
 
     it("웨이포인트가 3개 있을 때 2번 id로 삭제하면 1번과 3번의 상대 순서를 유지한다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints([
             ["waypoint-1", latLngA],
             ["waypoint-2", latLngB],
@@ -478,7 +488,7 @@ describe("waypointEditor", () => {
     });
 
     it("선택된 웨이포인트를 삭제하면 상태가 idle이 된다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints(
             [
                 ["waypoint-1", latLngA],
@@ -498,7 +508,7 @@ describe("waypointEditor", () => {
     });
 
     it("선택되지 않은 웨이포인트를 삭제하면 기존 선택 상태를 유지한다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints(
             [
                 ["waypoint-1", latLngA],
@@ -522,7 +532,7 @@ describe("waypointEditor", () => {
     });
 
     it("존재하지 않는 웨이포인트 id로 삭제하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints([
             ["waypoint-1", latLngA],
         ]);
@@ -537,7 +547,7 @@ describe("waypointEditor", () => {
     });
 
     it("웨이포인트가 여러 개 있을 때 전체 삭제하면 nodes는 빈 배열이 되고 상태는 idle이 된다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints([
             ["waypoint-1", latLngA],
             ["waypoint-2", latLngB],
@@ -551,7 +561,7 @@ describe("waypointEditor", () => {
     });
 
     it("selected 상태에서 전체 삭제하면 nodes는 빈 배열이 되고 상태는 idle이 된다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints(
             [
                 ["waypoint-1", latLngA],
@@ -571,7 +581,7 @@ describe("waypointEditor", () => {
     });
 
     it("빈 목록에서 전체 삭제하면 nodes는 빈 배열이고 상태는 idle이다", () => {
-        const editor = createWaypointEditor({ createId: () => "unused" });
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = editor.createInitialState();
 
         const next = editor.deleteAllWaypoint(state);
@@ -581,6 +591,64 @@ describe("waypointEditor", () => {
         expect(next.state.status).toEqual({ state: "idle" });
     });
 });
+
+type CreateTestWaypointEditorOptions = {
+    createId: () => WaypointNodeId;
+    maxWaypointCount?: number;
+    isValidLatLng?: (latLng: LatLng) => boolean;
+};
+
+function createTestWaypointEditor({
+    createId,
+    maxWaypointCount,
+    isValidLatLng,
+}: CreateTestWaypointEditorOptions): {
+    createInitialState: () => WaypointEditorState;
+    addWaypoint: (
+        state: WaypointEditorState,
+        latLng: LatLng,
+    ) => { state: WaypointEditorState; result: AddWaypointResult };
+    selectWaypoint: (
+        state: WaypointEditorState,
+        id: WaypointNodeId,
+    ) => { state: WaypointEditorState; result: SelectWaypointResult };
+    deleteWaypoint: (
+        state: WaypointEditorState,
+        id: WaypointNodeId,
+    ) => { state: WaypointEditorState; result: DeleteWaypointResult };
+    deleteAllWaypoint: (state: WaypointEditorState) => {
+        state: WaypointEditorState;
+        result: DeleteAllWaypointResult;
+    };
+    beginWaypointMove: (
+        state: WaypointEditorState,
+        id: WaypointNodeId,
+        latLng: LatLng,
+    ) => { state: WaypointEditorState; result: BeginWaypointMoveResult };
+    updateWaypointMove: (state: WaypointEditorState, id: WaypointNodeId, latLng: LatLng) => WaypointEditorState;
+    commitWaypointMove: (state: WaypointEditorState) => {
+        state: WaypointEditorState;
+        result: CommitWaypointMoveResult;
+    };
+} {
+    return {
+        createInitialState: waypointEditor.createInitialState,
+        addWaypoint: (state, latLng) =>
+            waypointEditor.addWaypoint(state, latLng, {
+                createId,
+                maxWaypointCount,
+            }),
+        selectWaypoint: waypointEditor.selectWaypoint,
+        deleteWaypoint: waypointEditor.deleteWaypoint,
+        deleteAllWaypoint: waypointEditor.deleteAllWaypoint,
+        beginWaypointMove: waypointEditor.beginWaypointMove,
+        updateWaypointMove: waypointEditor.updateWaypointMove,
+        commitWaypointMove: (state) =>
+            waypointEditor.commitWaypointMove(state, {
+                isValidLatLng,
+            }),
+    };
+}
 
 function createStateWithWaypoints(
     waypoints: [string, LatLng][],
