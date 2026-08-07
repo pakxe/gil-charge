@@ -28,7 +28,7 @@ export function WaypointEditorPage() {
                     actions.addWaypoint(latLng);
                 }}
             >
-                <WaypointEdgesLayer waypoints={data.visibleWaypoints} />
+                {/* <WaypointEdgesLayer waypoints={data.visibleWaypoints} /> */}
                 <WaypointNodesLayer
                     waypoints={data.visibleWaypoints}
                     status={status}
@@ -39,21 +39,6 @@ export function WaypointEditorPage() {
                     onWaypointMoveCommit={actions.commitWaypointMove}
                 />
             </Map>
-
-            <Box
-                role="button"
-                tabIndex={0}
-                className={cn(
-                    "absolute left-4 top-4 z-10 text-sm font-medium",
-                    data.waypoints.length === 0 ? "text-black" : "text-gil-yellow-400 cursor-pointer",
-                )}
-                onClick={() => {
-                    if (data.waypoints.length === 0) return;
-                    actions.deleteAllWaypoint();
-                }}
-            >
-                전체 삭제
-            </Box>
         </main>
     );
 }
