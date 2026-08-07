@@ -45,6 +45,60 @@ export function WaypointMarkers({
         [map],
     );
 
+    const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>, waypointId: WaypointNodeId) => {
+        event.stopPropagation();
+
+        if (event.button !== 0 || !map) {
+            return;
+        }
+
+        isDraggingRef.current = false;
+        startPosRef.current = {
+            x: event.clientX,
+            y: event.clientY,
+        };
+
+        const handlePointerMove = (e: PointerEvent) => {
+            const startPos = startPosRef.current;
+            if (!startPos) return;
+
+            if (!isDraggingRef.current) {
+                const dx = Math.abs(e.clientX - startPos.x);
+                const dy = Math.abs(e.clientY - startPos.y);
+
+                if (dx <= MOVE_BEGIN_THRESHOLD_PX && dy <= MOVE_BEGIN_THRESHOLD_PX) {
+                    return;
+                }
+            }
+
+            const latLng = getLatLngFromPointer(e.clientX, e.clientY);
+            if (!latLng) return;
+
+            if (!isDraggingRef.current) {
+                isDraggingRef.current = true;
+                onWaypointMoveBegin(waypointId, latLng);
+            }
+
+            onWaypointMoveUpdate(waypointId, latLng);
+        };
+
+        const handlePointerUpOrCancel = () => {
+            window.removeEventListener("pointermove", handlePointerMove);
+            window.removeEventListener("pointerup", handlePointerUpOrCancel);
+            window.removeEventListener("pointercancel", handlePointerUpOrCancel);
+
+            startPosRef.current = null;
+
+            if (isDraggingRef.current) {
+                onWaypointMoveCommit();
+            }
+        };
+
+        window.addEventListener("pointermove", handlePointerMove);
+        window.addEventListener("pointerup", handlePointerUpOrCancel);
+        window.addEventListener("pointercancel", handlePointerUpOrCancel);
+    };
+
     return (
         <>
             {waypoints.map((waypoint, index) => {
@@ -72,80 +126,7 @@ export function WaypointMarkers({
 
                                 onWaypointClick(waypoint.id);
                             }}
-                            onPointerDown={(event) => {
-                                event.stopPropagation();
-
-                                if (event.button !== 0 || !map) {
-                                    return;
-                                }
-
-                                isDraggingRef.current = false;
-                                startPosRef.current = {
-                                    x: event.clientX,
-                                    y: event.clientY,
-                                };
-                                event.currentTarget.setPointerCapture(event.pointerId);
-                            }}
-                            onPointerMove={(event) => {
-                                if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-                                    return;
-                                }
-
-                                const startPos = startPosRef.current;
-
-                                if (!startPos) {
-                                    return;
-                                }
-
-                                if (!isDraggingRef.current) {
-                                    const dx = Math.abs(event.clientX - startPos.x);
-                                    const dy = Math.abs(event.clientY - startPos.y);
-
-                                    if (dx <= MOVE_BEGIN_THRESHOLD_PX && dy <= MOVE_BEGIN_THRESHOLD_PX) {
-                                        return;
-                                    }
-                                }
-
-                                const latLng = getLatLngFromPointer(event.clientX, event.clientY);
-
-                                if (!latLng) {
-                                    return;
-                                }
-
-                                if (!isDraggingRef.current) {
-                                    isDraggingRef.current = true;
-                                    onWaypointMoveBegin(waypoint.id, latLng);
-                                }
-
-                                event.preventDefault();
-                                onWaypointMoveUpdate(waypoint.id, latLng);
-                            }}
-                            onPointerUp={(event) => {
-                                event.stopPropagation();
-
-                                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                                    event.currentTarget.releasePointerCapture(event.pointerId);
-                                }
-
-                                startPosRef.current = null;
-
-                                if (isDraggingRef.current) {
-                                    onWaypointMoveCommit();
-                                }
-                            }}
-                            onPointerCancel={(event) => {
-                                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                                    event.currentTarget.releasePointerCapture(event.pointerId);
-                                }
-
-                                startPosRef.current = null;
-
-                                if (isDraggingRef.current) {
-                                    event.preventDefault();
-                                    isDraggingRef.current = false;
-                                    onWaypointMoveCommit();
-                                }
-                            }}
+                            onPointerDown={(event) => handlePointerDown(event, waypoint.id)}
                         >
                             <button
                                 type="button"
