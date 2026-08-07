@@ -1,28 +1,24 @@
-import { useEffect, useRef, useState } from "react";
-import { ToolButton } from "./ToolButton";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { Station } from "@/shared/types/map";
 import { useStationsSearch } from "@/shared/hooks/useStationsSearch";
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
 import { useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
-import { KakaoMap } from "@/features/select_search_type/components/KakaoMap";
-import { useEditArea } from "@/shared/hooks/useEditArea";
-import { KakaoPoints } from "@/features/select_search_type/components/LatLngPathPoints";
-import { KakaoWaypoints } from "@/features/select_search_type/components/WaypointMarkers";
-import { KakaoProjectedRadiusPath } from "@/features/select_search_type/components/RadiusPath";
-
-const DEFAULT_RADIUS_KM = 1.0;
-const MIN_RADIUS_KM = 0.1;
-const MAX_RADIUS_KM = 5.0;
-const RADIUS_STEP_KM = 0.1;
+import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
+import { Map } from "@/shared/ui/Map/Map";
+import { WaypointNodesLayer } from "@/features/waypoint_editor/ui/WaypointNodesLayer";
+import { WaypointEdgesLayer } from "@/features/waypoint_editor/ui/WaypointEdgesLayer";
+import Box from "@/shared/components/Box/Box";
+import { LoadingSpinner } from "@/shared/components/LoadingSpinner/LoadingSpinner";
+import { cn } from "@/shared/utils/cn";
 
 interface DrawPathStepProps {
     onNext: (stations: Station[]) => void;
 }
 
 export function DrawPathStep({ onNext }: DrawPathStepProps) {
-    // const drawing = useMapDrawing();
-    const { state, data, getSubmitValue, actions, canRedo, canUndo } = useEditArea();
+    const { status, data, actions } = useWaypointEditor();
+
     const { fetchStations, isLoading } = useStationsSearch(onNext);
 
     const hasRequestedLocationRef = useRef(false);
@@ -30,16 +26,18 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
     const [zoomLevel, setZoomLevel] = useState(8);
     const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
 
-    const { requestLocation, location, locationAcceptStatus } = useCurrentLocation();
+    const { requestLocation, location } = useCurrentLocation();
 
-    const [isTracking, setIsTracking] = useState(false);
+    const handleRadiusChange = (event: ChangeEvent<HTMLInputElement>) => {
+        setRadiusKm(Number(event.target.value));
+    };
 
     useEffect(() => {
         if (hasRequestedLocationRef.current === true) return;
 
         requestLocation({
             onSuccess: () => {
-                setIsTracking(true);
+                // setIsTracking(true);
             },
             onFinally: () => {
                 hasRequestedLocationRef.current = true;
@@ -48,169 +46,117 @@ export function DrawPathStep({ onNext }: DrawPathStepProps) {
     }, [requestLocation]);
 
     const handleSubmit = async () => {
-        const payload = getSubmitValue();
-
-        await fetchStations(payload, radiusKm);
+        await fetchStations(
+            [
+                {
+                    type: "waypoint",
+                    points: data.waypoints.map((w) => w.latLng),
+                    id: "test",
+                },
+            ],
+            DEFAULT_RADIUS_KM,
+        );
     };
 
-    const radiusPathPoints = data.penPaths.length > 0 ? data.penPaths : Array.from(data.waypoints.values());
-    return (
-        <div className="relative flex min-h-0 flex-1 flex-col items-center justify-end overflow-hidden rounded-t-lg bg-gi-gray-900 touch-none">
-            {isLoading && (
-                <div className="absolute inset-0 z-50 bg-black/60 flex flex-col items-center justify-center backdrop-blur-sm">
-                    <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-white mt-4 font-bold">영역 안의 주유소를 찾는 중...</p>
-                </div>
-            )}
+    const currentStrokeWeight = useMemo(() => calculateStrokeWeight(zoomLevel, radiusKm), [zoomLevel, radiusKm]);
+    const hasWaypoint = data.waypoints.length > 0;
 
-            <KakaoMap
+    // const radiusPathPoints = data.penPaths.length > 0 ? data.penPaths : Array.from(data.waypoints.values());
+    return (
+        <div className="relative flex min-h-0 flex-1 flex-col items-center justify-end overflow-hidden bg-gi-gray-900 touch-none">
+            <Map
+                loadingFallback={
+                    <div className="absolute inset-0 z-50 bg-black/60 flex flex-col items-center justify-center backdrop-blur-sm">
+                        <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-white mt-4 font-bold">영역 안의 주유소를 찾는 중...</p>
+                    </div>
+                }
+                errorFallback={<div>error</div>}
                 center={location ?? DEFAULT_MAP_CENTER}
-                isGeneralDraggable={true}
-                currentLocation={location ?? undefined}
+                // currentLocation={location ?? undefined}
                 zoomLevel={zoomLevel}
-                isTracking={isTracking}
-                isDraggable={state.mode !== "pen"}
+                // isTracking={isTracking}
                 onZoomLevelChange={(zoomLevel) => setZoomLevel(zoomLevel)}
                 onClick={(latLng) => {
-                    setIsTracking(false);
-                    actions.onMapClick(latLng);
-                }}
-                onDragStart={(latLng) => {
-                    setIsTracking(false);
-                    actions.onMapDragStart(latLng);
-                }}
-                onDragMove={(latLng) => {
-                    actions.onMapDragMove(latLng);
-                }}
-                onDragEnd={() => {
-                    if (state.mode !== "pen") return;
-
-                    actions.onMapDragEnd();
+                    actions.addWaypoint(latLng);
                 }}
             >
-                <KakaoProjectedRadiusPath points={radiusPathPoints} radiusKm={radiusKm} />
+                <WaypointNodesLayer
+                    waypoints={data.visibleWaypoints}
+                    status={status}
+                    onWaypointClick={actions.selectWaypoint}
+                    onWaypointDelete={actions.deleteWaypoint}
+                    onWaypointMoveBegin={actions.beginWaypointMove}
+                    onWaypointMoveUpdate={actions.updateWaypointMove}
+                    onWaypointMoveCommit={actions.commitWaypointMove}
+                />
+                <WaypointEdgesLayer waypoints={data.visibleWaypoints} weight={currentStrokeWeight} />
+            </Map>
+            <div className="absolute bottom-0 z-50 flex flex-row justify-between w-full px-4 py-10 gap-4">
+                <Box className="h-fit min-w-0 flex-1 flex flex-col rounded-2xl gap-0">
+                    <div className="flex flex-row justify-between w-full">
+                        <label htmlFor="radius-range" className=" text-white text-xs">
+                            반경
+                        </label>
+                        <span className="font-bold text-gil-yellow-400 text-xs">{formatRadius(radiusKm)} km</span>
+                    </div>
 
-                {state.mode === "pen" && (
-                    <KakaoPoints
-                        points={data.penPaths.length > 0 ? data.penPaths : Array.from(data.waypoints.values())}
-                    />
-                )}
-                {state.mode === "waypoint" && (
-                    <KakaoWaypoints
-                        isDraggable={true}
-                        waypoints={data.waypoints}
-                        selectedIndex={state.selectedWaypointIndex}
-                        onWaypointDragStart={(index, latLng) => actions.onWaypointDragStart(index, latLng)}
-                        onWaypointDragMove={(index, latLng) => actions.onWaypointDragMove(index, latLng)}
-                        onWaypointDragEnd={() => actions.onWaypointDragEnd()}
-                        onWaypointClick={(index) => actions.onWaypointClick(index)}
-                        onWaypointDelete={(index) => actions.deleteWaypoint(index)}
-                    />
-                )}
-            </KakaoMap>
-
-            <button
-                className="absolute top-4 left-4 z-30 flex items-center gap-1.5 rounded-full bg-gray-900/85 px-3 py-2 text-sm font-bold text-white shadow-lg backdrop-blur-sm border border-white/10 disabled:opacity-60"
-                onClick={() => actions.undo()}
-                disabled={!canUndo}
-            >
-                ←
-            </button>
-            <button
-                className="absolute top-4 left-16 z-30 flex items-center gap-1.5 rounded-full bg-gray-900/85 px-3 py-2 text-sm font-bold text-white shadow-lg backdrop-blur-sm border border-white/10 disabled:opacity-60"
-                onClick={() => actions.redo()}
-                disabled={!canRedo}
-            >
-                →
-            </button>
-
-            <button
-                type="button"
-                onClick={() => setIsTracking(true)}
-                disabled={
-                    locationAcceptStatus === "loading" ||
-                    locationAcceptStatus === "unavailable" ||
-                    locationAcceptStatus === "denied" ||
-                    locationAcceptStatus === "error"
-                }
-                aria-label="내 위치로 돌아가기"
-                title="내 위치로 돌아가기"
-                className="absolute top-4 right-4 z-30 flex items-center gap-1.5 rounded-full bg-gray-900/85 px-3 py-2 text-sm font-bold text-white shadow-lg backdrop-blur-sm border border-white/10 disabled:opacity-60"
-            >
-                <span>{locationAcceptStatus === "loading" ? "…" : isTracking ? "따라가는중" : "안따라가는중"}</span>
-                <span>내 위치</span>
-            </button>
-            {/* 
-
-            {locationStatus === "denied" && (
-                <div className="absolute top-16 left-4 right-4 z-30 rounded-xl bg-gray-900/85 px-4 py-3 text-sm text-white shadow-lg backdrop-blur-sm">
-                    위치 권한이 거부되어 현재 위치로 이동할 수 없습니다.
-                </div>
-            )}
-
-            {locationStatus === "unavailable" && (
-                <div className="absolute top-16 left-4 right-4 z-30 rounded-xl bg-gray-900/85 px-4 py-3 text-sm text-white shadow-lg backdrop-blur-sm">
-                    이 브라우저에서는 현재 위치를 사용할 수 없습니다.
-                </div>
-            )}
-
-            {locationStatus === "error" && (
-                <div className="absolute top-16 left-4 right-4 z-30 rounded-xl bg-gray-900/85 px-4 py-3 text-sm text-white shadow-lg backdrop-blur-sm">
-                    현재 위치를 가져오지 못했습니다. 다시 시도해주세요.
-                </div>
-            )} */}
-
-            <div className="z-20 w-full px-6 pb-6 flex flex-col gap-6 pointer-events-none">
-                <div className="flex items-center justify-between w-full pointer-events-auto">
-                    <div className="flex flex-col gap-1 w-2/3 max-w-50 bg-gray-900/80 p-3 rounded-2xl backdrop-blur-sm shadow-lg">
-                        <span className="text-white text-sm font-bold ml-1">{radiusKm.toFixed(1)}km</span>
+                    <div className="w-full">
                         <input
+                            id="radius-range"
                             type="range"
-                            min={MIN_RADIUS_KM}
-                            max={MAX_RADIUS_KM}
-                            step={RADIUS_STEP_KM}
+                            min="1"
+                            max="5"
+                            step="0.1"
                             value={radiusKm}
-                            onChange={(e) => setRadiusKm(Number(e.target.value))}
-                            className="w-full accent-yellow-500"
-                        />
-                    </div>
-
-                    <div className="flex gap-2 bg-gray-900/80 p-2 rounded-full backdrop-blur-sm shadow-lg">
-                        {/* <ToolButton
-                            isActive={state.mode === "pen"}
-                            icon="✏️"
-                            onClick={() => {
-                                setIsTracking(false);
-                                actions.selectMode("pen");
-                            }}
-                        /> */}
-                        <ToolButton
-                            isActive={state.mode === "waypoint"}
-                            icon="📍"
-                            onClick={() => {
-                                setIsTracking(false);
-                                actions.selectMode("waypoint");
+                            onChange={handleRadiusChange}
+                            className="mt-2 block h-4.5 w-full cursor-pointer appearance-none rounded-full bg-transparent bg-center bg-no-repeat focus:outline-none focus-visible:ring-2 focus-visible:ring-gil-yellow-400/70 [&::-moz-range-progress]:h-[6px] [&::-moz-range-progress]:rounded-full [&::-moz-range-progress]:bg-gil-yellow-400 [&::-moz-range-thumb]:h-[18px] [&::-moz-range-thumb]:w-[18px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gil-yellow-400 [&::-moz-range-thumb]:shadow-[inset_0_0_0_2px_#fff] [&::-moz-range-track]:h-[6px] [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-black [&::-webkit-slider-runnable-track]:h-[6px] [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:h-[18px] [&::-webkit-slider-thumb]:w-[18px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gil-yellow-400 [&::-webkit-slider-thumb]:shadow-[inset_0_0_0_2px_#fff]"
+                            style={{
+                                backgroundImage: `linear-gradient(to right, #f0c243 0%, #f0c243 ${((radiusKm - 1) / 4) * 100}%, #000 ${((radiusKm - 1) / 4) * 100}%, #000 100%)`,
+                                backgroundSize: "100% 6px",
+                                backgroundClip: "content-box",
                             }}
                         />
-                        {/* <ToolButton
-                            isActive={drawing.tool === "eraser"}
-                            icon="🧽"
-                            onClick={() => {
-                                setIsTracking(false);
-                                drawing.handleChangeTool("eraser");
-                            }}
-                        /> */}
                     </div>
-                </div>
-
+                </Box>
                 <button
                     onClick={handleSubmit}
                     disabled={isLoading}
-                    className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-500 text-black font-bold rounded-full transition-colors text-lg shadow-lg pointer-events-auto"
+                    aria-label={isLoading ? "탐색 중" : "찾기"}
+                    className={cn(
+                        "flex items-center justify-center font-bold rounded-2xl transition-colors text-lg shadow-lg pointer-events-auto px-6 min-w-20",
+                        hasWaypoint ? "bg-gil-yellow-400 text-gil-brown-900" : "bg-gil-gray-850 text-gil-gray-600",
+                    )}
                 >
-                    {isLoading ? "탐색 중..." : "이 영역에서 찾기"}
+                    {isLoading ? <LoadingSpinner /> : "찾기"}
                 </button>
             </div>
+            <Box
+                role="button"
+                tabIndex={0}
+                className={cn(
+                    "absolute left-4 top-4 z-10 text-sm font-medium transition-colors ",
+                    hasWaypoint ? "text-gil-yellow-400 cursor-pointer" : "text-black",
+                )}
+                onClick={() => {
+                    if (!hasWaypoint) return;
+                    actions.deleteAllWaypoint();
+                }}
+            >
+                전체 삭제
+            </Box>
         </div>
     );
+}
+
+function formatRadius(radiusKm: number) {
+    return Number.isInteger(radiusKm) ? String(radiusKm) : radiusKm.toFixed(1);
+}
+
+const BASE_LEVEL = 6;
+const BASE_STROKE_WEIGHT = 250;
+const DEFAULT_RADIUS_KM = 1;
+
+function calculateStrokeWeight(currentLevel: number, radiusKm: number) {
+    return BASE_STROKE_WEIGHT * radiusKm * Math.pow(2, BASE_LEVEL - currentLevel);
 }
