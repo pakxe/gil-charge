@@ -10,10 +10,10 @@ export type WaypointNode = {
 };
 
 export type WaypointEditorStatus =
-    | { state: "idle" }
-    | { state: "selected"; selectedNodeId: WaypointNodeId }
+    | { statusName: "idle" }
+    | { statusName: "selected"; selectedNodeId: WaypointNodeId }
     | {
-          state: "moving";
+          statusName: "moving";
           movingNodeId: WaypointNodeId;
           latLng: LatLng;
           selectionAfterMove: WaypointNodeId | null;
@@ -43,7 +43,7 @@ type CommitWaypointMoveOptions = {
 function createInitialState(): WaypointEditorState {
     return {
         nodes: [],
-        status: { state: "idle" },
+        status: { statusName: "idle" },
     };
 }
 
@@ -71,7 +71,7 @@ function addWaypoint(
         state: {
             ...state,
             nodes: [...state.nodes, node],
-            status: { state: "idle" },
+            status: { statusName: "idle" },
         },
         result: {
             code: 0,
@@ -94,11 +94,11 @@ function selectWaypoint(
         };
     }
 
-    if (state.status.state === "selected" && state.status.selectedNodeId === id) {
+    if (state.status.statusName === "selected" && state.status.selectedNodeId === id) {
         return {
             state: {
                 ...state,
-                status: { state: "idle" },
+                status: { statusName: "idle" },
             },
             result: {
                 code: 0,
@@ -110,7 +110,7 @@ function selectWaypoint(
         state: {
             ...state,
             status: {
-                state: "selected",
+                statusName: "selected",
                 selectedNodeId: id,
             },
         },
@@ -151,7 +151,7 @@ function deleteAllWaypoint(state: WaypointEditorState): { state: WaypointEditorS
         state: {
             ...state,
             nodes: [],
-            status: { state: "idle" },
+            status: { statusName: "idle" },
         },
         result: undefined,
     };
@@ -162,7 +162,7 @@ function beginWaypointMove(
     id: WaypointNodeId,
     latLng: LatLng,
 ): { state: WaypointEditorState; result: BeginWaypointMoveResult } {
-    if (!hasWaypoint(state, id) || state.status.state === "moving") {
+    if (!hasWaypoint(state, id) || state.status.statusName === "moving") {
         return {
             state,
             result: {
@@ -176,10 +176,10 @@ function beginWaypointMove(
         state: {
             ...state,
             status: {
-                state: "moving",
+                statusName: "moving",
                 movingNodeId: id,
                 latLng: copyLatLng(latLng),
-                selectionAfterMove: state.status.state === "selected" && state.status.selectedNodeId === id ? id : null,
+                selectionAfterMove: state.status.statusName === "selected" && state.status.selectedNodeId === id ? id : null,
             },
         },
         result: {
@@ -189,7 +189,7 @@ function beginWaypointMove(
 }
 
 function updateWaypointMove(state: WaypointEditorState, id: WaypointNodeId, latLng: LatLng): WaypointEditorState {
-    if (state.status.state !== "moving" || state.status.movingNodeId !== id) {
+    if (state.status.statusName !== "moving" || state.status.movingNodeId !== id) {
         return state;
     }
 
@@ -206,7 +206,7 @@ function commitWaypointMove(
     state: WaypointEditorState,
     { isValidLatLng = () => true }: CommitWaypointMoveOptions = {},
 ): { state: WaypointEditorState; result: CommitWaypointMoveResult } {
-    if (state.status.state !== "moving") {
+    if (state.status.statusName !== "moving") {
         return {
             state,
             result: {
@@ -270,12 +270,12 @@ function getStatusAfterDelete(
     status: WaypointEditorStatus,
     deletedNodeId: WaypointNodeId,
 ): WaypointEditorStatus {
-    if (status.state === "selected" && status.selectedNodeId === deletedNodeId) {
-        return { state: "idle" };
+    if (status.statusName === "selected" && status.selectedNodeId === deletedNodeId) {
+        return { statusName: "idle" };
     }
 
-    if (status.state === "moving" && status.movingNodeId === deletedNodeId) {
-        return { state: "idle" };
+    if (status.statusName === "moving" && status.movingNodeId === deletedNodeId) {
+        return { statusName: "idle" };
     }
 
     return status;
@@ -283,11 +283,11 @@ function getStatusAfterDelete(
 
 function getStatusAfterMove(selectionAfterMove: WaypointNodeId | null): WaypointEditorStatus {
     if (!selectionAfterMove) {
-        return { state: "idle" };
+        return { statusName: "idle" };
     }
 
     return {
-        state: "selected",
+        statusName: "selected",
         selectedNodeId: selectionAfterMove,
     };
 }

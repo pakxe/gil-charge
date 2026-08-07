@@ -13,7 +13,7 @@ const MOVE_BEGIN_THRESHOLD_PX = 4;
 
 type Props = {
     waypoints: WaypointNode[];
-    state: WaypointEditorStatus;
+    status: WaypointEditorStatus;
     onWaypointClick: (id: WaypointNodeId) => void;
     onWaypointDelete: (id: WaypointNodeId) => void;
     onWaypointMoveBegin: (id: WaypointNodeId, latLng: LatLng) => void;
@@ -21,9 +21,9 @@ type Props = {
     onWaypointMoveCommit: () => void;
 };
 
-export function WaypointMarkers({
+export function WaypointNodesLayer({
     waypoints,
-    state,
+    status,
     onWaypointClick,
     onWaypointDelete,
     onWaypointMoveBegin,
@@ -102,8 +102,8 @@ export function WaypointMarkers({
     return (
         <>
             {waypoints.map((waypoint, index) => {
-                const isSelected = isSelectedWaypoint(state, waypoint.id);
-                const isMoving = isMovingWaypoint(state, waypoint.id);
+                const isSelected = isSelectedWaypoint(status, waypoint.id);
+                const isMoving = isMovingWaypoint(status, waypoint.id);
                 const isActive = isSelected || isMoving;
 
                 return (
@@ -133,8 +133,8 @@ export function WaypointMarkers({
                                 className={[
                                     "flex h-8 min-w-8 cursor-grab items-center justify-center rounded-full border-2 px-2 text-xs font-black shadow-lg active:cursor-grabbing",
                                     isActive
-                                        ? "border-white bg-gil-yellow-400 text-gray-950 ring-2 ring-gil-yellow-400"
-                                        : "border-gray-950 bg-gil-yellow-400 text-gray-950",
+                                        ? "border-white border-3 bg-gil-yellow-400 text-gray-950 ring-3 ring-gil-brown-900"
+                                        : "border-white border-3 bg-gil-yellow-400 text-gray-950",
                                 ].join(" ")}
                             >
                                 {index + 1}
@@ -164,10 +164,10 @@ export function WaypointMarkers({
     );
 }
 
-function isSelectedWaypoint(state: WaypointEditorStatus, waypointId: WaypointNodeId) {
-    return state.state === "selected" && state.selectedNodeId === waypointId;
+function isSelectedWaypoint(status: WaypointEditorStatus, waypointId: WaypointNodeId) {
+    return status.statusName === "selected" && status.selectedNodeId === waypointId;
 }
 
-function isMovingWaypoint(state: WaypointEditorStatus, waypointId: WaypointNodeId) {
-    return state.state === "moving" && state.movingNodeId === waypointId;
+function isMovingWaypoint(status: WaypointEditorStatus, waypointId: WaypointNodeId) {
+    return status.statusName === "moving" && status.movingNodeId === waypointId;
 }

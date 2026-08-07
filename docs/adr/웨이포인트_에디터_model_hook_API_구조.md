@@ -72,4 +72,4 @@ setEditorState((prev) => {
 
 - model은 순수 함수 기반이면서 `waypointEditor.*` 형태의 응집된 API를 제공한다.
 - hook은 상태 저장, model 명령 연결, 렌더링용 데이터 제공만 담당한다.
-- UI 컴포넌트는 hook의 `state`, `data`, `actions`만 사용한다.
+- UI 컴포넌트는 hook의 `status`, `data`, `actions`만 사용한다.
