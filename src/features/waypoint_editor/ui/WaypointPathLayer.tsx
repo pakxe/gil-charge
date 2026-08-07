@@ -14,7 +14,7 @@ const DEFAULT_RADIUS_KM = 1;
 
 type Props = {
     waypoints: WaypointNode[];
-    state: WaypointEditorStatus;
+    status: WaypointEditorStatus;
     onWaypointClick: (id: WaypointNodeId) => void;
     onWaypointDelete: (id: WaypointNodeId) => void;
     onWaypointMoveBegin: (id: WaypointNodeId, latLng: LatLng) => void;
@@ -24,7 +24,7 @@ type Props = {
 
 export function WaypointPathLayer({
     waypoints,
-    state,
+    status,
     onWaypointClick,
     onWaypointDelete,
     onWaypointMoveBegin,
@@ -59,7 +59,7 @@ export function WaypointPathLayer({
             <WaypointMarkers
                 currentStrokeWeight={currentStrokeWeight}
                 waypoints={waypoints}
-                state={state}
+                status={status}
                 onWaypointClick={onWaypointClick}
                 onWaypointDelete={onWaypointDelete}
                 onWaypointMoveBegin={onWaypointMoveBegin}

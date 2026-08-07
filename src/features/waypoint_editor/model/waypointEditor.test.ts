@@ -52,7 +52,7 @@ describe("waypointEditor", () => {
                 latLng: latLngA,
             },
         ]);
-        expect(next.state.status).toEqual({ state: "idle" });
+        expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
     it("selected 상태에서 좌표를 추가하면 웨이포인트를 추가하고 idle 상태로 변경한다", () => {
@@ -65,7 +65,7 @@ describe("waypointEditor", () => {
                 },
             ],
             status: {
-                state: "selected",
+                statusName: "selected",
                 selectedNodeId: "waypoint-1",
             },
         };
@@ -82,7 +82,7 @@ describe("waypointEditor", () => {
                 latLng: latLngB,
             },
         ]);
-        expect(next.state.status).toEqual({ state: "idle" });
+        expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
     it("웨이포인트가 19개일 때 1개를 추가하면 총 20개가 되고 성공 결과를 반환한다", () => {
@@ -93,7 +93,7 @@ describe("waypointEditor", () => {
                 id: `waypoint-${index + 1}`,
                 latLng: latLngA,
             })),
-            status: { state: "idle" },
+            status: { statusName: "idle" },
         };
 
         const next = editor.addWaypoint(state, latLngB);
@@ -115,7 +115,7 @@ describe("waypointEditor", () => {
                 id: `waypoint-${index + 1}`,
                 latLng: latLngA,
             })),
-            status: { state: "idle" },
+            status: { statusName: "idle" },
         };
 
         const next = editor.addWaypoint(state, latLngB);
@@ -155,7 +155,7 @@ describe("waypointEditor", () => {
                     latLng: latLngB,
                 },
             ],
-            status: { state: "idle" },
+            status: { statusName: "idle" },
         };
 
         const next = editor.addWaypoint(state, {
@@ -176,7 +176,7 @@ describe("waypointEditor", () => {
 
         expect(next.result).toEqual({ code: 0 });
         expect(next.state.status).toEqual({
-            state: "selected",
+            statusName: "selected",
             selectedNodeId: "waypoint-1",
         });
     });
@@ -186,7 +186,7 @@ describe("waypointEditor", () => {
         const state = createStateWithWaypoints(
             [["waypoint-1", latLngA]],
             {
-                state: "selected",
+                statusName: "selected",
                 selectedNodeId: "waypoint-1",
             },
         );
@@ -194,7 +194,7 @@ describe("waypointEditor", () => {
         const next = editor.selectWaypoint(state, "waypoint-1");
 
         expect(next.result).toEqual({ code: 0 });
-        expect(next.state.status).toEqual({ state: "idle" });
+        expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
     it("다른 웨이포인트 id를 선택하면 selectedNodeId를 변경한다", () => {
@@ -205,7 +205,7 @@ describe("waypointEditor", () => {
                 ["waypoint-2", latLngB],
             ],
             {
-                state: "selected",
+                statusName: "selected",
                 selectedNodeId: "waypoint-1",
             },
         );
@@ -214,7 +214,7 @@ describe("waypointEditor", () => {
 
         expect(next.result).toEqual({ code: 0 });
         expect(next.state.status).toEqual({
-            state: "selected",
+            statusName: "selected",
             selectedNodeId: "waypoint-2",
         });
     });
@@ -244,7 +244,7 @@ describe("waypointEditor", () => {
 
         expect(next.result).toEqual({ code: 0 });
         expect(next.state.status).toEqual({
-            state: "moving",
+            statusName: "moving",
             movingNodeId: "waypoint-1",
             latLng: latLngB,
             selectionAfterMove: null,
@@ -272,7 +272,7 @@ describe("waypointEditor", () => {
         const state = createStateWithWaypoints(
             [["waypoint-1", latLngA]],
             {
-                state: "moving",
+                statusName: "moving",
                 movingNodeId: "waypoint-1",
                 latLng: latLngB,
                 selectionAfterMove: null,
@@ -293,7 +293,7 @@ describe("waypointEditor", () => {
         const state = createStateWithWaypoints(
             [["waypoint-1", latLngA]],
             {
-                state: "moving",
+                statusName: "moving",
                 movingNodeId: "waypoint-1",
                 latLng: latLngB,
                 selectionAfterMove: null,
@@ -309,7 +309,7 @@ describe("waypointEditor", () => {
             },
         ]);
         expect(next.status).toEqual({
-            state: "moving",
+            statusName: "moving",
             movingNodeId: "waypoint-1",
             latLng: latLngC,
             selectionAfterMove: null,
@@ -327,7 +327,7 @@ describe("waypointEditor", () => {
                 ["waypoint-2", latLngB],
             ],
             {
-                state: "moving",
+                statusName: "moving",
                 movingNodeId: "waypoint-1",
                 latLng: latLngC,
                 selectionAfterMove: null,
@@ -346,7 +346,7 @@ describe("waypointEditor", () => {
                 ["waypoint-2", latLngB],
             ],
             {
-                state: "moving",
+                statusName: "moving",
                 movingNodeId: "waypoint-2",
                 latLng: latLngC,
                 selectionAfterMove: null,
@@ -366,7 +366,7 @@ describe("waypointEditor", () => {
                 latLng: latLngC,
             },
         ]);
-        expect(next.state.status).toEqual({ state: "idle" });
+        expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
     it("선택된 웨이포인트를 이동하면 확정 후 선택 상태를 유지한다", () => {
@@ -374,7 +374,7 @@ describe("waypointEditor", () => {
         const selectedState = createStateWithWaypoints(
             [["waypoint-1", latLngA]],
             {
-                state: "selected",
+                statusName: "selected",
                 selectedNodeId: "waypoint-1",
             },
         );
@@ -390,7 +390,7 @@ describe("waypointEditor", () => {
             },
         ]);
         expect(next.state.status).toEqual({
-            state: "selected",
+            statusName: "selected",
             selectedNodeId: "waypoint-1",
         });
     });
@@ -403,7 +403,7 @@ describe("waypointEditor", () => {
                 ["waypoint-2", latLngB],
             ],
             {
-                state: "selected",
+                statusName: "selected",
                 selectedNodeId: "waypoint-1",
             },
         );
@@ -422,7 +422,7 @@ describe("waypointEditor", () => {
                 latLng: latLngC,
             },
         ]);
-        expect(next.state.status).toEqual({ state: "idle" });
+        expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
     it("moving 상태가 아닐 때 이동 확정을 요청하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
@@ -448,7 +448,7 @@ describe("waypointEditor", () => {
         const state = createStateWithWaypoints(
             [["waypoint-1", latLngA]],
             {
-                state: "moving",
+                statusName: "moving",
                 movingNodeId: "waypoint-1",
                 latLng: latLngB,
                 selectionAfterMove: "waypoint-1",
@@ -468,7 +468,7 @@ describe("waypointEditor", () => {
             },
         ]);
         expect(next.state.status).toEqual({
-            state: "selected",
+            statusName: "selected",
             selectedNodeId: "waypoint-1",
         });
     });
@@ -495,7 +495,7 @@ describe("waypointEditor", () => {
                 ["waypoint-2", latLngB],
             ],
             {
-                state: "selected",
+                statusName: "selected",
                 selectedNodeId: "waypoint-2",
             },
         );
@@ -504,7 +504,7 @@ describe("waypointEditor", () => {
 
         expect(next.result).toEqual({ code: 0 });
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1"]);
-        expect(next.state.status).toEqual({ state: "idle" });
+        expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
     it("선택되지 않은 웨이포인트를 삭제하면 기존 선택 상태를 유지한다", () => {
@@ -516,7 +516,7 @@ describe("waypointEditor", () => {
                 ["waypoint-3", latLngC],
             ],
             {
-                state: "selected",
+                statusName: "selected",
                 selectedNodeId: "waypoint-1",
             },
         );
@@ -526,7 +526,7 @@ describe("waypointEditor", () => {
         expect(next.result).toEqual({ code: 0 });
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-3"]);
         expect(next.state.status).toEqual({
-            state: "selected",
+            statusName: "selected",
             selectedNodeId: "waypoint-1",
         });
     });
@@ -557,7 +557,7 @@ describe("waypointEditor", () => {
 
         expect(next.result).toBeUndefined();
         expect(next.state.nodes).toEqual([]);
-        expect(next.state.status).toEqual({ state: "idle" });
+        expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
     it("selected 상태에서 전체 삭제하면 nodes는 빈 배열이 되고 상태는 idle이 된다", () => {
@@ -568,7 +568,7 @@ describe("waypointEditor", () => {
                 ["waypoint-2", latLngB],
             ],
             {
-                state: "selected",
+                statusName: "selected",
                 selectedNodeId: "waypoint-1",
             },
         );
@@ -577,7 +577,7 @@ describe("waypointEditor", () => {
 
         expect(next.result).toBeUndefined();
         expect(next.state.nodes).toEqual([]);
-        expect(next.state.status).toEqual({ state: "idle" });
+        expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
     it("빈 목록에서 전체 삭제하면 nodes는 빈 배열이고 상태는 idle이다", () => {
@@ -588,7 +588,7 @@ describe("waypointEditor", () => {
 
         expect(next.result).toBeUndefined();
         expect(next.state.nodes).toEqual([]);
-        expect(next.state.status).toEqual({ state: "idle" });
+        expect(next.state.status).toEqual({ statusName: "idle" });
     });
 });
 
@@ -652,7 +652,7 @@ function createTestWaypointEditor({
 
 function createStateWithWaypoints(
     waypoints: [string, LatLng][],
-    status: WaypointEditorState["status"] = { state: "idle" },
+    status: WaypointEditorState["status"] = { statusName: "idle" },
 ): WaypointEditorState {
     return {
         nodes: waypoints.map(([id, latLng]) => ({

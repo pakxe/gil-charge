@@ -10,14 +10,14 @@ const INITIAL_CENTER: LatLng = {
 };
 
 export function WaypointEditorPage() {
-    const { state, data, actions } = useWaypointEditor();
+    const { status, data, actions } = useWaypointEditor();
 
     return (
         <main className="relative min-h-dvh bg-gil-gray-950 text-gil-light-text">
             <Map
                 center={INITIAL_CENTER}
                 zoomLevel={8}
-                isDraggable={state.state !== "moving"}
+                isDraggable={status.statusName !== "moving"}
                 isZoomable
                 className="min-h-dvh w-full"
                 loadingFallback={<div className="flex min-h-dvh items-center justify-center">loading</div>}
@@ -28,7 +28,7 @@ export function WaypointEditorPage() {
             >
                 <WaypointPathLayer
                     waypoints={data.visibleWaypoints}
-                    state={state}
+                    status={status}
                     onWaypointClick={actions.selectWaypoint}
                     onWaypointDelete={actions.deleteWaypoint}
                     onWaypointMoveBegin={actions.beginWaypointMove}

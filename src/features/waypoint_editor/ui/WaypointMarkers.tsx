@@ -14,7 +14,7 @@ const MOVE_BEGIN_THRESHOLD_PX = 4;
 type Props = {
     currentStrokeWeight: number;
     waypoints: WaypointNode[];
-    state: WaypointEditorStatus;
+    status: WaypointEditorStatus;
     onWaypointClick: (id: WaypointNodeId) => void;
     onWaypointDelete: (id: WaypointNodeId) => void;
     onWaypointMoveBegin: (id: WaypointNodeId, latLng: LatLng) => void;
@@ -25,7 +25,7 @@ type Props = {
 export function WaypointMarkers({
     waypoints,
     currentStrokeWeight,
-    state,
+    status,
     onWaypointClick,
     onWaypointDelete,
     onWaypointMoveBegin,
@@ -124,8 +124,8 @@ export function WaypointMarkers({
                 />
             }
             {waypoints.map((waypoint, index) => {
-                const isSelected = isSelectedWaypoint(state, waypoint.id);
-                const isMoving = isMovingWaypoint(state, waypoint.id);
+                const isSelected = isSelectedWaypoint(status, waypoint.id);
+                const isMoving = isMovingWaypoint(status, waypoint.id);
                 const isActive = isSelected || isMoving;
 
                 return (
@@ -186,10 +186,10 @@ export function WaypointMarkers({
     );
 }
 
-function isSelectedWaypoint(state: WaypointEditorStatus, waypointId: WaypointNodeId) {
-    return state.state === "selected" && state.selectedNodeId === waypointId;
+function isSelectedWaypoint(status: WaypointEditorStatus, waypointId: WaypointNodeId) {
+    return status.statusName === "selected" && status.selectedNodeId === waypointId;
 }
 
-function isMovingWaypoint(state: WaypointEditorStatus, waypointId: WaypointNodeId) {
-    return state.state === "moving" && state.movingNodeId === waypointId;
+function isMovingWaypoint(status: WaypointEditorStatus, waypointId: WaypointNodeId) {
+    return status.statusName === "moving" && status.movingNodeId === waypointId;
 }

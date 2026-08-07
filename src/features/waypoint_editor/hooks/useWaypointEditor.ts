@@ -123,7 +123,7 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
     const visibleWaypoints = useMemo(() => getVisibleWaypoints(editorState), [editorState]);
 
     return {
-        state: editorState.status,
+        status: editorState.status,
         data: {
             waypoints: editorState.nodes,
             visibleWaypoints,
@@ -142,7 +142,7 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
 }
 
 function getVisibleWaypoints(state: WaypointEditorState): WaypointNode[] {
-    if (state.status.state !== "moving") {
+    if (state.status.statusName !== "moving") {
         return state.nodes;
     }
 
