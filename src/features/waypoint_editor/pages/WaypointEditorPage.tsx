@@ -2,7 +2,8 @@ import { Map } from "@/shared/ui/Map/Map";
 import type { LatLng } from "@/shared/model/map";
 import { MAX_WAYPOINT_COUNT } from "@/features/waypoint_editor/model/waypointEditor";
 import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
-import { WaypointPathLayer } from "@/features/waypoint_editor/ui/WaypointPathLayer";
+import { WaypointEdgesLayer } from "@/features/waypoint_editor/ui/WaypointEdgesLayer";
+import { WaypointNodesLayer } from "@/features/waypoint_editor/ui/WaypointNodesLayer";
 
 const INITIAL_CENTER: LatLng = {
     lat: 37.5665,
@@ -26,7 +27,8 @@ export function WaypointEditorPage() {
                     actions.addWaypoint(latLng);
                 }}
             >
-                <WaypointPathLayer
+                <WaypointEdgesLayer waypoints={data.visibleWaypoints} />
+                <WaypointNodesLayer
                     waypoints={data.visibleWaypoints}
                     status={status}
                     onWaypointClick={actions.selectWaypoint}

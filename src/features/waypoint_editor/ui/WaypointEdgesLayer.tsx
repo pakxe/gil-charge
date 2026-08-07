@@ -1,12 +1,8 @@
 import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useMap } from "react-kakao-maps-sdk";
-import {
-    type WaypointEditorStatus,
-    type WaypointNode,
-    type WaypointNodeId,
-} from "@/features/waypoint_editor/model/waypointEditor";
-import { WaypointMarkers } from "@/features/waypoint_editor/ui/WaypointMarkers";
-import type { LatLng } from "@/shared/model/map";
+import type { WaypointNode } from "@/features/waypoint_editor/model/waypointEditor";
+import { MAP_Z_INDEX } from "@/shared/constants/map";
+import { Map } from "@/shared/ui/Map/Map";
 
 const BASE_LEVEL = 6;
 const BASE_STROKE_WEIGHT = 250;
@@ -14,24 +10,10 @@ const DEFAULT_RADIUS_KM = 1;
 
 type Props = {
     waypoints: WaypointNode[];
-    status: WaypointEditorStatus;
-    onWaypointClick: (id: WaypointNodeId) => void;
-    onWaypointDelete: (id: WaypointNodeId) => void;
-    onWaypointMoveBegin: (id: WaypointNodeId, latLng: LatLng) => void;
-    onWaypointMoveUpdate: (id: WaypointNodeId, latLng: LatLng) => void;
-    onWaypointMoveCommit: () => void;
 };
 
-export function WaypointPathLayer({
-    waypoints,
-    status,
-    onWaypointClick,
-    onWaypointDelete,
-    onWaypointMoveBegin,
-    onWaypointMoveUpdate,
-    onWaypointMoveCommit,
-}: Props) {
-    const map = useMap("WaypointPathLayer");
+export function WaypointEdgesLayer({ waypoints }: Props) {
+    const map = useMap("WaypointEdgesLayer");
     const [level, setLevel] = useState(() => map.getLevel());
     const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
 
@@ -48,6 +30,7 @@ export function WaypointPathLayer({
         };
     }, [map]);
 
+    const path = useMemo(() => waypoints.map((waypoint) => waypoint.latLng), [waypoints]);
     const currentStrokeWeight = useMemo(() => calculateStrokeWeight(level, radiusKm), [level, radiusKm]);
 
     const handleRadiusChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -56,15 +39,21 @@ export function WaypointPathLayer({
 
     return (
         <>
-            <WaypointMarkers
-                currentStrokeWeight={currentStrokeWeight}
-                waypoints={waypoints}
-                status={status}
-                onWaypointClick={onWaypointClick}
-                onWaypointDelete={onWaypointDelete}
-                onWaypointMoveBegin={onWaypointMoveBegin}
-                onWaypointMoveUpdate={onWaypointMoveUpdate}
-                onWaypointMoveCommit={onWaypointMoveCommit}
+            <Map.Polyline
+                path={path}
+                strokeWeight={6}
+                strokeColor={"#DEA60C"}
+                strokeOpacity={1}
+                strokeStyle={"solid"}
+                zIndex={MAP_Z_INDEX.waypoint - 1}
+            />
+            <Map.Polyline
+                path={path}
+                strokeWeight={currentStrokeWeight}
+                strokeColor={"#f0c243"}
+                strokeOpacity={0.4}
+                strokeStyle={"solid"}
+                zIndex={MAP_Z_INDEX.waypoint - 1}
             />
 
             <section className="absolute bottom-4 left-4 z-10 rounded-lg border border-white/10 bg-white px-4 py-3 text-sm text-gray-950 shadow-lg">

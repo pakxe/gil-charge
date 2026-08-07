@@ -12,7 +12,6 @@ import { Map } from "@/shared/ui/Map/Map";
 const MOVE_BEGIN_THRESHOLD_PX = 4;
 
 type Props = {
-    currentStrokeWeight: number;
     waypoints: WaypointNode[];
     status: WaypointEditorStatus;
     onWaypointClick: (id: WaypointNodeId) => void;
@@ -22,9 +21,8 @@ type Props = {
     onWaypointMoveCommit: () => void;
 };
 
-export function WaypointMarkers({
+export function WaypointNodesLayer({
     waypoints,
-    currentStrokeWeight,
     status,
     onWaypointClick,
     onWaypointDelete,
@@ -103,26 +101,6 @@ export function WaypointMarkers({
 
     return (
         <>
-            {
-                <Map.Polyline
-                    path={waypoints.map((w) => w.latLng)}
-                    strokeWeight={6}
-                    strokeColor={"#DEA60C"}
-                    strokeOpacity={1}
-                    strokeStyle={"solid"}
-                    zIndex={MAP_Z_INDEX.waypoint - 1}
-                />
-            }
-            {
-                <Map.Polyline
-                    path={waypoints.map((w) => w.latLng)}
-                    strokeWeight={currentStrokeWeight}
-                    strokeColor={"#f0c243"}
-                    strokeOpacity={0.4}
-                    strokeStyle={"solid"}
-                    zIndex={MAP_Z_INDEX.waypoint - 1}
-                />
-            }
             {waypoints.map((waypoint, index) => {
                 const isSelected = isSelectedWaypoint(status, waypoint.id);
                 const isMoving = isMovingWaypoint(status, waypoint.id);
