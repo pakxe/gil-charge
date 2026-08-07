@@ -12,6 +12,7 @@ import { Map } from "@/shared/ui/Map/Map";
 const MOVE_BEGIN_THRESHOLD_PX = 4;
 
 type Props = {
+    currentStrokeWeight: number;
     waypoints: WaypointNode[];
     state: WaypointEditorStatus;
     onWaypointClick: (id: WaypointNodeId) => void;
@@ -23,6 +24,7 @@ type Props = {
 
 export function WaypointMarkers({
     waypoints,
+    currentStrokeWeight,
     state,
     onWaypointClick,
     onWaypointDelete,
@@ -101,6 +103,26 @@ export function WaypointMarkers({
 
     return (
         <>
+            {
+                <Map.Polyline
+                    path={waypoints.map((w) => w.latLng)}
+                    strokeWeight={6}
+                    strokeColor={"#DEA60C"}
+                    strokeOpacity={1}
+                    strokeStyle={"solid"}
+                    zIndex={MAP_Z_INDEX.waypoint - 1}
+                />
+            }
+            {
+                <Map.Polyline
+                    path={waypoints.map((w) => w.latLng)}
+                    strokeWeight={currentStrokeWeight}
+                    strokeColor={"#f0c243"}
+                    strokeOpacity={0.4}
+                    strokeStyle={"solid"}
+                    zIndex={MAP_Z_INDEX.waypoint - 1}
+                />
+            }
             {waypoints.map((waypoint, index) => {
                 const isSelected = isSelectedWaypoint(state, waypoint.id);
                 const isMoving = isMovingWaypoint(state, waypoint.id);
@@ -133,8 +155,8 @@ export function WaypointMarkers({
                                 className={[
                                     "flex h-8 min-w-8 cursor-grab items-center justify-center rounded-full border-2 px-2 text-xs font-black shadow-lg active:cursor-grabbing",
                                     isActive
-                                        ? "border-white bg-gil-yellow-400 text-gray-950 ring-2 ring-gil-yellow-400"
-                                        : "border-gray-950 bg-gil-yellow-400 text-gray-950",
+                                        ? "border-white border-3 bg-gil-yellow-400 text-gray-950 ring-3 ring-gil-brown-900"
+                                        : "border-white border-3 bg-gil-yellow-400 text-gray-950",
                                 ].join(" ")}
                             >
                                 {index + 1}
