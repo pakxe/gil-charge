@@ -15,7 +15,7 @@ function Box_({ children, yPad = 8, xPad = 14, isRound = true, isCircle = false,
     return (
         <div
             className={cn(
-                "h-10 flex flex-row items-center justify-between gap-4 bg-[#1f1f1f]/40 px-(--box-x-pad) py-(--box-y-pad) text-gil-light-text backdrop-blur-[15px]",
+                "min-h-10 flex flex-row items-center justify-between gap-4 bg-[#1f1f1f]/40 px-(--box-x-pad) py-(--box-y-pad) text-gil-light-text backdrop-blur-[15px]",
                 isRound && !isCircle && "rounded-[50px]",
                 isCircle && "aspect-square rounded-full",
                 className,
