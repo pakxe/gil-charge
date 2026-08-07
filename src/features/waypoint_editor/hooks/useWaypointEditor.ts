@@ -1,11 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-    createWaypointEditor,
     type AddWaypointResult,
-    type DeleteAllWaypointResult,
+    type BeginWaypointMoveResult,
+    type CommitWaypointMoveResult,
     type DeleteWaypointResult,
     type SelectWaypointResult,
+    type WaypointEditorState,
+    type WaypointNode,
     type WaypointNodeId,
+    waypointEditor,
 } from "@/features/waypoint_editor/model/waypointEditor";
 import type { LatLng } from "@/shared/model/map";
 
@@ -14,70 +17,146 @@ type UseWaypointEditorOptions = {
     maxWaypointCount?: number;
 };
 
+type WaypointEditorCommandResult =
+    | AddWaypointResult
+    | BeginWaypointMoveResult
+    | CommitWaypointMoveResult
+    | DeleteWaypointResult
+    | SelectWaypointResult;
+
+type WaypointEditorHookState = {
+    editorState: WaypointEditorState;
+    result: WaypointEditorCommandResult | null;
+};
+
 const defaultCreateId = () => crypto.randomUUID();
 
 export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount }: UseWaypointEditorOptions = {}) {
-    const editor = useMemo(
-        () =>
-            createWaypointEditor({
-                createId,
-                maxWaypointCount,
-            }),
-        [createId, maxWaypointCount],
-    );
-    const [editorState, setEditorState] = useState(() => editor.createInitialState());
+    const [hookState, setHookState] = useState<WaypointEditorHookState>(() => ({
+        editorState: waypointEditor.createInitialState(),
+        result: null,
+    }));
 
     const addWaypoint = useCallback(
-        (latLng: LatLng): AddWaypointResult => {
-            const next = editor.addWaypoint(editorState, latLng);
+        (latLng: LatLng): void => {
+            setHookState((prev) => {
+                const next = waypointEditor.addWaypoint(prev.editorState, latLng, {
+                    createId,
+                    maxWaypointCount,
+                });
 
-            setEditorState(next.state);
-
-            return next.result;
+                return {
+                    editorState: next.state,
+                    result: next.result,
+                };
+            });
         },
-        [editor, editorState],
+        [createId, maxWaypointCount],
     );
 
-    const selectWaypoint = useCallback(
-        (id: WaypointNodeId): SelectWaypointResult => {
-            const next = editor.selectWaypoint(editorState, id);
+    const selectWaypoint = useCallback((id: WaypointNodeId): void => {
+        setHookState((prev) => {
+            const next = waypointEditor.selectWaypoint(prev.editorState, id);
 
-            setEditorState(next.state);
+            return {
+                ...prev,
+                editorState: next.state,
+                result: next.result,
+            };
+        });
+    }, []);
 
-            return next.result;
-        },
-        [editor, editorState],
-    );
+    const deleteWaypoint = useCallback((id: WaypointNodeId): void => {
+        setHookState((prev) => {
+            const next = waypointEditor.deleteWaypoint(prev.editorState, id);
 
-    const deleteWaypoint = useCallback(
-        (id: WaypointNodeId): DeleteWaypointResult => {
-            const next = editor.deleteWaypoint(editorState, id);
+            return {
+                editorState: next.state,
+                result: next.result,
+            };
+        });
+    }, []);
 
-            setEditorState(next.state);
+    const deleteAllWaypoint = useCallback((): void => {
+        setHookState((prev) => {
+            const next = waypointEditor.deleteAllWaypoint(prev.editorState);
 
-            return next.result;
-        },
-        [editor, editorState],
-    );
+            return {
+                editorState: next.state,
+                result: { code: 0 },
+            };
+        });
+    }, []);
 
-    const deleteAllWaypoint = useCallback((): DeleteAllWaypointResult => {
-        const next = editor.deleteAllWaypoint(editorState);
+    const beginWaypointMove = useCallback((id: WaypointNodeId, latLng: LatLng): void => {
+        setHookState((prev) => {
+            const next = waypointEditor.beginWaypointMove(prev.editorState, id, latLng);
 
-        setEditorState(next.state);
+            return {
+                ...prev,
+                editorState: next.state,
+                result: next.result,
+            };
+        });
+    }, []);
 
-        return next.result;
-    }, [editor, editorState]);
+    const updateWaypointMove = useCallback((id: WaypointNodeId, latLng: LatLng): void => {
+        setHookState((prev) => ({
+            ...prev,
+            editorState: waypointEditor.updateWaypointMove(prev.editorState, id, latLng),
+        }));
+    }, []);
+
+    const commitWaypointMove = useCallback((): void => {
+        setHookState((prev) => {
+            const next = waypointEditor.commitWaypointMove(prev.editorState);
+
+            return {
+                ...prev,
+                editorState: next.state,
+                result: next.result,
+            };
+        });
+    }, []);
+
+    const editorState = hookState.editorState;
+    const visibleWaypoints = useMemo(() => getVisibleWaypoints(editorState), [editorState]);
 
     return {
         state: editorState.status,
         data: {
             waypoints: editorState.nodes,
+            visibleWaypoints,
+            result: hookState.result,
         },
         actions: {
             addWaypoint,
             selectWaypoint,
             deleteWaypoint,
             deleteAllWaypoint,
+            beginWaypointMove,
+            updateWaypointMove,
+            commitWaypointMove,
         },
     };
+}
+
+function getVisibleWaypoints(state: WaypointEditorState): WaypointNode[] {
+    if (state.status.state !== "moving") {
+        return state.nodes;
+    }
+
+    const movingStatus = state.status;
+
+    return state.nodes.map((node) =>
+        node.id === movingStatus.movingNodeId
+            ? {
+                  ...node,
+                  latLng: {
+                      lat: movingStatus.latLng.lat,
+                      lng: movingStatus.latLng.lng,
+                  },
+              }
+            : node,
+    );
 }
