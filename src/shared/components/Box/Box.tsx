@@ -1,36 +1,41 @@
 import { cn } from "@/shared/utils/cn";
-import { cva, VariantProps } from "class-variance-authority";
-import { ComponentPropsWithRef } from "react";
+import type { ComponentPropsWithRef, CSSProperties, ReactNode } from "react";
 
-type Props = ComponentPropsWithRef<"div"> & VariantProps<typeof boxVariants> & {};
+type BoxPadding = number | string;
+
+type Props = Omit<ComponentPropsWithRef<"div">, "children"> & {
+    children: ReactNode;
+    yPad?: BoxPadding;
+    xPad?: BoxPadding;
+    isRound?: boolean;
+    isCircle?: boolean;
+};
 
 function Box_({
-    variant = "default",
-    corner = "lg",
-    className,
     children,
-
+    yPad = 16,
+    xPad = 16,
+    isRound = true,
+    isCircle = false,
+    className,
+    style,
     ...rest
 }: Props) {
     return (
-        <div className={cn(boxVariants({ variant, corner }), className)} {...rest}>
+        <div
+            className={cn(
+                "flex flex-row items-center justify-between gap-4 bg-[#d9d9d9]/20 px-[var(--box-x-pad)] py-[var(--box-y-pad)] text-gil-light-text backdrop-blur-[15px]",
+                isRound && !isCircle && "rounded-[50px]",
+                isCircle && "aspect-square rounded-full",
+                className,
+            )}
+            style={createBoxStyle({ xPad, yPad, style })}
+            {...rest}
+        >
             {children}
         </div>
     );
 }
-
-const boxVariants = cva("flex flex-row items-center justify-between rounded-3xl text-gil-light-text p-4 gap-4", {
-    variants: {
-        variant: {
-            default: "bg-gil-gray-850 border border-gil-gray-700",
-        },
-        corner: {
-            sm: "rounded-lg",
-            md: "rounded-2xl",
-            lg: "rounded-3xl",
-        },
-    },
-});
 
 function BoxSide({ className, children, ...rest }: ComponentPropsWithRef<"div">) {
     return (
@@ -54,6 +59,26 @@ function BoxContentRow({ className, children, ...rest }: ComponentPropsWithRef<"
             {children}
         </div>
     );
+}
+
+function createBoxStyle({
+    xPad,
+    yPad,
+    style,
+}: {
+    xPad: BoxPadding;
+    yPad: BoxPadding;
+    style?: CSSProperties;
+}): CSSProperties {
+    return {
+        "--box-x-pad": toCssLength(xPad),
+        "--box-y-pad": toCssLength(yPad),
+        ...style,
+    } as CSSProperties;
+}
+
+function toCssLength(value: BoxPadding) {
+    return typeof value === "number" ? `${value}px` : value;
 }
 
 const Box = Object.assign(Box_, {
