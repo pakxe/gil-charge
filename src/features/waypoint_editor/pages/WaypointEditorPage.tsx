@@ -1,9 +1,10 @@
 import { Map } from "@/shared/ui/Map/Map";
 import type { LatLng } from "@/shared/model/map";
-import { MAX_WAYPOINT_COUNT } from "@/features/waypoint_editor/model/waypointEditor";
 import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
 import { WaypointEdgesLayer } from "@/features/waypoint_editor/ui/WaypointEdgesLayer";
 import { WaypointNodesLayer } from "@/features/waypoint_editor/ui/WaypointNodesLayer";
+import Box from "@/shared/components/Box/Box";
+import { cn } from "@/shared/utils/cn";
 
 const INITIAL_CENTER: LatLng = {
     lat: 37.5665,
@@ -39,22 +40,20 @@ export function WaypointEditorPage() {
                 />
             </Map>
 
-            <section className="absolute left-4 top-4 z-10 rounded-lg border border-white/10 bg-gray-950/85 px-4 py-3 text-sm shadow-lg backdrop-blur-sm">
-                <p className="font-bold">
-                    웨이포인트 {data.waypoints.length} / {MAX_WAYPOINT_COUNT}
-                </p>
-                <button
-                    type="button"
-                    className="mt-2 rounded-md border border-white/10 bg-gil-yellow-400 px-3 py-1 text-xs font-bold text-gray-950 disabled:opacity-50"
-                    disabled={data.waypoints.length === 0}
-                    onClick={() => {
-                        actions.deleteAllWaypoint();
-                    }}
-                >
-                    전체 삭제
-                </button>
-                {data.result?.code === 1 && <p className="mt-1 text-gil-yellow-400">{data.result.reason}</p>}
-            </section>
+            <Box
+                role="button"
+                tabIndex={0}
+                className={cn(
+                    "absolute left-4 top-4 z-10 text-sm font-medium",
+                    data.waypoints.length === 0 ? "text-black" : "text-gil-yellow-400 cursor-pointer",
+                )}
+                onClick={() => {
+                    if (data.waypoints.length === 0) return;
+                    actions.deleteAllWaypoint();
+                }}
+            >
+                전체 삭제
+            </Box>
         </main>
     );
 }
