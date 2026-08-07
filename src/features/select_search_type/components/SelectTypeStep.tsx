@@ -18,7 +18,7 @@ const SEARCH_TYPES = [
 
 export function SelectTypeStep({ onNext }: { onNext: () => void }) {
     return (
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-8 py-6 px-4">
             <Top
                 title={<p className="typo-title-bold">어떻게 위치를 정할까요?</p>}
                 description={<p className="typo-content-medium text-gil-sub-text">원하시는 방식을 선택해주세요.</p>}
