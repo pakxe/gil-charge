@@ -3,7 +3,7 @@ import axios from "axios";
 import { PathSet, Station } from "@/shared/types/map";
 import { env } from "@/shared/config/env";
 
-const API_BASE_URL = env.NODE_ENV ? "http://localhost:8080/api" : `${env.VITE_API_URL}/api`;
+const API_BASE_URL = env.NODE_ENV === "production" ? `${env.VITE_API_URL}/api` : "/api";
 
 export function useStationsSearch(onSuccess: (stations: Station[]) => void) {
     const [isLoading, setIsLoading] = useState(false);

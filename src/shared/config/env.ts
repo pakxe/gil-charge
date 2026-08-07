@@ -8,7 +8,10 @@ const envSchema = z.object({
 });
 
 // parse를 실행하여 검증 실패 시 즉시 에러 발생 (Fail-Fast)
-const _env = envSchema.safeParse(import.meta.env);
+const _env = envSchema.safeParse({
+    ...import.meta.env,
+    NODE_ENV: import.meta.env.NODE_ENV ?? (import.meta.env.PROD ? "production" : import.meta.env.MODE),
+});
 
 if (!_env.success) {
     console.error("❌ 유효하지 않은 환경변수입니다:", _env.error.format());
