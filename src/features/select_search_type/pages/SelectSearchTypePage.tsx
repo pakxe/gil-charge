@@ -26,11 +26,7 @@ export function SelectSearchTypePage() {
     });
 
     return (
-        <div className="flex min-h-0 flex-1 flex-col gap-8">
-            <Progress value={currentStep} max={3} onPrev={handlePrev} onNext={handleNext} />
-
-            {loading && <div className="text-center">지도를 불러오는 중입니다...</div>}
-
+        <div className="flex min-h-0 flex-1 flex-col">
             {!loading && !error && (
                 <>
                     {currentStep === 1 && <SelectTypeStep onNext={handleNext} />}
