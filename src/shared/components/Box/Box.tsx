@@ -11,20 +11,11 @@ type Props = Omit<ComponentPropsWithRef<"div">, "children"> & {
     isCircle?: boolean;
 };
 
-function Box_({
-    children,
-    yPad = 16,
-    xPad = 16,
-    isRound = true,
-    isCircle = false,
-    className,
-    style,
-    ...rest
-}: Props) {
+function Box_({ children, yPad = 8, xPad = 14, isRound = true, isCircle = false, className, style, ...rest }: Props) {
     return (
         <div
             className={cn(
-                "flex flex-row items-center justify-between gap-4 bg-[#d9d9d9]/20 px-[var(--box-x-pad)] py-[var(--box-y-pad)] text-gil-light-text backdrop-blur-[15px]",
+                "h-10 flex flex-row items-center justify-between gap-4 bg-[#1f1f1f]/40 px-(--box-x-pad) py-(--box-y-pad) text-gil-light-text backdrop-blur-[15px]",
                 isRound && !isCircle && "rounded-[50px]",
                 isCircle && "aspect-square rounded-full",
                 className,
