@@ -17,7 +17,7 @@ export function WaypointEditorPage() {
             <Map
                 center={INITIAL_CENTER}
                 zoomLevel={8}
-                isDraggable={status.statusName !== "moving"}
+                isDraggable={!isMoveActive(status.statusName)}
                 isZoomable
                 className="min-h-dvh w-full"
                 loadingFallback={<div className="flex min-h-dvh items-center justify-center">loading</div>}
@@ -35,6 +35,9 @@ export function WaypointEditorPage() {
                     onWaypointMoveBegin={actions.beginWaypointMove}
                     onWaypointMoveUpdate={actions.updateWaypointMove}
                     onWaypointMoveCommit={actions.commitWaypointMove}
+                    onWaypointBatchMoveBegin={actions.beginBatchMove}
+                    onWaypointBatchMoveUpdate={actions.updateBatchMove}
+                    onWaypointBatchMoveCommit={actions.commitBatchMove}
                 />
             </Map>
             <WaypointHistoryControls
@@ -46,4 +49,8 @@ export function WaypointEditorPage() {
             />
         </main>
     );
+}
+
+function isMoveActive(statusName: string) {
+    return statusName === "moving" || statusName === "batchMoving";
 }

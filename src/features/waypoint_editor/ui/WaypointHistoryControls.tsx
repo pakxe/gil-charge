@@ -11,7 +11,7 @@ type Props = {
 
 export function WaypointHistoryControls({ canUndo, canRedo, onUndo, onRedo, className }: Props) {
     return (
-        <Box>
+        <Box className={className}>
             <button
                 type="button"
                 aria-label="웨이포인트 실행 취소"

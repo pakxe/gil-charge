@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
     type AddWaypointResult,
+    type BeginBatchMoveResult,
     type BeginWaypointMoveResult,
+    type CommitBatchMoveResult,
     type CommitWaypointMoveResult,
     type DeleteAllWaypointResult,
+    type DeleteBatchWaypointResult,
     type DeleteWaypointResult,
     type SelectWaypointResult,
+    type SelectWaypointsResult,
     waypointEditor,
     type WaypointEditorState,
     type WaypointNode,
@@ -67,7 +71,7 @@ describe("waypointEditor", () => {
             ],
             status: {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         };
 
@@ -169,28 +173,23 @@ describe("waypointEditor", () => {
 
     it("존재하는 웨이포인트 id를 선택하면 selected 상태가 된다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
-        const state = createStateWithWaypoints([
-            ["waypoint-1", latLngA],
-        ]);
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]]);
 
         const next = editor.selectWaypoint(state, "waypoint-1");
 
         expect(next.result).toEqual({ code: 0 });
         expect(next.state.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-1",
+            selectedNodeIds: ["waypoint-1"],
         });
     });
 
     it("이미 선택된 웨이포인트 id를 다시 선택하면 idle 상태가 된다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
-        const state = createStateWithWaypoints(
-            [["waypoint-1", latLngA]],
-            {
-                statusName: "selected",
-                selectedNodeId: "waypoint-1",
-            },
-        );
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]], {
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-1"],
+        });
 
         const next = editor.selectWaypoint(state, "waypoint-1");
 
@@ -198,7 +197,7 @@ describe("waypointEditor", () => {
         expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
-    it("다른 웨이포인트 id를 선택하면 selectedNodeId를 변경한다", () => {
+    it("다른 웨이포인트 id를 선택하면 selectedNodeIds를 단일 배열로 변경한다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints(
             [
@@ -207,7 +206,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -216,15 +215,36 @@ describe("waypointEditor", () => {
         expect(next.result).toEqual({ code: 0 });
         expect(next.state.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-2",
+            selectedNodeIds: ["waypoint-2"],
+        });
+    });
+
+    it("여러 웨이포인트가 선택된 상태에서 웨이포인트 id를 선택하면 해당 id 하나로 선택을 대체한다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+                ["waypoint-3", latLngC],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1", "waypoint-2"],
+            },
+        );
+
+        const next = editor.selectWaypoint(state, "waypoint-3");
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.status).toEqual({
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-3"],
         });
     });
 
     it("존재하지 않는 웨이포인트 id를 선택하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
-        const state = createStateWithWaypoints([
-            ["waypoint-1", latLngA],
-        ]);
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]]);
 
         const next = editor.selectWaypoint(state, "missing-waypoint");
 
@@ -235,11 +255,67 @@ describe("waypointEditor", () => {
         expect(next.state).toBe(state);
     });
 
-    it("존재하는 웨이포인트 id로 이동을 시작하면 moving 상태가 된다", () => {
+    it("여러 웨이포인트 id를 선택하면 selectedNodeIds를 전달받은 순서로 대체한다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+                ["waypoint-3", latLngC],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1"],
+            },
+        );
+
+        const next = editor.selectWaypoints(state, ["waypoint-3", "waypoint-1"]);
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.status).toEqual({
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-3", "waypoint-1"],
+        });
+    });
+
+    it("빈 웨이포인트 id 목록을 선택하면 idle 상태가 된다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1", "waypoint-2"],
+            },
+        );
+
+        const next = editor.selectWaypoints(state, []);
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.status).toEqual({ statusName: "idle" });
+    });
+
+    it("없는 웨이포인트 id가 포함되면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints([
             ["waypoint-1", latLngA],
+            ["waypoint-2", latLngB],
         ]);
+
+        const next = editor.selectWaypoints(state, ["waypoint-1", "missing-waypoint"]);
+
+        expect(next.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(next.state).toBe(state);
+    });
+
+    it("존재하는 웨이포인트 id로 이동을 시작하면 moving 상태가 된다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]]);
 
         const next = editor.beginWaypointMove(state, "waypoint-1", latLngB);
 
@@ -248,16 +324,14 @@ describe("waypointEditor", () => {
             statusName: "moving",
             movingNodeId: "waypoint-1",
             latLng: latLngB,
-            selectionAfterMove: null,
+            selectionAfterMove: [],
         });
         expect(next.state.nodes).toEqual(state.nodes);
     });
 
     it("존재하지 않는 웨이포인트 id로 이동을 시작하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
-        const state = createStateWithWaypoints([
-            ["waypoint-1", latLngA],
-        ]);
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]]);
 
         const next = editor.beginWaypointMove(state, "missing-waypoint", latLngB);
 
@@ -270,15 +344,12 @@ describe("waypointEditor", () => {
 
     it("이미 moving 상태이면 이동 시작 요청을 실패시키고 상태를 변경하지 않는다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
-        const state = createStateWithWaypoints(
-            [["waypoint-1", latLngA]],
-            {
-                statusName: "moving",
-                movingNodeId: "waypoint-1",
-                latLng: latLngB,
-                selectionAfterMove: null,
-            },
-        );
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]], {
+            statusName: "moving",
+            movingNodeId: "waypoint-1",
+            latLng: latLngB,
+            selectionAfterMove: [],
+        });
 
         const next = editor.beginWaypointMove(state, "waypoint-1", latLngC);
 
@@ -291,15 +362,12 @@ describe("waypointEditor", () => {
 
     it("이동 중 좌표를 변경하면 draft 좌표만 변경하고 확정 nodes는 변경하지 않는다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
-        const state = createStateWithWaypoints(
-            [["waypoint-1", latLngA]],
-            {
-                statusName: "moving",
-                movingNodeId: "waypoint-1",
-                latLng: latLngB,
-                selectionAfterMove: null,
-            },
-        );
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]], {
+            statusName: "moving",
+            movingNodeId: "waypoint-1",
+            latLng: latLngB,
+            selectionAfterMove: [],
+        });
 
         const next = editor.updateWaypointMove(state, "waypoint-1", latLngC);
 
@@ -313,15 +381,13 @@ describe("waypointEditor", () => {
             statusName: "moving",
             movingNodeId: "waypoint-1",
             latLng: latLngC,
-            selectionAfterMove: null,
+            selectionAfterMove: [],
         });
     });
 
     it("moving 상태가 아니거나 이동 중인 id가 다르면 이동 중 좌표 변경 요청을 무시한다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
-        const idleState = createStateWithWaypoints([
-            ["waypoint-1", latLngA],
-        ]);
+        const idleState = createStateWithWaypoints([["waypoint-1", latLngA]]);
         const movingState = createStateWithWaypoints(
             [
                 ["waypoint-1", latLngA],
@@ -331,7 +397,7 @@ describe("waypointEditor", () => {
                 statusName: "moving",
                 movingNodeId: "waypoint-1",
                 latLng: latLngC,
-                selectionAfterMove: null,
+                selectionAfterMove: [],
             },
         );
 
@@ -350,7 +416,7 @@ describe("waypointEditor", () => {
                 statusName: "moving",
                 movingNodeId: "waypoint-2",
                 latLng: latLngC,
-                selectionAfterMove: null,
+                selectionAfterMove: [],
             },
         );
 
@@ -372,13 +438,10 @@ describe("waypointEditor", () => {
 
     it("선택된 웨이포인트를 이동하면 확정 후 선택 상태를 유지한다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
-        const selectedState = createStateWithWaypoints(
-            [["waypoint-1", latLngA]],
-            {
-                statusName: "selected",
-                selectedNodeId: "waypoint-1",
-            },
-        );
+        const selectedState = createStateWithWaypoints([["waypoint-1", latLngA]], {
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-1"],
+        });
 
         const movingState = editor.beginWaypointMove(selectedState, "waypoint-1", latLngB).state;
         const next = editor.commitWaypointMove(movingState);
@@ -392,7 +455,7 @@ describe("waypointEditor", () => {
         ]);
         expect(next.state.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-1",
+            selectedNodeIds: ["waypoint-1"],
         });
     });
 
@@ -405,7 +468,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -428,9 +491,7 @@ describe("waypointEditor", () => {
 
     it("moving 상태가 아닐 때 이동 확정을 요청하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
-        const state = createStateWithWaypoints([
-            ["waypoint-1", latLngA],
-        ]);
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]]);
 
         const next = editor.commitWaypointMove(state);
 
@@ -446,15 +507,12 @@ describe("waypointEditor", () => {
             createId: () => "unused",
             isValidLatLng: () => false,
         });
-        const state = createStateWithWaypoints(
-            [["waypoint-1", latLngA]],
-            {
-                statusName: "moving",
-                movingNodeId: "waypoint-1",
-                latLng: latLngB,
-                selectionAfterMove: "waypoint-1",
-            },
-        );
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]], {
+            statusName: "moving",
+            movingNodeId: "waypoint-1",
+            latLng: latLngB,
+            selectionAfterMove: ["waypoint-1"],
+        });
 
         const next = editor.commitWaypointMove(state);
 
@@ -470,7 +528,204 @@ describe("waypointEditor", () => {
         ]);
         expect(next.state.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-1",
+            selectedNodeIds: ["waypoint-1"],
+        });
+    });
+
+    it("여러 웨이포인트 id로 batch 이동을 시작하면 batchMoving 상태가 된다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([
+            ["waypoint-1", latLngA],
+            ["waypoint-2", latLngB],
+            ["waypoint-3", latLngC],
+        ]);
+
+        const next = editor.beginBatchMove(state, ["waypoint-1", "waypoint-3"], latLngD);
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.status).toEqual({
+            statusName: "batchMoving",
+            movingNodeIds: ["waypoint-1", "waypoint-3"],
+            originLatLng: latLngD,
+            latLng: latLngD,
+            selectionAfterMove: ["waypoint-1", "waypoint-3"],
+        });
+        expect(next.state.nodes).toEqual(state.nodes);
+    });
+
+    it("빈 id 목록이나 존재하지 않는 id로 batch 이동을 시작하면 INVALID_INPUT을 반환한다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]]);
+
+        const emptyResult = editor.beginBatchMove(state, [], latLngB);
+        const missingResult = editor.beginBatchMove(state, ["waypoint-1", "missing-waypoint"], latLngB);
+
+        expect(emptyResult.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(emptyResult.state).toBe(state);
+        expect(missingResult.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(missingResult.state).toBe(state);
+    });
+
+    it("이미 이동 중이면 batch 이동 시작 요청을 실패시키고 상태를 변경하지 않는다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const movingState = createStateWithWaypoints([["waypoint-1", latLngA]], {
+            statusName: "moving",
+            movingNodeId: "waypoint-1",
+            latLng: latLngB,
+            selectionAfterMove: [],
+        });
+        const batchMovingState = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+            ],
+            {
+                statusName: "batchMoving",
+                movingNodeIds: ["waypoint-1", "waypoint-2"],
+                originLatLng: latLngA,
+                latLng: latLngB,
+                selectionAfterMove: ["waypoint-1", "waypoint-2"],
+            },
+        );
+
+        const movingResult = editor.beginBatchMove(movingState, ["waypoint-1"], latLngC);
+        const batchMovingResult = editor.beginBatchMove(batchMovingState, ["waypoint-1"], latLngC);
+
+        expect(movingResult.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(movingResult.state).toBe(movingState);
+        expect(batchMovingResult.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(batchMovingResult.state).toBe(batchMovingState);
+    });
+
+    it("batch 이동 중 좌표를 변경하면 draft 좌표만 변경하고 확정 nodes는 변경하지 않는다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+            ],
+            {
+                statusName: "batchMoving",
+                movingNodeIds: ["waypoint-1", "waypoint-2"],
+                originLatLng: latLngA,
+                latLng: latLngB,
+                selectionAfterMove: ["waypoint-1", "waypoint-2"],
+            },
+        );
+
+        const next = editor.updateBatchMove(state, latLngC);
+
+        expect(next.nodes).toEqual(state.nodes);
+        expect(next.status).toEqual({
+            statusName: "batchMoving",
+            movingNodeIds: ["waypoint-1", "waypoint-2"],
+            originLatLng: latLngA,
+            latLng: latLngC,
+            selectionAfterMove: ["waypoint-1", "waypoint-2"],
+        });
+    });
+
+    it("batchMoving 상태가 아니면 batch 이동 중 좌표 변경 요청을 무시한다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]]);
+
+        expect(editor.updateBatchMove(state, latLngB)).toBe(state);
+    });
+
+    it("batch 이동을 확정하면 delta를 모든 대상 노드에 반영하고 선택 상태를 유지한다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", { lat: 10, lng: 20 }],
+                ["waypoint-2", { lat: 30, lng: 40 }],
+                ["waypoint-3", { lat: 50, lng: 60 }],
+            ],
+            {
+                statusName: "batchMoving",
+                movingNodeIds: ["waypoint-1", "waypoint-3"],
+                originLatLng: { lat: 1, lng: 2 },
+                latLng: { lat: 3, lng: 5 },
+                selectionAfterMove: ["waypoint-1", "waypoint-3"],
+            },
+        );
+
+        const next = editor.commitBatchMove(state);
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.nodes).toEqual([
+            {
+                id: "waypoint-1",
+                latLng: { lat: 12, lng: 23 },
+            },
+            {
+                id: "waypoint-2",
+                latLng: { lat: 30, lng: 40 },
+            },
+            {
+                id: "waypoint-3",
+                latLng: { lat: 52, lng: 63 },
+            },
+        ]);
+        expect(next.state.status).toEqual({
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-1", "waypoint-3"],
+        });
+    });
+
+    it("batchMoving 상태가 아닐 때 batch 이동 확정을 요청하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]]);
+
+        const next = editor.commitBatchMove(state);
+
+        expect(next.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(next.state).toBe(state);
+    });
+
+    it("유효하지 않은 위치로 batch 이동을 확정하면 기존 좌표를 유지하고 선택 상태를 복원한다", () => {
+        const editor = createTestWaypointEditor({
+            createId: () => "unused",
+            isValidLatLng: (latLng) => latLng.lat < 40,
+        });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", { lat: 10, lng: 20 }],
+                ["waypoint-2", { lat: 30, lng: 40 }],
+            ],
+            {
+                statusName: "batchMoving",
+                movingNodeIds: ["waypoint-1", "waypoint-2"],
+                originLatLng: { lat: 0, lng: 0 },
+                latLng: { lat: 15, lng: 5 },
+                selectionAfterMove: ["waypoint-1", "waypoint-2"],
+            },
+        );
+
+        const next = editor.commitBatchMove(state);
+
+        expect(next.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(next.state.nodes).toEqual(state.nodes);
+        expect(next.state.status).toEqual({
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-1", "waypoint-2"],
         });
     });
 
@@ -497,7 +752,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-2",
+                selectedNodeIds: ["waypoint-2"],
             },
         );
 
@@ -518,7 +773,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -528,15 +783,37 @@ describe("waypointEditor", () => {
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-3"]);
         expect(next.state.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-1",
+            selectedNodeIds: ["waypoint-1"],
+        });
+    });
+
+    it("여러 웨이포인트가 선택된 상태에서 선택된 웨이포인트를 삭제하면 삭제된 id만 선택에서 제거한다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+                ["waypoint-3", latLngC],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1", "waypoint-3"],
+            },
+        );
+
+        const next = editor.deleteWaypoint(state, "waypoint-3");
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-2"]);
+        expect(next.state.status).toEqual({
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-1"],
         });
     });
 
     it("존재하지 않는 웨이포인트 id로 삭제하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
-        const state = createStateWithWaypoints([
-            ["waypoint-1", latLngA],
-        ]);
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]]);
 
         const next = editor.deleteWaypoint(state, "missing-waypoint");
 
@@ -545,6 +822,89 @@ describe("waypointEditor", () => {
             reason: "INVALID_INPUT",
         });
         expect(next.state).toBe(state);
+    });
+
+    it("여러 웨이포인트 id로 batch 삭제하면 대상 노드만 제거하고 상대 순서를 유지한다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([
+            ["waypoint-1", latLngA],
+            ["waypoint-2", latLngB],
+            ["waypoint-3", latLngC],
+            ["waypoint-4", latLngD],
+        ]);
+
+        const next = editor.deleteBatchWaypoint(state, ["waypoint-2", "waypoint-3"]);
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-4"]);
+        expect(next.state.status).toEqual({ statusName: "idle" });
+    });
+
+    it("선택된 웨이포인트 일부를 batch 삭제하면 삭제되지 않은 선택 상태를 유지한다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+                ["waypoint-3", latLngC],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1", "waypoint-3"],
+            },
+        );
+
+        const next = editor.deleteBatchWaypoint(state, ["waypoint-2", "waypoint-3"]);
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1"]);
+        expect(next.state.status).toEqual({
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-1"],
+        });
+    });
+
+    it("선택된 웨이포인트를 모두 batch 삭제하면 idle 상태가 된다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+                ["waypoint-3", latLngC],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1", "waypoint-3"],
+            },
+        );
+
+        const next = editor.deleteBatchWaypoint(state, ["waypoint-1", "waypoint-3"]);
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-2"]);
+        expect(next.state.status).toEqual({ statusName: "idle" });
+    });
+
+    it("빈 id 목록이나 존재하지 않는 id로 batch 삭제하면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([
+            ["waypoint-1", latLngA],
+            ["waypoint-2", latLngB],
+        ]);
+
+        const emptyResult = editor.deleteBatchWaypoint(state, []);
+        const missingResult = editor.deleteBatchWaypoint(state, ["waypoint-1", "missing-waypoint"]);
+
+        expect(emptyResult.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(emptyResult.state).toBe(state);
+        expect(missingResult.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(missingResult.state).toBe(state);
     });
 
     it("웨이포인트가 여러 개 있을 때 전체 삭제하면 nodes는 빈 배열이 되고 상태는 idle이 된다", () => {
@@ -570,7 +930,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -600,7 +960,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -619,7 +979,37 @@ describe("waypointEditor", () => {
         ]);
         expect(next.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-1",
+            selectedNodeIds: ["waypoint-1"],
+        });
+    });
+
+    it("nodes를 복원할 때 현재 선택된 id 중 존재하는 id만 유지한다", () => {
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+                ["waypoint-3", latLngC],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1", "waypoint-2", "waypoint-3"],
+            },
+        );
+
+        const next = waypointEditor.restoreNodes(state, [
+            {
+                id: "waypoint-1",
+                latLng: latLngA,
+            },
+            {
+                id: "waypoint-3",
+                latLng: latLngC,
+            },
+        ]);
+
+        expect(next.status).toEqual({
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-1", "waypoint-3"],
         });
     });
 
@@ -631,7 +1021,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-2",
+                selectedNodeIds: ["waypoint-2"],
             },
         );
 
@@ -646,15 +1036,12 @@ describe("waypointEditor", () => {
     });
 
     it("moving 상태에서 nodes를 복원하면 이동 상태를 유지하지 않고 idle 상태가 된다", () => {
-        const state = createStateWithWaypoints(
-            [["waypoint-1", latLngA]],
-            {
-                statusName: "moving",
-                movingNodeId: "waypoint-1",
-                latLng: latLngB,
-                selectionAfterMove: null,
-            },
-        );
+        const state = createStateWithWaypoints([["waypoint-1", latLngA]], {
+            statusName: "moving",
+            movingNodeId: "waypoint-1",
+            latLng: latLngB,
+            selectionAfterMove: [],
+        });
 
         const next = waypointEditor.restoreNodes(state, [
             {
@@ -697,11 +1084,7 @@ type CreateTestWaypointEditorOptions = {
     isValidLatLng?: (latLng: LatLng) => boolean;
 };
 
-function createTestWaypointEditor({
-    createId,
-    maxWaypointCount,
-    isValidLatLng,
-}: CreateTestWaypointEditorOptions): {
+function createTestWaypointEditor({ createId, maxWaypointCount, isValidLatLng }: CreateTestWaypointEditorOptions): {
     createInitialState: () => WaypointEditorState;
     addWaypoint: (
         state: WaypointEditorState,
@@ -711,10 +1094,18 @@ function createTestWaypointEditor({
         state: WaypointEditorState,
         id: WaypointNodeId,
     ) => { state: WaypointEditorState; result: SelectWaypointResult };
+    selectWaypoints: (
+        state: WaypointEditorState,
+        ids: WaypointNodeId[],
+    ) => { state: WaypointEditorState; result: SelectWaypointsResult };
     deleteWaypoint: (
         state: WaypointEditorState,
         id: WaypointNodeId,
     ) => { state: WaypointEditorState; result: DeleteWaypointResult };
+    deleteBatchWaypoint: (
+        state: WaypointEditorState,
+        ids: WaypointNodeId[],
+    ) => { state: WaypointEditorState; result: DeleteBatchWaypointResult };
     deleteAllWaypoint: (state: WaypointEditorState) => {
         state: WaypointEditorState;
         result: DeleteAllWaypointResult;
@@ -724,10 +1115,20 @@ function createTestWaypointEditor({
         id: WaypointNodeId,
         latLng: LatLng,
     ) => { state: WaypointEditorState; result: BeginWaypointMoveResult };
+    beginBatchMove: (
+        state: WaypointEditorState,
+        ids: WaypointNodeId[],
+        latLng: LatLng,
+    ) => { state: WaypointEditorState; result: BeginBatchMoveResult };
     updateWaypointMove: (state: WaypointEditorState, id: WaypointNodeId, latLng: LatLng) => WaypointEditorState;
+    updateBatchMove: (state: WaypointEditorState, latLng: LatLng) => WaypointEditorState;
     commitWaypointMove: (state: WaypointEditorState) => {
         state: WaypointEditorState;
         result: CommitWaypointMoveResult;
+    };
+    commitBatchMove: (state: WaypointEditorState) => {
+        state: WaypointEditorState;
+        result: CommitBatchMoveResult;
     };
 } {
     return {
@@ -738,12 +1139,20 @@ function createTestWaypointEditor({
                 maxWaypointCount,
             }),
         selectWaypoint: waypointEditor.selectWaypoint,
+        selectWaypoints: waypointEditor.selectWaypoints,
         deleteWaypoint: waypointEditor.deleteWaypoint,
+        deleteBatchWaypoint: waypointEditor.deleteBatchWaypoint,
         deleteAllWaypoint: waypointEditor.deleteAllWaypoint,
         beginWaypointMove: waypointEditor.beginWaypointMove,
+        beginBatchMove: waypointEditor.beginBatchMove,
         updateWaypointMove: waypointEditor.updateWaypointMove,
+        updateBatchMove: waypointEditor.updateBatchMove,
         commitWaypointMove: (state) =>
             waypointEditor.commitWaypointMove(state, {
+                isValidLatLng,
+            }),
+        commitBatchMove: (state) =>
+            waypointEditor.commitBatchMove(state, {
                 isValidLatLng,
             }),
     };
