@@ -11,12 +11,12 @@ export type WaypointNode = {
 
 export type WaypointEditorStatus =
     | { statusName: "idle" }
-    | { statusName: "selected"; selectedNodeId: WaypointNodeId }
+    | { statusName: "selected"; selectedNodeIds: WaypointNodeId[] }
     | {
           statusName: "moving";
           movingNodeId: WaypointNodeId;
           latLng: LatLng;
-          selectionAfterMove: WaypointNodeId | null;
+          selectionAfterMove: WaypointNodeId[];
       };
 
 export type WaypointEditorState = {
@@ -94,7 +94,7 @@ function selectWaypoint(
         };
     }
 
-    if (state.status.statusName === "selected" && state.status.selectedNodeId === id) {
+    if (state.status.statusName === "selected" && isSameSelection(state.status.selectedNodeIds, [id])) {
         return {
             state: {
                 ...state,
@@ -111,7 +111,7 @@ function selectWaypoint(
             ...state,
             status: {
                 statusName: "selected",
-                selectedNodeId: id,
+                selectedNodeIds: [id],
             },
         },
         result: {
@@ -186,7 +186,10 @@ function beginWaypointMove(
                 statusName: "moving",
                 movingNodeId: id,
                 latLng: copyLatLng(latLng),
-                selectionAfterMove: state.status.statusName === "selected" && state.status.selectedNodeId === id ? id : null,
+                selectionAfterMove:
+                    state.status.statusName === "selected" && state.status.selectedNodeIds.includes(id)
+                        ? copyWaypointNodeIds(state.status.selectedNodeIds)
+                        : [],
             },
         },
         result: {
@@ -278,8 +281,8 @@ function getStatusAfterDelete(
     status: WaypointEditorStatus,
     deletedNodeId: WaypointNodeId,
 ): WaypointEditorStatus {
-    if (status.statusName === "selected" && status.selectedNodeId === deletedNodeId) {
-        return { statusName: "idle" };
+    if (status.statusName === "selected") {
+        return getStatusFromSelection(status.selectedNodeIds.filter((selectedNodeId) => selectedNodeId !== deletedNodeId));
     }
 
     if (status.statusName === "moving" && status.movingNodeId === deletedNodeId) {
@@ -289,15 +292,8 @@ function getStatusAfterDelete(
     return status;
 }
 
-function getStatusAfterMove(selectionAfterMove: WaypointNodeId | null): WaypointEditorStatus {
-    if (!selectionAfterMove) {
-        return { statusName: "idle" };
-    }
-
-    return {
-        statusName: "selected",
-        selectedNodeId: selectionAfterMove,
-    };
+function getStatusAfterMove(selectionAfterMove: WaypointNodeId[]): WaypointEditorStatus {
+    return getStatusFromSelection(selectionAfterMove);
 }
 
 function getStatusAfterRestore(status: WaypointEditorStatus, nodes: WaypointNode[]): WaypointEditorStatus {
@@ -305,11 +301,33 @@ function getStatusAfterRestore(status: WaypointEditorStatus, nodes: WaypointNode
         return { statusName: "idle" };
     }
 
-    if (!nodes.some((node) => node.id === status.selectedNodeId)) {
+    const nodeIds = new Set(nodes.map((node) => node.id));
+    const selectedNodeIds = status.selectedNodeIds.filter((selectedNodeId) => nodeIds.has(selectedNodeId));
+
+    return getStatusFromSelection(selectedNodeIds);
+}
+
+function getStatusFromSelection(selectedNodeIds: WaypointNodeId[]): WaypointEditorStatus {
+    if (selectedNodeIds.length === 0) {
         return { statusName: "idle" };
     }
 
-    return status;
+    return {
+        statusName: "selected",
+        selectedNodeIds: copyWaypointNodeIds(selectedNodeIds),
+    };
+}
+
+function isSameSelection(a: WaypointNodeId[], b: WaypointNodeId[]): boolean {
+    if (a.length !== b.length) {
+        return false;
+    }
+
+    return a.every((id, index) => id === b[index]);
+}
+
+function copyWaypointNodeIds(nodeIds: WaypointNodeId[]): WaypointNodeId[] {
+    return [...nodeIds];
 }
 
 function copyWaypointNode(node: WaypointNode): WaypointNode {

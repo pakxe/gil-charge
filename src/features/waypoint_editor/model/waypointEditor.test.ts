@@ -67,7 +67,7 @@ describe("waypointEditor", () => {
             ],
             status: {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         };
 
@@ -178,7 +178,7 @@ describe("waypointEditor", () => {
         expect(next.result).toEqual({ code: 0 });
         expect(next.state.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-1",
+            selectedNodeIds: ["waypoint-1"],
         });
     });
 
@@ -188,7 +188,7 @@ describe("waypointEditor", () => {
             [["waypoint-1", latLngA]],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -198,7 +198,7 @@ describe("waypointEditor", () => {
         expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
-    it("다른 웨이포인트 id를 선택하면 selectedNodeId를 변경한다", () => {
+    it("다른 웨이포인트 id를 선택하면 selectedNodeIds를 단일 배열로 변경한다", () => {
         const editor = createTestWaypointEditor({ createId: () => "unused" });
         const state = createStateWithWaypoints(
             [
@@ -207,7 +207,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -216,7 +216,30 @@ describe("waypointEditor", () => {
         expect(next.result).toEqual({ code: 0 });
         expect(next.state.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-2",
+            selectedNodeIds: ["waypoint-2"],
+        });
+    });
+
+    it("여러 웨이포인트가 선택된 상태에서 웨이포인트 id를 선택하면 해당 id 하나로 선택을 대체한다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+                ["waypoint-3", latLngC],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1", "waypoint-2"],
+            },
+        );
+
+        const next = editor.selectWaypoint(state, "waypoint-3");
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.status).toEqual({
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-3"],
         });
     });
 
@@ -248,7 +271,7 @@ describe("waypointEditor", () => {
             statusName: "moving",
             movingNodeId: "waypoint-1",
             latLng: latLngB,
-            selectionAfterMove: null,
+            selectionAfterMove: [],
         });
         expect(next.state.nodes).toEqual(state.nodes);
     });
@@ -276,7 +299,7 @@ describe("waypointEditor", () => {
                 statusName: "moving",
                 movingNodeId: "waypoint-1",
                 latLng: latLngB,
-                selectionAfterMove: null,
+                selectionAfterMove: [],
             },
         );
 
@@ -297,7 +320,7 @@ describe("waypointEditor", () => {
                 statusName: "moving",
                 movingNodeId: "waypoint-1",
                 latLng: latLngB,
-                selectionAfterMove: null,
+                selectionAfterMove: [],
             },
         );
 
@@ -313,7 +336,7 @@ describe("waypointEditor", () => {
             statusName: "moving",
             movingNodeId: "waypoint-1",
             latLng: latLngC,
-            selectionAfterMove: null,
+            selectionAfterMove: [],
         });
     });
 
@@ -331,7 +354,7 @@ describe("waypointEditor", () => {
                 statusName: "moving",
                 movingNodeId: "waypoint-1",
                 latLng: latLngC,
-                selectionAfterMove: null,
+                selectionAfterMove: [],
             },
         );
 
@@ -350,7 +373,7 @@ describe("waypointEditor", () => {
                 statusName: "moving",
                 movingNodeId: "waypoint-2",
                 latLng: latLngC,
-                selectionAfterMove: null,
+                selectionAfterMove: [],
             },
         );
 
@@ -376,7 +399,7 @@ describe("waypointEditor", () => {
             [["waypoint-1", latLngA]],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -392,7 +415,7 @@ describe("waypointEditor", () => {
         ]);
         expect(next.state.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-1",
+            selectedNodeIds: ["waypoint-1"],
         });
     });
 
@@ -405,7 +428,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -452,7 +475,7 @@ describe("waypointEditor", () => {
                 statusName: "moving",
                 movingNodeId: "waypoint-1",
                 latLng: latLngB,
-                selectionAfterMove: "waypoint-1",
+                selectionAfterMove: ["waypoint-1"],
             },
         );
 
@@ -470,7 +493,7 @@ describe("waypointEditor", () => {
         ]);
         expect(next.state.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-1",
+            selectedNodeIds: ["waypoint-1"],
         });
     });
 
@@ -497,7 +520,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-2",
+                selectedNodeIds: ["waypoint-2"],
             },
         );
 
@@ -518,7 +541,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -528,7 +551,31 @@ describe("waypointEditor", () => {
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-3"]);
         expect(next.state.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-1",
+            selectedNodeIds: ["waypoint-1"],
+        });
+    });
+
+    it("여러 웨이포인트가 선택된 상태에서 선택된 웨이포인트를 삭제하면 삭제된 id만 선택에서 제거한다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+                ["waypoint-3", latLngC],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1", "waypoint-3"],
+            },
+        );
+
+        const next = editor.deleteWaypoint(state, "waypoint-3");
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-2"]);
+        expect(next.state.status).toEqual({
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-1"],
         });
     });
 
@@ -570,7 +617,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -600,7 +647,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-1",
+                selectedNodeIds: ["waypoint-1"],
             },
         );
 
@@ -619,7 +666,37 @@ describe("waypointEditor", () => {
         ]);
         expect(next.status).toEqual({
             statusName: "selected",
-            selectedNodeId: "waypoint-1",
+            selectedNodeIds: ["waypoint-1"],
+        });
+    });
+
+    it("nodes를 복원할 때 현재 선택된 id 중 존재하는 id만 유지한다", () => {
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+                ["waypoint-3", latLngC],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1", "waypoint-2", "waypoint-3"],
+            },
+        );
+
+        const next = waypointEditor.restoreNodes(state, [
+            {
+                id: "waypoint-1",
+                latLng: latLngA,
+            },
+            {
+                id: "waypoint-3",
+                latLng: latLngC,
+            },
+        ]);
+
+        expect(next.status).toEqual({
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-1", "waypoint-3"],
         });
     });
 
@@ -631,7 +708,7 @@ describe("waypointEditor", () => {
             ],
             {
                 statusName: "selected",
-                selectedNodeId: "waypoint-2",
+                selectedNodeIds: ["waypoint-2"],
             },
         );
 
@@ -652,7 +729,7 @@ describe("waypointEditor", () => {
                 statusName: "moving",
                 movingNodeId: "waypoint-1",
                 latLng: latLngB,
-                selectionAfterMove: null,
+                selectionAfterMove: [],
             },
         );
 
