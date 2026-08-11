@@ -1,8 +1,10 @@
+/* eslint-disable react-refresh/only-export-components */
 import { env } from "@/shared/config/env";
 import { MapInterface } from "@/shared/model/map";
 import { KakaoMapAdapter } from "@/shared/ui/Map/KakaoMapAdapter";
 import { CustomOverlay } from "@/shared/ui/Map/CustomOverlay";
 import { Polyline } from "@/shared/ui/Map/Polyline";
+import { Polygon } from "@/shared/ui/Map/Polygon";
 
 type Props = MapInterface;
 
@@ -16,4 +18,5 @@ function MapComponent(props: Props) {
 export const Map = Object.assign(MapComponent, {
     CustomOverlay: CustomOverlay,
     Polyline: Polyline,
+    Polygon: Polygon,
 });
