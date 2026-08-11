@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 import type { LatLng } from "@/shared/model/map";
 import { useMap } from "@/shared/model/useMap";
 import { MAP_Z_INDEX } from "@/shared/constants/map";
 import { Map } from "@/shared/ui/Map/Map";
-import { cn } from "@/shared/utils/cn";
 
 const MOVE_BEGIN_THRESHOLD_PX = 4;
 const PATH_SAMPLE_INTERVAL_PX = 6;
@@ -27,312 +25,120 @@ type DragState = {
     isDrawing: boolean;
 };
 
-type TwoPointerGestureState = {
-    previousCenter: Point;
-    startDistance: number;
-    startZoomLevel: number;
-};
-
-type PanDragState = {
-    pointerId: number;
-    lastPoint: Point;
-};
-
 export function WaypointLassoLayer({ enabled, onComplete }: Props) {
     const map = useMap();
+    const onCompleteRef = useRef(onComplete);
     const dragStateRef = useRef<DragState | null>(null);
-    const panDragStateRef = useRef<PanDragState | null>(null);
-    const activePointersRef = useRef<globalThis.Map<number, Point>>(new globalThis.Map());
-    const gestureStateRef = useRef<TwoPointerGestureState | null>(null);
     const pathRef = useRef<LatLng[]>([]);
-    const cleanupListenersRef = useRef<(() => void) | null>(null);
     const [draftPath, setDraftPath] = useState<LatLng[]>([]);
 
     useEffect(() => {
-        const activePointers = activePointersRef.current;
+        onCompleteRef.current = onComplete;
+    }, [onComplete]);
 
-        return () => {
-            cleanupListenersRef.current?.();
-            cleanupListenersRef.current = null;
-            dragStateRef.current = null;
-            panDragStateRef.current = null;
-            activePointers.clear();
-            gestureStateRef.current = null;
+    useEffect(() => {
+        if (!enabled || !map) return;
+
+        const container = map.getContainer();
+        const previousCursor = container.style.cursor;
+        const previousTouchAction = container.style.touchAction;
+
+        container.style.cursor = "crosshair";
+        container.style.touchAction = "none";
+
+        const handlePointerDown = (event: PointerEvent) => {
+            if (event.button !== 0 || shouldIgnoreLassoStart(event.target)) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const startPoint = toPoint(event);
+            const startLatLng = map.clientPointToLatLng(event.clientX, event.clientY);
+
+            dragStateRef.current = {
+                pointerId: event.pointerId,
+                startPoint,
+                lastSamplePoint: startPoint,
+                startLatLng,
+                isDrawing: false,
+            };
+
             pathRef.current = [];
+            setDraftPath([]);
         };
-    }, []);
-
-    const beginTwoPointerGesture = (currentMap: NonNullable<typeof map>) => {
-        const snapshot = getTwoPointerSnapshot(Array.from(activePointersRef.current.values()));
-        if (!snapshot) return;
-
-        gestureStateRef.current = {
-            previousCenter: snapshot.center,
-            startDistance: snapshot.distance,
-            startZoomLevel: currentMap.getLevel(),
-        };
-        dragStateRef.current = null;
-        pathRef.current = [];
-        setDraftPath([]);
-    };
-
-    const updateTwoPointerGesture = (currentMap: NonNullable<typeof map>) => {
-        const snapshot = getTwoPointerSnapshot(Array.from(activePointersRef.current.values()));
-        if (!snapshot) return;
-
-        const previousGesture = gestureStateRef.current ?? {
-            previousCenter: snapshot.center,
-            startDistance: snapshot.distance,
-            startZoomLevel: currentMap.getLevel(),
-        };
-        const deltaX = snapshot.center.x - previousGesture.previousCenter.x;
-        const deltaY = snapshot.center.y - previousGesture.previousCenter.y;
-
-        if (deltaX !== 0 || deltaY !== 0) {
-            currentMap.panBy(-deltaX, -deltaY);
-        }
-
-        const zoomRatio = snapshot.distance / previousGesture.startDistance;
-        const nextZoomLevel = Math.round(previousGesture.startZoomLevel - Math.log2(zoomRatio));
-
-        if (Number.isFinite(nextZoomLevel) && nextZoomLevel !== currentMap.getLevel()) {
-            currentMap.setZoom(nextZoomLevel);
-        }
-
-        gestureStateRef.current = {
-            ...previousGesture,
-            previousCenter: snapshot.center,
-        };
-        dragStateRef.current = null;
-        pathRef.current = [];
-        setDraftPath([]);
-    };
-
-    const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
-        if (!enabled || !map || (event.deltaX === 0 && event.deltaY === 0)) {
-            return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
-            const deltaX = event.deltaX !== 0 ? event.deltaX : event.deltaY;
-
-            map.panBy(deltaX, 0);
-            return;
-        }
-
-        const nextZoomLevel = map.getLevel() + Math.sign(event.deltaY);
-        map.setZoom(nextZoomLevel);
-    };
-
-    const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-        if (!enabled || !map) {
-            return;
-        }
-
-        if (event.button === 1 || event.button === 2) {
-            beginMousePan(event, map);
-            return;
-        }
-
-        if (event.button !== 0) {
-            return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        activePointersRef.current.set(event.pointerId, toPoint(event));
-
-        if (activePointersRef.current.size >= 2) {
-            beginTwoPointerGesture(map);
-            return;
-        }
-
-        if (cleanupListenersRef.current) {
-            return;
-        }
-
-        const startPoint = toPoint(event);
-        const startLatLng = map.clientPointToLatLng(event.clientX, event.clientY);
-
-        dragStateRef.current = {
-            pointerId: event.pointerId,
-            startPoint,
-            lastSamplePoint: startPoint,
-            startLatLng,
-            isDrawing: false,
-        };
-        pathRef.current = [];
-        setDraftPath([]);
 
         const handlePointerMove = (moveEvent: PointerEvent) => {
-            if (!activePointersRef.current.has(moveEvent.pointerId)) {
-                return;
-            }
-
-            moveEvent.preventDefault();
-            activePointersRef.current.set(moveEvent.pointerId, toPoint(moveEvent));
-
-            if (activePointersRef.current.size >= 2 || gestureStateRef.current) {
-                updateTwoPointerGesture(map);
-                return;
-            }
-
             const dragState = dragStateRef.current;
 
-            if (!dragState || dragState.pointerId !== moveEvent.pointerId) {
-                return;
-            }
+            // 드래그 중이 아니거나 다른 포인터 이벤트면 무시
+            if (!dragState || dragState.pointerId !== moveEvent.pointerId) return;
+
+            moveEvent.preventDefault();
 
             const currentPoint = toPoint(moveEvent);
             const distanceFromStart = getDistance(dragState.startPoint, currentPoint);
 
-            if (!dragState.isDrawing && distanceFromStart <= MOVE_BEGIN_THRESHOLD_PX) {
-                return;
-            }
+            if (!dragState.isDrawing && distanceFromStart <= MOVE_BEGIN_THRESHOLD_PX) return;
 
             const currentLatLng = map.clientPointToLatLng(moveEvent.clientX, moveEvent.clientY);
 
             if (!dragState.isDrawing) {
                 dragState.isDrawing = true;
                 pathRef.current = [dragState.startLatLng, currentLatLng];
-                dragState.lastSamplePoint = currentPoint;
-                setDraftPath(pathRef.current);
-                return;
+            } else {
+                if (getDistance(dragState.lastSamplePoint, currentPoint) < PATH_SAMPLE_INTERVAL_PX) return;
+                pathRef.current = [...pathRef.current, currentLatLng];
             }
 
-            if (getDistance(dragState.lastSamplePoint, currentPoint) < PATH_SAMPLE_INTERVAL_PX) {
-                return;
-            }
-
-            pathRef.current = [...pathRef.current, currentLatLng];
             dragState.lastSamplePoint = currentPoint;
             setDraftPath(pathRef.current);
         };
 
         const handlePointerUpOrCancel = (endEvent: PointerEvent) => {
             const dragState = dragStateRef.current;
-            const wasTwoPointerGesture = gestureStateRef.current !== null;
 
-            activePointersRef.current.delete(endEvent.pointerId);
+            // 현재 진행 중인 드래그 이벤트가 아니면 무시
+            if (!dragState || dragState.pointerId !== endEvent.pointerId) return;
 
-            if (wasTwoPointerGesture || activePointersRef.current.size > 0) {
-                dragStateRef.current = null;
-                gestureStateRef.current = activePointersRef.current.size >= 2 ? gestureStateRef.current : null;
-                pathRef.current = [];
-                setDraftPath([]);
-
-                if (activePointersRef.current.size === 0) {
-                    cleanupListenersRef.current?.();
-                    cleanupListenersRef.current = null;
-                }
-
-                return;
-            }
-
-            cleanupListenersRef.current?.();
-            cleanupListenersRef.current = null;
             dragStateRef.current = null;
             setDraftPath([]);
 
-            if (!dragState || dragState.pointerId !== endEvent.pointerId || !dragState.isDrawing) {
-                pathRef.current = [];
-                return;
-            }
-
-            if (endEvent.type === "pointerup") {
+            if (dragState.isDrawing && endEvent.type === "pointerup") {
                 const completedPath = appendEndPoint(pathRef.current, dragState.lastSamplePoint, endEvent, map);
 
                 if (completedPath.length >= 3) {
-                    onComplete(completedPath);
+                    onCompleteRef.current(completedPath);
                 }
             }
 
             pathRef.current = [];
         };
 
+        container.addEventListener("pointerdown", handlePointerDown);
         window.addEventListener("pointermove", handlePointerMove);
         window.addEventListener("pointerup", handlePointerUpOrCancel);
         window.addEventListener("pointercancel", handlePointerUpOrCancel);
-        cleanupListenersRef.current = () => {
+
+        return () => {
+            container.removeEventListener("pointerdown", handlePointerDown);
             window.removeEventListener("pointermove", handlePointerMove);
             window.removeEventListener("pointerup", handlePointerUpOrCancel);
             window.removeEventListener("pointercancel", handlePointerUpOrCancel);
+
+            container.style.cursor = previousCursor;
+            container.style.touchAction = previousTouchAction;
+
+            dragStateRef.current = null;
+            pathRef.current = [];
+            setDraftPath([]);
         };
-    };
-
-    const beginMousePan = (event: ReactPointerEvent<HTMLDivElement>, currentMap: NonNullable<typeof map>) => {
-        event.preventDefault();
-        event.stopPropagation();
-        cleanupListenersRef.current?.();
-
-        activePointersRef.current.clear();
-        activePointersRef.current.set(event.pointerId, toPoint(event));
-        dragStateRef.current = null;
-        gestureStateRef.current = null;
-        pathRef.current = [];
-        setDraftPath([]);
-        panDragStateRef.current = {
-            pointerId: event.pointerId,
-            lastPoint: toPoint(event),
-        };
-
-        const handlePointerMove = (moveEvent: PointerEvent) => {
-            const panDragState = panDragStateRef.current;
-
-            if (!panDragState || panDragState.pointerId !== moveEvent.pointerId) {
-                return;
-            }
-
-            moveEvent.preventDefault();
-
-            const currentPoint = toPoint(moveEvent);
-            const deltaX = currentPoint.x - panDragState.lastPoint.x;
-            const deltaY = currentPoint.y - panDragState.lastPoint.y;
-
-            if (deltaX !== 0 || deltaY !== 0) {
-                currentMap.panBy(-deltaX, -deltaY);
-            }
-
-            panDragStateRef.current = {
-                ...panDragState,
-                lastPoint: currentPoint,
-            };
-        };
-
-        const handlePointerUpOrCancel = (endEvent: PointerEvent) => {
-            const panDragState = panDragStateRef.current;
-
-            if (!panDragState || panDragState.pointerId !== endEvent.pointerId) {
-                return;
-            }
-
-            cleanupListenersRef.current?.();
-            cleanupListenersRef.current = null;
-            panDragStateRef.current = null;
-            activePointersRef.current.clear();
-        };
-
-        window.addEventListener("pointermove", handlePointerMove);
-        window.addEventListener("pointerup", handlePointerUpOrCancel);
-        window.addEventListener("pointercancel", handlePointerUpOrCancel);
-        cleanupListenersRef.current = () => {
-            window.removeEventListener("pointermove", handlePointerMove);
-            window.removeEventListener("pointerup", handlePointerUpOrCancel);
-            window.removeEventListener("pointercancel", handlePointerUpOrCancel);
-        };
-    };
-
-    const visibleDraftPath = enabled ? draftPath : [];
+    }, [enabled, map]);
 
     return (
         <>
-            {visibleDraftPath.length >= 3 && (
+            {draftPath.length >= 3 && (
                 <Map.Polygon
-                    path={visibleDraftPath}
+                    path={draftPath}
                     strokeWeight={2}
                     strokeColor="#f0c243"
                     strokeOpacity={0.8}
@@ -342,34 +148,6 @@ export function WaypointLassoLayer({ enabled, onComplete }: Props) {
                     zIndex={MAP_Z_INDEX.lasso}
                 />
             )}
-            {visibleDraftPath.length >= 2 && (
-                <Map.Polyline
-                    path={visibleDraftPath}
-                    strokeWeight={3}
-                    strokeColor="#f0c243"
-                    strokeOpacity={1}
-                    strokeStyle="solid"
-                    zIndex={MAP_Z_INDEX.lasso + 1}
-                />
-            )}
-            <div
-                aria-hidden="true"
-                className={cn("absolute inset-0 z-40 touch-none", enabled ? "cursor-crosshair" : "pointer-events-none")}
-                onContextMenu={(event) => {
-                    if (!enabled) return;
-
-                    event.preventDefault();
-                    event.stopPropagation();
-                }}
-                onAuxClick={(event) => {
-                    if (!enabled) return;
-
-                    event.preventDefault();
-                    event.stopPropagation();
-                }}
-                onPointerDown={handlePointerDown}
-                onWheel={handleWheel}
-            />
         </>
     );
 }
@@ -392,29 +170,15 @@ function appendEndPoint(
     return [...path, map.clientPointToLatLng(event.clientX, event.clientY)];
 }
 
-type TwoPointerSnapshot = {
-    center: Point;
-    distance: number;
-};
-
-function getTwoPointerSnapshot(points: Point[]): TwoPointerSnapshot | null {
-    const first = points[0];
-    const second = points[1];
-
-    if (!first || !second) {
-        return null;
+function shouldIgnoreLassoStart(target: EventTarget | null): boolean {
+    if (!(target instanceof Element)) {
+        return false;
     }
 
-    return {
-        center: {
-            x: (first.x + second.x) / 2,
-            y: (first.y + second.y) / 2,
-        },
-        distance: Math.max(getDistance(first, second), 1),
-    };
+    return Boolean(target.closest("[data-waypoint-node='true'], button, a, input, select, textarea, [role='button']"));
 }
 
-function toPoint(event: Pick<PointerEvent | ReactPointerEvent<HTMLDivElement>, "clientX" | "clientY">): Point {
+function toPoint(event: Pick<PointerEvent, "clientX" | "clientY">): Point {
     return {
         x: event.clientX,
         y: event.clientY,
