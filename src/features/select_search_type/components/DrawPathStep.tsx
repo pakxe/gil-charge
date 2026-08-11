@@ -79,6 +79,8 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
     const hasSearchResult = stations !== null;
     const controlBottom = hasSearchResult ? resultSheetVisibleHeight : 0;
     const isLassoMode = mode === "lasso";
+    const selectedWaypointIds = status.statusName === "selected" ? status.selectedNodeIds : [];
+    const hasSelectedWaypoint = selectedWaypointIds.length > 0;
 
     // const radiusPathPoints = data.penPaths.length > 0 ? data.penPaths : Array.from(data.waypoints.values());
     return (
@@ -94,7 +96,7 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
                 center={location ?? DEFAULT_MAP_CENTER}
                 // currentLocation={location ?? undefined}
                 zoomLevel={zoomLevel}
-                isDraggable={!isLassoMode && status.statusName !== "moving"}
+                isDraggable={!isLassoMode && !isMoveActive(status.statusName)}
                 isZoomable={!isLassoMode}
                 // isTracking={isTracking}
                 onZoomLevelChange={(zoomLevel) => setZoomLevel(zoomLevel)}
@@ -111,6 +113,9 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
                     onWaypointMoveBegin={actions.beginWaypointMove}
                     onWaypointMoveUpdate={actions.updateWaypointMove}
                     onWaypointMoveCommit={actions.commitWaypointMove}
+                    onWaypointBatchMoveBegin={actions.beginBatchMove}
+                    onWaypointBatchMoveUpdate={actions.updateBatchMove}
+                    onWaypointBatchMoveCommit={actions.commitBatchMove}
                 />
                 <WaypointEdgesLayer waypoints={data.visibleWaypoints} weight={currentStrokeWeight} />
                 <WaypointLassoLayer
@@ -206,6 +211,25 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
                         선택
                     </button>
                 </Box>
+                <button
+                    type="button"
+                    disabled={!hasSelectedWaypoint}
+                    className={cn(
+                        "min-h-10 rounded-full bg-[#1f1f1f]/40 px-3 text-sm backdrop-blur-[15px] transition-colors",
+                        hasSelectedWaypoint
+                            ? "cursor-pointer text-gil-yellow-400"
+                            : "cursor-not-allowed text-gil-gray-600",
+                    )}
+                    onClick={() => {
+                        if (!hasSelectedWaypoint) return;
+
+                        actions.deleteBatchWaypoint(selectedWaypointIds);
+                        setResultSheetVisibleHeight(0);
+                        onResultClear();
+                    }}
+                >
+                    선택 삭제
+                </button>
                 <Box
                     role="button"
                     tabIndex={0}
@@ -232,6 +256,10 @@ const BASE_LEVEL = 6;
 const BASE_STROKE_WEIGHT = 250;
 const DEFAULT_RADIUS_KM = 1;
 const DEFAULT_RESULT_SHEET_HEIGHT_RATIO = 0.5;
+
+function isMoveActive(statusName: string) {
+    return statusName === "moving" || statusName === "batchMoving";
+}
 
 function calculateStrokeWeight(currentLevel: number, radiusKm: number) {
     return BASE_STROKE_WEIGHT * radiusKm * Math.pow(2, BASE_LEVEL - currentLevel);
