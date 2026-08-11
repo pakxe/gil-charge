@@ -5,6 +5,7 @@ import {
     type CommitWaypointMoveResult,
     type DeleteWaypointResult,
     type SelectWaypointResult,
+    type SelectWaypointsResult,
     type WaypointEditorState,
     type WaypointNode,
     type WaypointNodeId,
@@ -26,7 +27,8 @@ type WaypointEditorCommandResult =
     | BeginWaypointMoveResult
     | CommitWaypointMoveResult
     | DeleteWaypointResult
-    | SelectWaypointResult;
+    | SelectWaypointResult
+    | SelectWaypointsResult;
 
 type WaypointEditorHookState = {
     editorState: WaypointEditorState;
@@ -77,6 +79,18 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
     const selectWaypoint = useCallback((id: WaypointNodeId): void => {
         setHookState((prev) => {
             const next = waypointEditor.selectWaypoint(prev.editorState, id);
+
+            return {
+                ...prev,
+                editorState: next.state,
+                result: next.result,
+            };
+        });
+    }, []);
+
+    const selectWaypoints = useCallback((ids: WaypointNodeId[]): void => {
+        setHookState((prev) => {
+            const next = waypointEditor.selectWaypoints(prev.editorState, ids);
 
             return {
                 ...prev,
@@ -225,6 +239,7 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
         actions: {
             addWaypoint,
             selectWaypoint,
+            selectWaypoints,
             deleteWaypoint,
             deleteAllWaypoint,
             beginWaypointMove,
