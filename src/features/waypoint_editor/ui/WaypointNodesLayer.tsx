@@ -165,7 +165,7 @@ export function WaypointNodesLayer({
 }
 
 function isSelectedWaypoint(status: WaypointEditorStatus, waypointId: WaypointNodeId) {
-    return status.statusName === "selected" && status.selectedNodeId === waypointId;
+    return status.statusName === "selected" && status.selectedNodeIds.includes(waypointId);
 }
 
 function isMovingWaypoint(status: WaypointEditorStatus, waypointId: WaypointNodeId) {
