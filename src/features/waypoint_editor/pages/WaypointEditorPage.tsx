@@ -1,10 +1,8 @@
 import { Map } from "@/shared/ui/Map/Map";
 import type { LatLng } from "@/shared/model/map";
 import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
-import { WaypointEdgesLayer } from "@/features/waypoint_editor/ui/WaypointEdgesLayer";
 import { WaypointNodesLayer } from "@/features/waypoint_editor/ui/WaypointNodesLayer";
-import Box from "@/shared/components/Box/Box";
-import { cn } from "@/shared/utils/cn";
+import { WaypointHistoryControls } from "@/features/waypoint_editor/ui/WaypointHistoryControls";
 
 const INITIAL_CENTER: LatLng = {
     lat: 37.5665,
@@ -39,6 +37,13 @@ export function WaypointEditorPage() {
                     onWaypointMoveCommit={actions.commitWaypointMove}
                 />
             </Map>
+            <WaypointHistoryControls
+                canUndo={data.canUndo}
+                canRedo={data.canRedo}
+                onUndo={actions.undoWaypoint}
+                onRedo={actions.redoWaypoint}
+                className="absolute right-4 top-4 z-10"
+            />
         </main>
     );
 }
