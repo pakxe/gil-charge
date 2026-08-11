@@ -19,6 +19,9 @@ type Props = {
     onWaypointMoveBegin: (id: WaypointNodeId, latLng: LatLng) => void;
     onWaypointMoveUpdate: (id: WaypointNodeId, latLng: LatLng) => void;
     onWaypointMoveCommit: () => void;
+    onWaypointBatchMoveBegin: (ids: WaypointNodeId[], latLng: LatLng) => void;
+    onWaypointBatchMoveUpdate: (latLng: LatLng) => void;
+    onWaypointBatchMoveCommit: () => void;
 };
 
 export function WaypointNodesLayer({
@@ -29,6 +32,9 @@ export function WaypointNodesLayer({
     onWaypointMoveBegin,
     onWaypointMoveUpdate,
     onWaypointMoveCommit,
+    onWaypointBatchMoveBegin,
+    onWaypointBatchMoveUpdate,
+    onWaypointBatchMoveCommit,
 }: Props) {
     const map = useMap();
     const isDraggingRef = useRef(false);
@@ -58,6 +64,8 @@ export function WaypointNodesLayer({
             y: event.clientY,
         };
 
+        let activeMoveMode: "single" | "batch" | null = null;
+
         const handlePointerMove = (e: PointerEvent) => {
             const startPos = startPosRef.current;
             if (!startPos) return;
@@ -76,7 +84,22 @@ export function WaypointNodesLayer({
 
             if (!isDraggingRef.current) {
                 isDraggingRef.current = true;
+                const batchMoveIds = getBatchMoveIds(status, waypointId);
+
+                if (batchMoveIds) {
+                    activeMoveMode = "batch";
+                    onWaypointBatchMoveBegin(batchMoveIds, latLng);
+                    onWaypointBatchMoveUpdate(latLng);
+                    return;
+                }
+
+                activeMoveMode = "single";
                 onWaypointMoveBegin(waypointId, latLng);
+            }
+
+            if (activeMoveMode === "batch") {
+                onWaypointBatchMoveUpdate(latLng);
+                return;
             }
 
             onWaypointMoveUpdate(waypointId, latLng);
@@ -90,7 +113,11 @@ export function WaypointNodesLayer({
             startPosRef.current = null;
 
             if (isDraggingRef.current) {
-                onWaypointMoveCommit();
+                if (activeMoveMode === "batch") {
+                    onWaypointBatchMoveCommit();
+                } else {
+                    onWaypointMoveCommit();
+                }
             }
         };
 
@@ -114,6 +141,7 @@ export function WaypointNodesLayer({
                         zIndex={isActive ? MAP_Z_INDEX.selectedWaypoint : MAP_Z_INDEX.waypoint}
                     >
                         <div
+                            data-waypoint-node="true"
                             className="relative touch-none select-none"
                             onClick={(event) => {
                                 event.stopPropagation();
@@ -169,5 +197,24 @@ function isSelectedWaypoint(status: WaypointEditorStatus, waypointId: WaypointNo
 }
 
 function isMovingWaypoint(status: WaypointEditorStatus, waypointId: WaypointNodeId) {
-    return status.statusName === "moving" && status.movingNodeId === waypointId;
+    return (
+        (status.statusName === "moving" && status.movingNodeId === waypointId) ||
+        isBatchMovingWaypoint(status, waypointId)
+    );
+}
+
+function isBatchMovingWaypoint(status: WaypointEditorStatus, waypointId: WaypointNodeId) {
+    return status.statusName === "batchMoving" && status.movingNodeIds.includes(waypointId);
+}
+
+function getBatchMoveIds(status: WaypointEditorStatus, waypointId: WaypointNodeId): WaypointNodeId[] | null {
+    if (status.statusName !== "selected" || !status.selectedNodeIds.includes(waypointId)) {
+        return null;
+    }
+
+    if (status.selectedNodeIds.length < 2) {
+        return null;
+    }
+
+    return status.selectedNodeIds;
 }
