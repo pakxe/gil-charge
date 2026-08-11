@@ -161,7 +161,6 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
                     canRedo={data.canRedo}
                     onUndo={actions.undoWaypoint}
                     onRedo={actions.redoWaypoint}
-                    className="absolute right-4 top-4 z-10"
                 />
                 <Box
                     role="button"
