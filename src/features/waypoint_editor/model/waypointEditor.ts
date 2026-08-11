@@ -17,6 +17,13 @@ export type WaypointEditorStatus =
           movingNodeId: WaypointNodeId;
           latLng: LatLng;
           selectionAfterMove: WaypointNodeId[];
+      }
+    | {
+          statusName: "batchMoving";
+          movingNodeIds: WaypointNodeId[];
+          originLatLng: LatLng;
+          latLng: LatLng;
+          selectionAfterMove: WaypointNodeId[];
       };
 
 export type WaypointEditorState = {
@@ -28,9 +35,12 @@ export type AddWaypointResult = { code: 0; node: WaypointNode } | { code: 1; rea
 export type SelectWaypointResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
 export type SelectWaypointsResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
 export type DeleteWaypointResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
+export type DeleteBatchWaypointResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
 export type DeleteAllWaypointResult = void;
 export type BeginWaypointMoveResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
 export type CommitWaypointMoveResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
+export type BeginBatchMoveResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
+export type CommitBatchMoveResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
 
 type AddWaypointOptions = {
     createId: () => WaypointNodeId;
@@ -172,7 +182,38 @@ function deleteWaypoint(
     };
 }
 
-function deleteAllWaypoint(state: WaypointEditorState): { state: WaypointEditorState; result: DeleteAllWaypointResult } {
+function deleteBatchWaypoint(
+    state: WaypointEditorState,
+    ids: WaypointNodeId[],
+): { state: WaypointEditorState; result: DeleteBatchWaypointResult } {
+    if (ids.length === 0 || !ids.every((id) => hasWaypoint(state, id))) {
+        return {
+            state,
+            result: {
+                code: 2,
+                reason: "INVALID_INPUT",
+            },
+        };
+    }
+
+    const deletedNodeIds = new Set(ids);
+
+    return {
+        state: {
+            ...state,
+            nodes: state.nodes.filter((node) => !deletedNodeIds.has(node.id)),
+            status: getStatusAfterBatchDelete(state.status, deletedNodeIds),
+        },
+        result: {
+            code: 0,
+        },
+    };
+}
+
+function deleteAllWaypoint(state: WaypointEditorState): {
+    state: WaypointEditorState;
+    result: DeleteAllWaypointResult;
+} {
     return {
         state: {
             ...state,
@@ -195,7 +236,7 @@ function beginWaypointMove(
     id: WaypointNodeId,
     latLng: LatLng,
 ): { state: WaypointEditorState; result: BeginWaypointMoveResult } {
-    if (!hasWaypoint(state, id) || state.status.statusName === "moving") {
+    if (!hasWaypoint(state, id) || isMoveActive(state.status)) {
         return {
             state,
             result: {
@@ -224,8 +265,54 @@ function beginWaypointMove(
     };
 }
 
+function beginBatchMove(
+    state: WaypointEditorState,
+    ids: WaypointNodeId[],
+    latLng: LatLng,
+): { state: WaypointEditorState; result: BeginBatchMoveResult } {
+    if (ids.length === 0 || !ids.every((id) => hasWaypoint(state, id)) || isMoveActive(state.status)) {
+        return {
+            state,
+            result: {
+                code: 2,
+                reason: "INVALID_INPUT",
+            },
+        };
+    }
+
+    return {
+        state: {
+            ...state,
+            status: {
+                statusName: "batchMoving",
+                movingNodeIds: copyWaypointNodeIds(ids),
+                originLatLng: copyLatLng(latLng),
+                latLng: copyLatLng(latLng),
+                selectionAfterMove: copyWaypointNodeIds(ids),
+            },
+        },
+        result: {
+            code: 0,
+        },
+    };
+}
+
 function updateWaypointMove(state: WaypointEditorState, id: WaypointNodeId, latLng: LatLng): WaypointEditorState {
     if (state.status.statusName !== "moving" || state.status.movingNodeId !== id) {
+        return state;
+    }
+
+    return {
+        ...state,
+        status: {
+            ...state.status,
+            latLng: copyLatLng(latLng),
+        },
+    };
+}
+
+function updateBatchMove(state: WaypointEditorState, latLng: LatLng): WaypointEditorState {
+    if (state.status.statusName !== "batchMoving") {
         return state;
     }
 
@@ -287,32 +374,112 @@ function commitWaypointMove(
     };
 }
 
+function commitBatchMove(
+    state: WaypointEditorState,
+    { isValidLatLng = () => true }: CommitWaypointMoveOptions = {},
+): { state: WaypointEditorState; result: CommitBatchMoveResult } {
+    if (state.status.statusName !== "batchMoving") {
+        return {
+            state,
+            result: {
+                code: 2,
+                reason: "INVALID_INPUT",
+            },
+        };
+    }
+
+    const movingStatus = state.status;
+    const delta = getLatLngDelta(movingStatus.originLatLng, movingStatus.latLng);
+    const movingNodeIds = new Set(movingStatus.movingNodeIds);
+    const nextStatus = getStatusAfterMove(movingStatus.selectionAfterMove);
+    const nextNodes = state.nodes.map((node) =>
+        movingNodeIds.has(node.id)
+            ? {
+                  ...node,
+                  latLng: addLatLngDelta(node.latLng, delta),
+              }
+            : node,
+    );
+
+    if (!nextNodes.every((node) => !movingNodeIds.has(node.id) || isValidLatLng(node.latLng))) {
+        return {
+            state: {
+                ...state,
+                status: nextStatus,
+            },
+            result: {
+                code: 2,
+                reason: "INVALID_INPUT",
+            },
+        };
+    }
+
+    return {
+        state: {
+            ...state,
+            nodes: nextNodes,
+            status: nextStatus,
+        },
+        result: {
+            code: 0,
+        },
+    };
+}
+
 export const waypointEditor = {
     createInitialState,
     addWaypoint,
     selectWaypoint,
     selectWaypoints,
     deleteWaypoint,
+    deleteBatchWaypoint,
     deleteAllWaypoint,
     restoreNodes,
     beginWaypointMove,
+    beginBatchMove,
     updateWaypointMove,
+    updateBatchMove,
     commitWaypointMove,
+    commitBatchMove,
 };
 
 function hasWaypoint(state: WaypointEditorState, id: WaypointNodeId) {
     return state.nodes.some((node) => node.id === id);
 }
 
-function getStatusAfterDelete(
-    status: WaypointEditorStatus,
-    deletedNodeId: WaypointNodeId,
-): WaypointEditorStatus {
+function getStatusAfterDelete(status: WaypointEditorStatus, deletedNodeId: WaypointNodeId): WaypointEditorStatus {
     if (status.statusName === "selected") {
-        return getStatusFromSelection(status.selectedNodeIds.filter((selectedNodeId) => selectedNodeId !== deletedNodeId));
+        return getStatusFromSelection(
+            status.selectedNodeIds.filter((selectedNodeId) => selectedNodeId !== deletedNodeId),
+        );
     }
 
     if (status.statusName === "moving" && status.movingNodeId === deletedNodeId) {
+        return { statusName: "idle" };
+    }
+
+    if (status.statusName === "batchMoving" && status.movingNodeIds.includes(deletedNodeId)) {
+        return { statusName: "idle" };
+    }
+
+    return status;
+}
+
+function getStatusAfterBatchDelete(
+    status: WaypointEditorStatus,
+    deletedNodeIds: ReadonlySet<WaypointNodeId>,
+): WaypointEditorStatus {
+    if (status.statusName === "selected") {
+        return getStatusFromSelection(
+            status.selectedNodeIds.filter((selectedNodeId) => !deletedNodeIds.has(selectedNodeId)),
+        );
+    }
+
+    if (status.statusName === "moving" && deletedNodeIds.has(status.movingNodeId)) {
+        return { statusName: "idle" };
+    }
+
+    if (status.statusName === "batchMoving" && status.movingNodeIds.some((movingNodeId) => deletedNodeIds.has(movingNodeId))) {
         return { statusName: "idle" };
     }
 
@@ -368,5 +535,23 @@ function copyLatLng(latLng: LatLng): LatLng {
     return {
         lat: latLng.lat,
         lng: latLng.lng,
+    };
+}
+
+function isMoveActive(status: WaypointEditorStatus): boolean {
+    return status.statusName === "moving" || status.statusName === "batchMoving";
+}
+
+function getLatLngDelta(origin: LatLng, current: LatLng): LatLng {
+    return {
+        lat: current.lat - origin.lat,
+        lng: current.lng - origin.lng,
+    };
+}
+
+function addLatLngDelta(latLng: LatLng, delta: LatLng): LatLng {
+    return {
+        lat: latLng.lat + delta.lat,
+        lng: latLng.lng + delta.lng,
     };
 }
