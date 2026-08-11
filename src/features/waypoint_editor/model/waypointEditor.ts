@@ -157,6 +157,13 @@ function deleteAllWaypoint(state: WaypointEditorState): { state: WaypointEditorS
     };
 }
 
+function restoreNodes(state: WaypointEditorState, nodes: WaypointNode[]): WaypointEditorState {
+    return {
+        nodes: nodes.map(copyWaypointNode),
+        status: getStatusAfterRestore(state.status, nodes),
+    };
+}
+
 function beginWaypointMove(
     state: WaypointEditorState,
     id: WaypointNodeId,
@@ -257,6 +264,7 @@ export const waypointEditor = {
     selectWaypoint,
     deleteWaypoint,
     deleteAllWaypoint,
+    restoreNodes,
     beginWaypointMove,
     updateWaypointMove,
     commitWaypointMove,
@@ -289,6 +297,25 @@ function getStatusAfterMove(selectionAfterMove: WaypointNodeId | null): Waypoint
     return {
         statusName: "selected",
         selectedNodeId: selectionAfterMove,
+    };
+}
+
+function getStatusAfterRestore(status: WaypointEditorStatus, nodes: WaypointNode[]): WaypointEditorStatus {
+    if (status.statusName !== "selected") {
+        return { statusName: "idle" };
+    }
+
+    if (!nodes.some((node) => node.id === status.selectedNodeId)) {
+        return { statusName: "idle" };
+    }
+
+    return status;
+}
+
+function copyWaypointNode(node: WaypointNode): WaypointNode {
+    return {
+        id: node.id,
+        latLng: copyLatLng(node.latLng),
     };
 }
 

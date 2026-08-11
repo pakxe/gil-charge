@@ -10,6 +10,10 @@ import {
     type WaypointNodeId,
     waypointEditor,
 } from "@/features/waypoint_editor/model/waypointEditor";
+import {
+    type WaypointHistoryState,
+    waypointHistory,
+} from "@/features/waypoint_editor/model/waypointHistory";
 import type { LatLng } from "@/shared/model/map";
 
 type UseWaypointEditorOptions = {
@@ -26,6 +30,7 @@ type WaypointEditorCommandResult =
 
 type WaypointEditorHookState = {
     editorState: WaypointEditorState;
+    historyState: WaypointHistoryState;
     result: WaypointEditorCommandResult | null;
 };
 
@@ -34,6 +39,7 @@ const defaultCreateId = () => crypto.randomUUID();
 export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount }: UseWaypointEditorOptions = {}) {
     const [hookState, setHookState] = useState<WaypointEditorHookState>(() => ({
         editorState: waypointEditor.createInitialState(),
+        historyState: waypointHistory.create(),
         result: null,
     }));
 
@@ -45,8 +51,22 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
                     maxWaypointCount,
                 });
 
+                if (next.result.code !== 0) {
+                    return {
+                        ...prev,
+                        editorState: next.state,
+                        result: next.result,
+                    };
+                }
+
+                const nextHistoryState = waypointHistory.commit(prev.historyState, next.state.nodes);
+
                 return {
-                    editorState: next.state,
+                    editorState: {
+                        ...next.state,
+                        nodes: waypointHistory.getCurrent(nextHistoryState),
+                    },
+                    historyState: nextHistoryState,
                     result: next.result,
                 };
             });
@@ -70,8 +90,22 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
         setHookState((prev) => {
             const next = waypointEditor.deleteWaypoint(prev.editorState, id);
 
+            if (next.result.code !== 0) {
+                return {
+                    ...prev,
+                    editorState: next.state,
+                    result: next.result,
+                };
+            }
+
+            const nextHistoryState = waypointHistory.commit(prev.historyState, next.state.nodes);
+
             return {
-                editorState: next.state,
+                editorState: {
+                    ...next.state,
+                    nodes: waypointHistory.getCurrent(nextHistoryState),
+                },
+                historyState: nextHistoryState,
                 result: next.result,
             };
         });
@@ -80,9 +114,14 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
     const deleteAllWaypoint = useCallback((): void => {
         setHookState((prev) => {
             const next = waypointEditor.deleteAllWaypoint(prev.editorState);
+            const nextHistoryState = waypointHistory.commit(prev.historyState, next.state.nodes);
 
             return {
-                editorState: next.state,
+                editorState: {
+                    ...next.state,
+                    nodes: waypointHistory.getCurrent(nextHistoryState),
+                },
+                historyState: nextHistoryState,
                 result: { code: 0 },
             };
         });
@@ -111,22 +150,76 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
         setHookState((prev) => {
             const next = waypointEditor.commitWaypointMove(prev.editorState);
 
+            if (next.result.code !== 0) {
+                return {
+                    ...prev,
+                    editorState: next.state,
+                    result: next.result,
+                };
+            }
+
+            const nextHistoryState = waypointHistory.commit(prev.historyState, next.state.nodes);
+
             return {
-                ...prev,
-                editorState: next.state,
+                editorState: {
+                    ...next.state,
+                    nodes: waypointHistory.getCurrent(nextHistoryState),
+                },
+                historyState: nextHistoryState,
                 result: next.result,
+            };
+        });
+    }, []);
+
+    const undoWaypoint = useCallback((): void => {
+        setHookState((prev) => {
+            if (prev.editorState.status.statusName === "moving" || !waypointHistory.canUndo(prev.historyState)) {
+                return prev;
+            }
+
+            const nextHistoryState = waypointHistory.undo(prev.historyState);
+
+            return {
+                editorState: waypointEditor.restoreNodes(
+                    prev.editorState,
+                    waypointHistory.getCurrent(nextHistoryState),
+                ),
+                historyState: nextHistoryState,
+                result: null,
+            };
+        });
+    }, []);
+
+    const redoWaypoint = useCallback((): void => {
+        setHookState((prev) => {
+            if (prev.editorState.status.statusName === "moving" || !waypointHistory.canRedo(prev.historyState)) {
+                return prev;
+            }
+
+            const nextHistoryState = waypointHistory.redo(prev.historyState);
+
+            return {
+                editorState: waypointEditor.restoreNodes(
+                    prev.editorState,
+                    waypointHistory.getCurrent(nextHistoryState),
+                ),
+                historyState: nextHistoryState,
+                result: null,
             };
         });
     }, []);
 
     const editorState = hookState.editorState;
     const visibleWaypoints = useMemo(() => getVisibleWaypoints(editorState), [editorState]);
+    const canUseHistory = editorState.status.statusName !== "moving";
 
     return {
         status: editorState.status,
         data: {
             waypoints: editorState.nodes,
             visibleWaypoints,
+            canUndo: canUseHistory && waypointHistory.canUndo(hookState.historyState),
+            canRedo: canUseHistory && waypointHistory.canRedo(hookState.historyState),
             result: hookState.result,
         },
         actions: {
@@ -137,6 +230,8 @@ export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount
             beginWaypointMove,
             updateWaypointMove,
             commitWaypointMove,
+            undoWaypoint,
+            redoWaypoint,
         },
     };
 }

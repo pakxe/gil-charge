@@ -8,6 +8,7 @@ import {
     type SelectWaypointResult,
     waypointEditor,
     type WaypointEditorState,
+    type WaypointNode,
     type WaypointNodeId,
 } from "@/features/waypoint_editor/model/waypointEditor";
 import type { LatLng } from "@/shared/model/map";
@@ -589,6 +590,104 @@ describe("waypointEditor", () => {
         expect(next.result).toBeUndefined();
         expect(next.state.nodes).toEqual([]);
         expect(next.state.status).toEqual({ statusName: "idle" });
+    });
+
+    it("nodes를 복원할 때 현재 선택된 id가 존재하면 선택 상태를 유지한다", () => {
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeId: "waypoint-1",
+            },
+        );
+
+        const next = waypointEditor.restoreNodes(state, [
+            {
+                id: "waypoint-1",
+                latLng: latLngC,
+            },
+        ]);
+
+        expect(next.nodes).toEqual([
+            {
+                id: "waypoint-1",
+                latLng: latLngC,
+            },
+        ]);
+        expect(next.status).toEqual({
+            statusName: "selected",
+            selectedNodeId: "waypoint-1",
+        });
+    });
+
+    it("nodes를 복원할 때 현재 선택된 id가 없으면 idle 상태가 된다", () => {
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeId: "waypoint-2",
+            },
+        );
+
+        const next = waypointEditor.restoreNodes(state, [
+            {
+                id: "waypoint-1",
+                latLng: latLngA,
+            },
+        ]);
+
+        expect(next.status).toEqual({ statusName: "idle" });
+    });
+
+    it("moving 상태에서 nodes를 복원하면 이동 상태를 유지하지 않고 idle 상태가 된다", () => {
+        const state = createStateWithWaypoints(
+            [["waypoint-1", latLngA]],
+            {
+                statusName: "moving",
+                movingNodeId: "waypoint-1",
+                latLng: latLngB,
+                selectionAfterMove: null,
+            },
+        );
+
+        const next = waypointEditor.restoreNodes(state, [
+            {
+                id: "waypoint-1",
+                latLng: latLngC,
+            },
+        ]);
+
+        expect(next.status).toEqual({ statusName: "idle" });
+    });
+
+    it("nodes를 복원할 때 전달받은 nodes를 복사한다", () => {
+        const state = waypointEditor.createInitialState();
+        const nodes: WaypointNode[] = [
+            {
+                id: "waypoint-1",
+                latLng: latLngA,
+            },
+        ];
+
+        const next = waypointEditor.restoreNodes(state, nodes);
+
+        nodes[0] = {
+            id: "waypoint-1",
+            latLng: latLngB,
+        };
+
+        expect(next.nodes).toEqual([
+            {
+                id: "waypoint-1",
+                latLng: latLngA,
+            },
+        ]);
     });
 });
 

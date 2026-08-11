@@ -13,6 +13,7 @@ import { ConfirmStep } from "@/features/select_search_type/components/ConfirmSte
 import Box from "@/shared/components/Box/Box";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner/LoadingSpinner";
 import { cn } from "@/shared/utils/cn";
+import { WaypointHistoryControls } from "@/features/waypoint_editor/ui/WaypointHistoryControls";
 
 interface DrawPathStepProps {
     stations: Station[] | null;
@@ -111,6 +112,7 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
                     onVisibleHeightChange={setResultSheetVisibleHeight}
                 />
             )}
+
             <div
                 className="absolute inset-x-0 z-[60] flex flex-row justify-between w-full px-4 py-10 gap-4"
                 style={{ bottom: controlBottom }}
@@ -153,22 +155,28 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
                     {isLoading ? <LoadingSpinner /> : "찾기"}
                 </button>
             </div>
-            <Box
-                role="button"
-                tabIndex={0}
-                className={cn(
-                    "absolute left-4 top-4 z-10 text-sm font-medium transition-colors ",
-                    hasWaypoint ? "text-gil-yellow-400 cursor-pointer" : "text-black",
-                )}
-                onClick={() => {
-                    if (!hasWaypoint) return;
-                    actions.deleteAllWaypoint();
-                    setResultSheetVisibleHeight(0);
-                    onResultClear();
-                }}
-            >
-                전체 삭제
-            </Box>
+            <div className="absolute left-4 top-4 z-10 text-sm font-medium transition-colors flex flex-row gap-3">
+                <WaypointHistoryControls
+                    canUndo={data.canUndo}
+                    canRedo={data.canRedo}
+                    onUndo={actions.undoWaypoint}
+                    onRedo={actions.redoWaypoint}
+                    className="absolute right-4 top-4 z-10"
+                />
+                <Box
+                    role="button"
+                    tabIndex={0}
+                    className={cn(hasWaypoint ? "text-gil-yellow-400 cursor-pointer" : "text-black")}
+                    onClick={() => {
+                        if (!hasWaypoint) return;
+                        actions.deleteAllWaypoint();
+                        setResultSheetVisibleHeight(0);
+                        onResultClear();
+                    }}
+                >
+                    전체 삭제
+                </Box>
+            </div>
         </div>
     );
 }
