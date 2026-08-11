@@ -6,6 +6,7 @@ import {
     type DeleteAllWaypointResult,
     type DeleteWaypointResult,
     type SelectWaypointResult,
+    type SelectWaypointsResult,
     waypointEditor,
     type WaypointEditorState,
     type WaypointNode,
@@ -250,6 +251,64 @@ describe("waypointEditor", () => {
         ]);
 
         const next = editor.selectWaypoint(state, "missing-waypoint");
+
+        expect(next.result).toEqual({
+            code: 2,
+            reason: "INVALID_INPUT",
+        });
+        expect(next.state).toBe(state);
+    });
+
+    it("여러 웨이포인트 id를 선택하면 selectedNodeIds를 전달받은 순서로 대체한다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+                ["waypoint-3", latLngC],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1"],
+            },
+        );
+
+        const next = editor.selectWaypoints(state, ["waypoint-3", "waypoint-1"]);
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.status).toEqual({
+            statusName: "selected",
+            selectedNodeIds: ["waypoint-3", "waypoint-1"],
+        });
+    });
+
+    it("빈 웨이포인트 id 목록을 선택하면 idle 상태가 된다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints(
+            [
+                ["waypoint-1", latLngA],
+                ["waypoint-2", latLngB],
+            ],
+            {
+                statusName: "selected",
+                selectedNodeIds: ["waypoint-1", "waypoint-2"],
+            },
+        );
+
+        const next = editor.selectWaypoints(state, []);
+
+        expect(next.result).toEqual({ code: 0 });
+        expect(next.state.status).toEqual({ statusName: "idle" });
+    });
+
+    it("없는 웨이포인트 id가 포함되면 INVALID_INPUT을 반환하고 상태를 변경하지 않는다", () => {
+        const editor = createTestWaypointEditor({ createId: () => "unused" });
+        const state = createStateWithWaypoints([
+            ["waypoint-1", latLngA],
+            ["waypoint-2", latLngB],
+        ]);
+
+        const next = editor.selectWaypoints(state, ["waypoint-1", "missing-waypoint"]);
 
         expect(next.result).toEqual({
             code: 2,
@@ -788,6 +847,10 @@ function createTestWaypointEditor({
         state: WaypointEditorState,
         id: WaypointNodeId,
     ) => { state: WaypointEditorState; result: SelectWaypointResult };
+    selectWaypoints: (
+        state: WaypointEditorState,
+        ids: WaypointNodeId[],
+    ) => { state: WaypointEditorState; result: SelectWaypointsResult };
     deleteWaypoint: (
         state: WaypointEditorState,
         id: WaypointNodeId,
@@ -815,6 +878,7 @@ function createTestWaypointEditor({
                 maxWaypointCount,
             }),
         selectWaypoint: waypointEditor.selectWaypoint,
+        selectWaypoints: waypointEditor.selectWaypoints,
         deleteWaypoint: waypointEditor.deleteWaypoint,
         deleteAllWaypoint: waypointEditor.deleteAllWaypoint,
         beginWaypointMove: waypointEditor.beginWaypointMove,

@@ -26,6 +26,7 @@ export type WaypointEditorState = {
 
 export type AddWaypointResult = { code: 0; node: WaypointNode } | { code: 1; reason: "OVERFLOW" };
 export type SelectWaypointResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
+export type SelectWaypointsResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
 export type DeleteWaypointResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
 export type DeleteAllWaypointResult = void;
 export type BeginWaypointMoveResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
@@ -113,6 +114,31 @@ function selectWaypoint(
                 statusName: "selected",
                 selectedNodeIds: [id],
             },
+        },
+        result: {
+            code: 0,
+        },
+    };
+}
+
+function selectWaypoints(
+    state: WaypointEditorState,
+    ids: WaypointNodeId[],
+): { state: WaypointEditorState; result: SelectWaypointsResult } {
+    if (!ids.every((id) => hasWaypoint(state, id))) {
+        return {
+            state,
+            result: {
+                code: 2,
+                reason: "INVALID_INPUT",
+            },
+        };
+    }
+
+    return {
+        state: {
+            ...state,
+            status: getStatusFromSelection(ids),
         },
         result: {
             code: 0,
@@ -265,6 +291,7 @@ export const waypointEditor = {
     createInitialState,
     addWaypoint,
     selectWaypoint,
+    selectWaypoints,
     deleteWaypoint,
     deleteAllWaypoint,
     restoreNodes,
