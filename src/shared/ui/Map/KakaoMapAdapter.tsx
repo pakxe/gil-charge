@@ -26,6 +26,9 @@ export function KakaoMapAdapter(props: Props) {
             getLevel() {
                 return kakaoMap.getLevel();
             },
+            panBy(deltaX, deltaY) {
+                kakaoMap.panBy(deltaX, deltaY);
+            },
             clientPointToLatLng(clientX, clientY) {
                 const rect = kakaoMap.getNode().getBoundingClientRect();
                 const containerPoint = new kakao.maps.Point(clientX - rect.left, clientY - rect.top);

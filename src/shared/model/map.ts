@@ -31,5 +31,6 @@ export type MapInstance = {
     setCenter(latLng: LatLng): void;
     setZoom(level: number): void;
     getLevel(): number;
+    panBy(deltaX: number, deltaY: number): void;
     clientPointToLatLng(clientX: number, clientY: number): LatLng;
 };
