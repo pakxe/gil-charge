@@ -9,6 +9,8 @@ import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointE
 import { Map } from "@/shared/ui/Map/Map";
 import { WaypointNodesLayer } from "@/features/waypoint_editor/ui/WaypointNodesLayer";
 import { WaypointEdgesLayer } from "@/features/waypoint_editor/ui/WaypointEdgesLayer";
+import { WaypointLassoLayer } from "@/features/waypoint_editor/ui/WaypointLassoLayer";
+import { getWaypointIdsInPolygon } from "@/features/waypoint_editor/utils/getWaypointIdsInPolygon";
 import { ConfirmStep } from "@/features/select_search_type/components/ConfirmStep";
 import Box from "@/shared/components/Box/Box";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner/LoadingSpinner";
@@ -21,6 +23,8 @@ interface DrawPathStepProps {
     onResultClear: () => void;
 }
 
+type DrawMode = "waypoint" | "lasso";
+
 export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepProps) {
     const { status, data, actions } = useWaypointEditor();
 
@@ -29,6 +33,7 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
     const [zoomLevel, setZoomLevel] = useState(8);
     const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
     const [resultSheetVisibleHeight, setResultSheetVisibleHeight] = useState(0);
+    const [mode, setMode] = useState<DrawMode>("waypoint");
 
     const { requestLocation, location } = useCurrentLocation();
 
@@ -73,6 +78,7 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
     const hasWaypoint = data.waypoints.length > 0;
     const hasSearchResult = stations !== null;
     const controlBottom = hasSearchResult ? resultSheetVisibleHeight : 0;
+    const isLassoMode = mode === "lasso";
 
     // const radiusPathPoints = data.penPaths.length > 0 ? data.penPaths : Array.from(data.waypoints.values());
     return (
@@ -88,9 +94,12 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
                 center={location ?? DEFAULT_MAP_CENTER}
                 // currentLocation={location ?? undefined}
                 zoomLevel={zoomLevel}
+                isDraggable={!isLassoMode && status.statusName !== "moving"}
+                isZoomable={!isLassoMode}
                 // isTracking={isTracking}
                 onZoomLevelChange={(zoomLevel) => setZoomLevel(zoomLevel)}
                 onClick={(latLng) => {
+                    if (isLassoMode) return;
                     actions.addWaypoint(latLng);
                 }}
             >
@@ -104,6 +113,13 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
                     onWaypointMoveCommit={actions.commitWaypointMove}
                 />
                 <WaypointEdgesLayer waypoints={data.visibleWaypoints} weight={currentStrokeWeight} />
+                <WaypointLassoLayer
+                    key={mode}
+                    enabled={isLassoMode}
+                    onComplete={(lassoPath) => {
+                        actions.selectWaypoints(getWaypointIdsInPolygon(data.waypoints, lassoPath));
+                    }}
+                />
             </Map>
             {hasSearchResult && (
                 <ConfirmStep
@@ -155,13 +171,41 @@ export function DrawPathStep({ stations, onNext, onResultClear }: DrawPathStepPr
                     {isLoading ? <LoadingSpinner /> : "찾기"}
                 </button>
             </div>
-            <div className="absolute left-4 top-4 z-10 text-sm font-medium transition-colors flex flex-row gap-3">
+            <div className="absolute left-4 top-4 z-[60] text-sm font-medium transition-colors flex flex-row gap-3">
                 <WaypointHistoryControls
                     canUndo={data.canUndo}
                     canRedo={data.canRedo}
                     onUndo={actions.undoWaypoint}
                     onRedo={actions.redoWaypoint}
                 />
+                <Box role="group" aria-label="경로 편집 모드" yPad={4} xPad={4} className="gap-1">
+                    <button
+                        type="button"
+                        aria-pressed={mode === "waypoint"}
+                        className={cn(
+                            "h-8 rounded-full px-3 text-xs font-bold transition-colors",
+                            mode === "waypoint"
+                                ? "bg-gil-yellow-400 text-gil-brown-900"
+                                : "bg-transparent text-gil-light-text",
+                        )}
+                        onClick={() => setMode("waypoint")}
+                    >
+                        추가
+                    </button>
+                    <button
+                        type="button"
+                        aria-pressed={mode === "lasso"}
+                        className={cn(
+                            "h-8 rounded-full px-3 text-xs font-bold transition-colors",
+                            mode === "lasso"
+                                ? "bg-gil-yellow-400 text-gil-brown-900"
+                                : "bg-transparent text-gil-light-text",
+                        )}
+                        onClick={() => setMode("lasso")}
+                    >
+                        선택
+                    </button>
+                </Box>
                 <Box
                     role="button"
                     tabIndex={0}
