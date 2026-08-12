@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import {
     type AddWaypointResult,
     type BeginBatchMoveResult,
@@ -39,7 +40,7 @@ type WaypointEditorHookState = {
     result: WaypointEditorCommandResult | null;
 };
 
-const defaultCreateId = () => crypto.randomUUID();
+const defaultCreateId = () => uuidv4();
 
 export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount }: UseWaypointEditorOptions = {}) {
     const [hookState, setHookState] = useState<WaypointEditorHookState>(() => ({
