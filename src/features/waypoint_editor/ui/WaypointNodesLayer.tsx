@@ -141,7 +141,6 @@ export function WaypointNodesLayer({
                         zIndex={isActive ? MAP_Z_INDEX.selectedWaypoint : MAP_Z_INDEX.waypoint}
                     >
                         <div
-                            data-waypoint-node="true"
                             className="relative touch-none select-none"
                             onClick={(event) => {
                                 event.stopPropagation();
