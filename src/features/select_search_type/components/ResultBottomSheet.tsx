@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PointerEvent, RefObject } from "react";
 
+import type { StationSelectionSource } from "@/features/select_search_type/model/stationSelection";
 import type { Station } from "@/shared/types/map";
 import { cn } from "@/shared/utils/cn";
 import { clamp, snapResultSheetHeight } from "@/features/select_search_type/model/resultBottomSheet";
@@ -9,8 +10,14 @@ interface ResultBottomSheetProps {
     containerRef: RefObject<HTMLElement | null>;
     maxHeight: number;
     stations: Station[];
+    visibleStations: Station[];
+    localCurrencyOnly: boolean;
+    selectedStationId: string | null;
+    selectionSource: StationSelectionSource | null;
     visibleHeight: number;
     onVisibleHeightChange: (visibleHeight: number) => void;
+    onLocalCurrencyOnlyChange: (localCurrencyOnly: boolean) => void;
+    onStationClick: (stationId: string) => void;
     onClose: () => void;
 }
 
@@ -20,19 +27,34 @@ export function ResultBottomSheet({
     containerRef,
     maxHeight,
     stations,
+    visibleStations,
+    localCurrencyOnly,
+    selectedStationId,
+    selectionSource,
     visibleHeight,
     onVisibleHeightChange,
+    onLocalCurrencyOnlyChange,
+    onStationClick,
     onClose,
 }: ResultBottomSheetProps) {
     const dragRef = useRef<{ pointerOffsetFromSheetTop: number } | null>(null);
     const latestVisibleHeightRef = useRef(visibleHeight);
+    const stationItemRefs = useRef(new Map<string, HTMLButtonElement>());
 
-    const [localCurrencyOnly, setLocalCurrencyOnly] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
     useEffect(() => {
         latestVisibleHeightRef.current = visibleHeight;
     }, [visibleHeight]);
+
+    useEffect(() => {
+        if (selectionSource !== "map" || selectedStationId === null) return;
+
+        stationItemRefs.current.get(selectedStationId)?.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+        });
+    }, [selectedStationId, selectionSource]);
 
     const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
         if (maxHeight <= 0) return;
@@ -82,13 +104,6 @@ export function ResultBottomSheet({
     };
 
     const clampedVisibleHeight = clamp(visibleHeight, 0, maxHeight);
-    const visibleStations = useMemo(() => {
-        const filteredStations = localCurrencyOnly
-            ? stations.filter((station) => station.localCurrency?.accepted === true)
-            : stations;
-
-        return [...filteredStations].sort((a, b) => a.price - b.price);
-    }, [localCurrencyOnly, stations]);
 
     const emptyMessage =
         stations.length === 0
@@ -130,7 +145,7 @@ export function ResultBottomSheet({
                         <span className="text-sub font-medium text-gil-gray-200">지역화폐 가능</span>
                         <button
                             type="button"
-                            onClick={() => setLocalCurrencyOnly((prev) => !prev)}
+                            onClick={() => onLocalCurrencyOnlyChange(!localCurrencyOnly)}
                             aria-pressed={localCurrencyOnly}
                             className={cn(
                                 "relative h-7 w-12 shrink-0 rounded-full transition-colors",
@@ -155,9 +170,27 @@ export function ResultBottomSheet({
                     ) : (
                         visibleStations.map((station) => {
                             const currencyStatus = station.localCurrency?.status ?? "UNKNOWN";
+                            const isSelected = station.id === selectedStationId;
 
                             return (
-                                <div key={station.id} className="rounded-lg bg-gil-gray-900 px-4 py-4">
+                                <button
+                                    key={station.id}
+                                    ref={(element) => {
+                                        if (element) {
+                                            stationItemRefs.current.set(station.id, element);
+                                            return;
+                                        }
+
+                                        stationItemRefs.current.delete(station.id);
+                                    }}
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    className={cn(
+                                        "block w-full rounded-lg px-4 py-4 text-left transition-colors",
+                                        isSelected ? "bg-gil-brown-800" : "bg-gil-gray-900",
+                                    )}
+                                    onClick={() => onStationClick(station.id)}
+                                >
                                     <div className="flex items-start justify-between gap-3">
                                         <p className="min-w-0 truncate text-content font-bold text-gil-gray-200">
                                             {station.name}
@@ -184,7 +217,7 @@ export function ResultBottomSheet({
                                             </span>
                                         )}
                                     </div>
-                                </div>
+                                </button>
                             );
                         })
                     )}
