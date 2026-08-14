@@ -172,6 +172,8 @@ export function ResultBottomSheet({
                     ) : (
                         visibleStations.map((station) => {
                             const currencyStatus = station.localCurrency?.status ?? "UNKNOWN";
+                            const shouldShowCurrencyStatusTag =
+                                currencyStatus === "ACCEPTED" || currencyStatus === "NOT_ACCEPTED";
                             const isSelected = station.id === selectedStationId;
 
                             return (
@@ -205,14 +207,16 @@ export function ResultBottomSheet({
                                         <p className="min-w-0 truncate text-sub font-medium text-gil-gray-600">
                                             {station.localCurrency?.roadAddress ?? "주소 정보 없음"}
                                         </p>
-                                        <span
-                                            className={cn(
-                                                "shrink-0 rounded-full px-2 py-0.5 text-xs",
-                                                getStatusTone(currencyStatus),
-                                            )}
-                                        >
-                                            {LOCAL_CURRENCY_STATUS_LABELS[currencyStatus]}
-                                        </span>
+                                        {shouldShowCurrencyStatusTag && (
+                                            <span
+                                                className={cn(
+                                                    "shrink-0 rounded-full px-2 py-0.5 text-xs",
+                                                    getStatusTone(currencyStatus),
+                                                )}
+                                            >
+                                                {LOCAL_CURRENCY_STATUS_LABELS[currencyStatus]}
+                                            </span>
+                                        )}
                                     </div>
                                     {station.localCurrency?.currencyName && (
                                         <div className="mt-3 flex items-center justify-end">
@@ -232,8 +236,8 @@ export function ResultBottomSheet({
 }
 
 const LOCAL_CURRENCY_STATUS_LABELS: Record<LocalCurrencyStatus, string> = {
-    ACCEPTED: "사용 가능",
-    NOT_ACCEPTED: "사용 불가",
+    ACCEPTED: "지역화폐 가능",
+    NOT_ACCEPTED: "지역화폐 불가능",
     UNKNOWN: "확인 필요",
     OUT_OF_SCOPE: "확인 대상 아님",
     MISSING_ROAD_ADDRESS: "주소 확인 불가",
