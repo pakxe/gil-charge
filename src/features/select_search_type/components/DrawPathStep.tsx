@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 
 import type { Station } from "@/shared/types/map";
@@ -48,7 +48,7 @@ export function DrawPathStep() {
 
     const [zoomLevel, setZoomLevel] = useState(8);
     const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
-    const [mode, setMode] = useState<DrawMode>("waypoint");
+    const [mode, setMode] = useState<DrawMode>(INITIAL_DRAW_MODE);
     const [modeGuideToast, setModeGuideToast] = useState<ModeGuideToastState | null>(null);
     const [stations, setStations] = useState<Station[] | null>(null);
     const [localCurrencyOnly, setLocalCurrencyOnly] = useState(false);
@@ -70,6 +70,29 @@ export function DrawPathStep() {
     const handleRadiusChange = (event: ChangeEvent<HTMLInputElement>) => {
         setRadiusKm(Number(event.target.value));
     };
+
+    const showModeGuideToast = useCallback((nextMode: DrawMode) => {
+        const nextToastId = modeGuideToastIdRef.current + 1;
+
+        modeGuideToastIdRef.current = nextToastId;
+        setModeGuideToast({
+            id: nextToastId,
+            message: MODE_GUIDE_MESSAGES[nextMode],
+        });
+
+        if (modeGuideToastTimeoutRef.current !== null) {
+            window.clearTimeout(modeGuideToastTimeoutRef.current);
+        }
+
+        modeGuideToastTimeoutRef.current = window.setTimeout(() => {
+            setModeGuideToast(null);
+            modeGuideToastTimeoutRef.current = null;
+        }, MODE_GUIDE_TOAST_DURATION_MS);
+    }, []);
+
+    useEffect(() => {
+        showModeGuideToast(INITIAL_DRAW_MODE);
+    }, [showModeGuideToast]);
 
     useEffect(() => {
         if (hasRequestedLocationRef.current === true) return;
@@ -144,23 +167,8 @@ export function DrawPathStep() {
     };
 
     const handleModeChange = (nextMode: DrawMode) => {
-        const nextToastId = modeGuideToastIdRef.current + 1;
-
-        modeGuideToastIdRef.current = nextToastId;
         setMode(nextMode);
-        setModeGuideToast({
-            id: nextToastId,
-            message: MODE_GUIDE_MESSAGES[nextMode],
-        });
-
-        if (modeGuideToastTimeoutRef.current !== null) {
-            window.clearTimeout(modeGuideToastTimeoutRef.current);
-        }
-
-        modeGuideToastTimeoutRef.current = window.setTimeout(() => {
-            setModeGuideToast(null);
-            modeGuideToastTimeoutRef.current = null;
-        }, MODE_GUIDE_TOAST_DURATION_MS);
+        showModeGuideToast(nextMode);
     };
 
     const handleLocalCurrencyOnlyChange = (nextLocalCurrencyOnly: boolean) => {
@@ -480,6 +488,7 @@ function formatRadius(radiusKm: number) {
 const BASE_LEVEL = 6;
 const BASE_STROKE_WEIGHT = 250;
 const DEFAULT_RADIUS_KM = 1;
+const INITIAL_DRAW_MODE: DrawMode = "waypoint";
 const MODE_GUIDE_TOAST_DURATION_MS = 2500;
 const MODE_GUIDE_MESSAGES: Record<DrawMode, string> = {
     waypoint: "화면을 눌러 웨이포인트를 찍을 수 있습니다.",
