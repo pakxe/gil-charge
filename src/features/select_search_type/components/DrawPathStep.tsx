@@ -24,8 +24,8 @@ import {
     getSearchControlsBottom,
 } from "@/features/select_search_type/model/resultBottomSheet";
 import {
+    getStationCenteringDecision,
     getVisibleStations,
-    shouldCenterStation,
     shouldClearSelectedStation,
     stationToLatLng,
     type StationSelectionSource,
@@ -99,7 +99,11 @@ export function DrawPathStep() {
     const selectedWaypointIds = status.statusName === "selected" ? status.selectedNodeIds : [];
     const hasSelectedWaypoint = selectedWaypointIds.length > 0;
 
-    const changeSelectedStation = (source: StationSelectionSource, stationId: string) => {
+    const changeSelectedStation = (
+        source: StationSelectionSource,
+        stationId: string,
+        bottomSheetVisibleHeight = 0,
+    ) => {
         setSelectedStationId(stationId);
         setSelectionSource(source);
 
@@ -108,8 +112,19 @@ export function DrawPathStep() {
         const station = visibleStations.find((visibleStation) => visibleStation.id === stationId);
         if (!station) return;
 
-        if (shouldCenterStation(station, map.getBounds())) {
-            map.setCenter(stationToLatLng(station));
+        const mapContainer = map.getContainer();
+        const containerSize = {
+            width: mapContainer.clientWidth,
+            height: mapContainer.clientHeight,
+        };
+
+        if (containerSize.width <= 0 || containerSize.height <= 0) return;
+
+        const stationPoint = map.latLngToContainerPoint(stationToLatLng(station));
+        const centeringDecision = getStationCenteringDecision(stationPoint, containerSize, bottomSheetVisibleHeight);
+
+        if (centeringDecision.shouldCenter) {
+            map.setCenter(map.containerPointToLatLng(centeringDecision.nextCenterPoint));
         }
     };
 
@@ -184,7 +199,9 @@ export function DrawPathStep() {
                 isLoading={isLoading}
                 onRadiusChange={handleRadiusChange}
                 onLocalCurrencyOnlyChange={handleLocalCurrencyOnlyChange}
-                onStationClick={(stationId) => changeSelectedStation("list", stationId)}
+                onStationClick={(stationId, bottomSheetVisibleHeight) =>
+                    changeSelectedStation("list", stationId, bottomSheetVisibleHeight)
+                }
                 onSubmit={handleSubmit}
                 onClose={() => {
                     setStations(null);
@@ -271,7 +288,7 @@ interface BottomSearchOverlayProps {
     isLoading: boolean;
     onRadiusChange: (event: ChangeEvent<HTMLInputElement>) => void;
     onLocalCurrencyOnlyChange: (localCurrencyOnly: boolean) => void;
-    onStationClick: (stationId: string) => void;
+    onStationClick: (stationId: string, bottomSheetVisibleHeight: number) => void;
     onSubmit: () => void;
     onClose: () => void;
 }
@@ -387,7 +404,7 @@ function BottomSearchOverlay({
                     visibleHeight={visibleHeight}
                     onVisibleHeightChange={setVisibleHeight}
                     onLocalCurrencyOnlyChange={onLocalCurrencyOnlyChange}
-                    onStationClick={onStationClick}
+                    onStationClick={(stationId) => onStationClick(stationId, visibleHeight)}
                     onClose={onClose}
                 />
             )}
