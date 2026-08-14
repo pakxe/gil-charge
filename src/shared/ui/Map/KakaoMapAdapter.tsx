@@ -26,6 +26,22 @@ export function KakaoMapAdapter(props: Props) {
             getLevel() {
                 return kakaoMap.getLevel();
             },
+            getBounds() {
+                const bounds = kakaoMap.getBounds();
+                const southWest = bounds.getSouthWest();
+                const northEast = bounds.getNorthEast();
+
+                return {
+                    southWest: {
+                        lat: southWest.getLat(),
+                        lng: southWest.getLng(),
+                    },
+                    northEast: {
+                        lat: northEast.getLat(),
+                        lng: northEast.getLng(),
+                    },
+                };
+            },
             panBy(deltaX, deltaY) {
                 kakaoMap.panBy(deltaX, deltaY);
             },
