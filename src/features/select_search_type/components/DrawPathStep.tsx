@@ -33,19 +33,28 @@ import {
 
 type DrawMode = "waypoint" | "lasso";
 
+interface ModeGuideToastState {
+    id: number;
+    message: string;
+}
+
 export function DrawPathStep() {
     const { status, data, actions } = useWaypointEditor();
     const map = useMap();
 
     const hasRequestedLocationRef = useRef(false);
+    const modeGuideToastIdRef = useRef(0);
+    const modeGuideToastTimeoutRef = useRef<number | null>(null);
 
     const [zoomLevel, setZoomLevel] = useState(8);
     const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
     const [mode, setMode] = useState<DrawMode>("waypoint");
+    const [modeGuideToast, setModeGuideToast] = useState<ModeGuideToastState | null>(null);
     const [stations, setStations] = useState<Station[] | null>(null);
     const [localCurrencyOnly, setLocalCurrencyOnly] = useState(false);
     const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
     const [selectionSource, setSelectionSource] = useState<StationSelectionSource | null>(null);
+    const [selectionRevision, setSelectionRevision] = useState(0);
 
     const { requestLocation, location } = useCurrentLocation();
 
@@ -53,6 +62,7 @@ export function DrawPathStep() {
         setStations(nextStations);
         setSelectedStationId(null);
         setSelectionSource(null);
+        setSelectionRevision(0);
     };
 
     const { fetchStations, isLoading } = useStationsSearch(handleStationsFound);
@@ -73,6 +83,14 @@ export function DrawPathStep() {
             },
         });
     }, [requestLocation]);
+
+    useEffect(() => {
+        return () => {
+            if (modeGuideToastTimeoutRef.current === null) return;
+
+            window.clearTimeout(modeGuideToastTimeoutRef.current);
+        };
+    }, []);
 
     const handleSubmit = async () => {
         if (data.waypoints.length === 0) return;
@@ -99,13 +117,10 @@ export function DrawPathStep() {
     const selectedWaypointIds = status.statusName === "selected" ? status.selectedNodeIds : [];
     const hasSelectedWaypoint = selectedWaypointIds.length > 0;
 
-    const changeSelectedStation = (
-        source: StationSelectionSource,
-        stationId: string,
-        bottomSheetVisibleHeight = 0,
-    ) => {
+    const changeSelectedStation = (source: StationSelectionSource, stationId: string, bottomSheetVisibleHeight = 0) => {
         setSelectedStationId(stationId);
         setSelectionSource(source);
+        setSelectionRevision((prev) => prev + 1);
 
         if (source !== "list" || !map) return;
 
@@ -128,6 +143,26 @@ export function DrawPathStep() {
         }
     };
 
+    const handleModeChange = (nextMode: DrawMode) => {
+        const nextToastId = modeGuideToastIdRef.current + 1;
+
+        modeGuideToastIdRef.current = nextToastId;
+        setMode(nextMode);
+        setModeGuideToast({
+            id: nextToastId,
+            message: MODE_GUIDE_MESSAGES[nextMode],
+        });
+
+        if (modeGuideToastTimeoutRef.current !== null) {
+            window.clearTimeout(modeGuideToastTimeoutRef.current);
+        }
+
+        modeGuideToastTimeoutRef.current = window.setTimeout(() => {
+            setModeGuideToast(null);
+            modeGuideToastTimeoutRef.current = null;
+        }, MODE_GUIDE_TOAST_DURATION_MS);
+    };
+
     const handleLocalCurrencyOnlyChange = (nextLocalCurrencyOnly: boolean) => {
         const nextVisibleStations = stations ? getVisibleStations(stations, nextLocalCurrencyOnly) : [];
 
@@ -146,7 +181,7 @@ export function DrawPathStep() {
                 loadingFallback={
                     <div className="absolute inset-0 z-50 bg-black/60 flex flex-col items-center justify-center backdrop-blur-sm">
                         <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-white mt-4 font-bold">영역 안의 주유소를 찾는 중...</p>
+                        <p className="text-white mt-4 font-bold">지도를 준비중...</p>
                     </div>
                 }
                 errorFallback={<div>error</div>}
@@ -195,6 +230,7 @@ export function DrawPathStep() {
                 localCurrencyOnly={localCurrencyOnly}
                 selectedStationId={selectedStationId}
                 selectionSource={selectionSource}
+                selectionRevision={selectionRevision}
                 hasWaypoint={hasWaypoint}
                 isLoading={isLoading}
                 onRadiusChange={handleRadiusChange}
@@ -207,9 +243,11 @@ export function DrawPathStep() {
                     setStations(null);
                     setSelectedStationId(null);
                     setSelectionSource(null);
+                    setSelectionRevision(0);
                 }}
             />
-            <div className="absolute left-4 top-4 z-[60] text-sm font-medium transition-colors flex flex-row gap-3">
+            <ModeGuideToast toast={modeGuideToast} />
+            <div className="absolute left-4 top-4 z-60 text-sm font-medium transition-colors flex flex-row gap-2 h-9">
                 <WaypointHistoryControls
                     canUndo={data.canUndo}
                     canRedo={data.canRedo}
@@ -221,12 +259,12 @@ export function DrawPathStep() {
                         type="button"
                         aria-pressed={mode === "waypoint"}
                         className={cn(
-                            "h-8 rounded-full px-3 text-xs font-bold transition-colors",
+                            "h-8 rounded-full px-3 text-xs font-bold transition-colors shrink-0",
                             mode === "waypoint"
                                 ? "bg-gil-yellow-400 text-gil-brown-900"
                                 : "bg-transparent text-gil-light-text",
                         )}
-                        onClick={() => setMode("waypoint")}
+                        onClick={() => handleModeChange("waypoint")}
                     >
                         추가
                     </button>
@@ -234,12 +272,12 @@ export function DrawPathStep() {
                         type="button"
                         aria-pressed={mode === "lasso"}
                         className={cn(
-                            "h-8 rounded-full px-3 text-xs font-bold transition-colors",
+                            "h-8 rounded-full px-3 text-xs font-bold transition-colors shrink-0",
                             mode === "lasso"
                                 ? "bg-gil-yellow-400 text-gil-brown-900"
                                 : "bg-transparent text-gil-light-text",
                         )}
-                        onClick={() => setMode("lasso")}
+                        onClick={() => handleModeChange("lasso")}
                     >
                         선택
                     </button>
@@ -248,10 +286,8 @@ export function DrawPathStep() {
                     type="button"
                     disabled={!hasSelectedWaypoint}
                     className={cn(
-                        "min-h-10 rounded-full bg-[#1f1f1f]/40 px-3 text-sm backdrop-blur-[15px] transition-colors",
-                        hasSelectedWaypoint
-                            ? "cursor-pointer text-gil-yellow-400"
-                            : "cursor-not-allowed text-gil-gray-600",
+                        "min-h-10 rounded-full bg-[#1f1f1f]/40 px-3 backdrop-blur-[15px] transition-colors text-xs font-bold",
+                        hasSelectedWaypoint ? "cursor-pointer text-white" : "cursor-not-allowed text-gil-gray-650",
                     )}
                     onClick={() => {
                         if (!hasSelectedWaypoint) return;
@@ -264,7 +300,10 @@ export function DrawPathStep() {
                 <Box
                     role="button"
                     tabIndex={0}
-                    className={cn(hasWaypoint ? "text-gil-yellow-400 cursor-pointer" : "text-black")}
+                    className={cn(
+                        hasWaypoint ? "text-white cursor-pointer" : "text-gil-gray-650",
+                        "text-xs px-3 font-bold",
+                    )}
                     onClick={() => {
                         if (!hasWaypoint) return;
                         actions.deleteAllWaypoint();
@@ -277,6 +316,21 @@ export function DrawPathStep() {
     );
 }
 
+function ModeGuideToast({ toast }: { toast: ModeGuideToastState | null }) {
+    if (!toast) return null;
+
+    return (
+        <div
+            key={toast.id}
+            role="status"
+            aria-live="polite"
+            className="pointer-events-none absolute left-1/2 top-16 z-[80] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-lg bg-gil-gray-950/90 px-4 py-3 text-center text-sub font-bold text-white shadow-lg backdrop-blur-[15px]"
+        >
+            {toast.message}
+        </div>
+    );
+}
+
 interface BottomSearchOverlayProps {
     stations: Station[] | null;
     visibleStations: Station[];
@@ -284,6 +338,7 @@ interface BottomSearchOverlayProps {
     localCurrencyOnly: boolean;
     selectedStationId: string | null;
     selectionSource: StationSelectionSource | null;
+    selectionRevision: number;
     hasWaypoint: boolean;
     isLoading: boolean;
     onRadiusChange: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -300,6 +355,7 @@ function BottomSearchOverlay({
     localCurrencyOnly,
     selectedStationId,
     selectionSource,
+    selectionRevision,
     hasWaypoint,
     isLoading,
     onRadiusChange,
@@ -314,6 +370,7 @@ function BottomSearchOverlay({
 
     const hasSearchResult = stations !== null;
     const searchControlsBottom = getSearchControlsBottom(visibleHeight, hasSearchResult);
+    const canSubmit = hasWaypoint && !isLoading;
 
     useEffect(() => {
         if (!hasSearchResult) return;
@@ -345,10 +402,7 @@ function BottomSearchOverlay({
     }, [hasSearchResult, stations]);
 
     return (
-        <div
-            ref={overlayRef}
-            className="pointer-events-none absolute inset-0 z-[70]"
-        >
+        <div ref={overlayRef} className="pointer-events-none absolute inset-0 z-[70]">
             <div
                 className="pointer-events-auto absolute left-0 flex w-full flex-row justify-between gap-4 px-4"
                 style={{ bottom: searchControlsBottom }}
@@ -380,12 +434,18 @@ function BottomSearchOverlay({
                     </div>
                 </Box>
                 <button
-                    onClick={onSubmit}
-                    disabled={!hasWaypoint || isLoading}
+                    type="button"
+                    onClick={() => {
+                        if (!canSubmit) return;
+
+                        onSubmit();
+                    }}
+                    disabled={!canSubmit}
                     aria-label={isLoading ? "탐색 중" : "찾기"}
                     className={cn(
                         "flex min-w-20 items-center justify-center rounded-2xl px-6 text-lg font-bold shadow-lg transition-colors",
                         hasWaypoint ? "bg-gil-yellow-400 text-gil-brown-900" : "bg-gil-gray-850 text-gil-gray-600",
+                        canSubmit ? "cursor-pointer" : "cursor-not-allowed",
                     )}
                 >
                     {isLoading ? <LoadingSpinner /> : "찾기"}
@@ -401,6 +461,7 @@ function BottomSearchOverlay({
                     localCurrencyOnly={localCurrencyOnly}
                     selectedStationId={selectedStationId}
                     selectionSource={selectionSource}
+                    selectionRevision={selectionRevision}
                     visibleHeight={visibleHeight}
                     onVisibleHeightChange={setVisibleHeight}
                     onLocalCurrencyOnlyChange={onLocalCurrencyOnlyChange}
@@ -419,6 +480,11 @@ function formatRadius(radiusKm: number) {
 const BASE_LEVEL = 6;
 const BASE_STROKE_WEIGHT = 250;
 const DEFAULT_RADIUS_KM = 1;
+const MODE_GUIDE_TOAST_DURATION_MS = 2500;
+const MODE_GUIDE_MESSAGES: Record<DrawMode, string> = {
+    waypoint: "화면을 눌러 웨이포인트를 찍을 수 있습니다.",
+    lasso: "올가미를 그려 여러 개의 웨이포인트를 선택할 수 있습니다.",
+};
 
 function isMoveActive(statusName: string) {
     return statusName === "moving" || statusName === "batchMoving";

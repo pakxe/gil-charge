@@ -174,12 +174,12 @@ export function WaypointLassoLayer({ enabled, onComplete }: Props) {
             {draftPath.length >= 3 && (
                 <Map.Polygon
                     path={draftPath}
-                    strokeWeight={2}
+                    strokeWeight={4}
                     strokeColor="#f0c243"
-                    strokeOpacity={0.8}
+                    strokeOpacity={1}
                     strokeStyle="solid"
                     fillColor="#f0c243"
-                    fillOpacity={0.16}
+                    fillOpacity={0.32}
                     zIndex={MAP_Z_INDEX.lasso}
                 />
             )}
