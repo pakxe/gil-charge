@@ -170,7 +170,12 @@ export function ResultBottomSheet({
                                         {station.localCurrency?.roadAddress ?? "주소 정보 없음"}
                                     </p>
                                     <div className="mt-3 flex items-center justify-between gap-3">
-                                        <span className={cn("rounded-full px-2 py-1 text-tiny font-bold", getStatusTone(currencyStatus))}>
+                                        <span
+                                            className={cn(
+                                                "rounded-full px-2 py-0.5 text-xs",
+                                                getStatusTone(currencyStatus),
+                                            )}
+                                        >
                                             {LOCAL_CURRENCY_STATUS_LABELS[currencyStatus]}
                                         </span>
                                         {station.localCurrency?.currencyName && (
