@@ -122,7 +122,7 @@ export function ResultBottomSheet({
 
                 <div className="mb-4 flex flex-none items-center justify-between gap-4">
                     <div className="min-w-0">
-                        <p className="text-content font-bold text-white">총 {visibleStations.length}개의 주유소</p>
+                        <p className="text-md font-bold text-white">총 {visibleStations.length}개의 주유소</p>
                         <p className="mt-1 text-sub font-medium text-gil-gray-600">가격 낮은 순</p>
                     </div>
 
