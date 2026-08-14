@@ -48,6 +48,24 @@ export function KakaoMapAdapter(props: Props) {
             getContainer() {
                 return kakaoMap.getNode();
             },
+            latLngToContainerPoint(latLng) {
+                const point = kakaoMap
+                    .getProjection()
+                    .containerPointFromCoords(new kakao.maps.LatLng(latLng.lat, latLng.lng));
+
+                return {
+                    x: point.x,
+                    y: point.y,
+                };
+            },
+            containerPointToLatLng(point) {
+                const latLng = kakaoMap.getProjection().coordsFromContainerPoint(new kakao.maps.Point(point.x, point.y));
+
+                return {
+                    lat: latLng.getLat(),
+                    lng: latLng.getLng(),
+                };
+            },
             clientPointToLatLng(clientX, clientY) {
                 const rect = kakaoMap.getNode().getBoundingClientRect();
                 const containerPoint = new kakao.maps.Point(clientX - rect.left, clientY - rect.top);
