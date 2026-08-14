@@ -11,7 +11,7 @@ type Props = {
 
 export function WaypointHistoryControls({ canUndo, canRedo, onUndo, onRedo, className }: Props) {
     return (
-        <Box className={className}>
+        <Box className={cn(className, "px-2 font-extrabold")}>
             <button
                 type="button"
                 aria-label="웨이포인트 실행 취소"
@@ -19,7 +19,7 @@ export function WaypointHistoryControls({ canUndo, canRedo, onUndo, onRedo, clas
                 disabled={!canUndo}
                 className={cn(
                     "flex items-center justify-center rounded-full text-md transition-colors disabled:cursor-not-allowed px-2",
-                    canUndo ? "text-gil-yellow-400" : "text-gil-gray-950",
+                    canUndo ? "text-white" : "text-gil-gray-650",
                 )}
                 onClick={onUndo}
             >
@@ -33,7 +33,7 @@ export function WaypointHistoryControls({ canUndo, canRedo, onUndo, onRedo, clas
                 disabled={!canRedo}
                 className={cn(
                     "flex items-center justify-center rounded-full text-md transition-colors disabled:cursor-not-allowed px-2",
-                    canRedo ? "text-gil-yellow-400" : "text-gil-gray-950",
+                    canRedo ? "text-white" : "text-gil-gray-650",
                 )}
                 onClick={onRedo}
             >

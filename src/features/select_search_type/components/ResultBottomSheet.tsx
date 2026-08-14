@@ -14,6 +14,7 @@ interface ResultBottomSheetProps {
     localCurrencyOnly: boolean;
     selectedStationId: string | null;
     selectionSource: StationSelectionSource | null;
+    selectionRevision: number;
     visibleHeight: number;
     onVisibleHeightChange: (visibleHeight: number) => void;
     onLocalCurrencyOnlyChange: (localCurrencyOnly: boolean) => void;
@@ -31,6 +32,7 @@ export function ResultBottomSheet({
     localCurrencyOnly,
     selectedStationId,
     selectionSource,
+    selectionRevision,
     visibleHeight,
     onVisibleHeightChange,
     onLocalCurrencyOnlyChange,
@@ -54,7 +56,7 @@ export function ResultBottomSheet({
             behavior: "smooth",
             block: "nearest",
         });
-    }, [selectedStationId, selectionSource]);
+    }, [selectedStationId, selectionRevision, selectionSource]);
 
     const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
         if (maxHeight <= 0) return;
@@ -118,7 +120,7 @@ export function ResultBottomSheet({
             )}
             style={{ height: clampedVisibleHeight, maxHeight }}
         >
-            <div className={cn("flex h-full min-h-0 flex-col px-4 pb-5 pt-3", isDragging && "select-none")}>
+            <div className={cn("flex h-full min-h-0 flex-col px-4 pt-3", isDragging && "select-none")}>
                 <div
                     role="slider"
                     aria-label="검색 결과 바텀시트 높이 조절"
@@ -126,7 +128,7 @@ export function ResultBottomSheet({
                     aria-valuemax={Math.round(maxHeight)}
                     aria-valuenow={Math.round(clampedVisibleHeight)}
                     tabIndex={0}
-                    className="mx-auto mb-3 flex h-10 w-full touch-none cursor-grab items-start justify-center pt-2 active:cursor-grabbing"
+                    className="mx-auto flex h-7 w-full touch-none cursor-grab items-start justify-center pt-2 active:cursor-grabbing"
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerEnd}
@@ -162,7 +164,7 @@ export function ResultBottomSheet({
                     </div>
                 </div>
 
-                <div className="flex min-h-0 flex-1 touch-pan-y flex-col gap-2.5 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex min-h-0 flex-1 touch-pan-y flex-col gap-2.5 overflow-y-auto pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     {visibleStations.length === 0 ? (
                         <div className="rounded-lg bg-gil-gray-900 px-4 py-5">
                             <p className="text-content font-medium text-gil-gray-600">{emptyMessage}</p>
@@ -199,24 +201,26 @@ export function ResultBottomSheet({
                                             {station.price.toLocaleString()}원
                                         </p>
                                     </div>
-                                    <p className="mt-3 truncate text-sub font-medium text-gil-gray-600">
-                                        {station.localCurrency?.roadAddress ?? "주소 정보 없음"}
-                                    </p>
                                     <div className="mt-3 flex items-center justify-between gap-3">
+                                        <p className="min-w-0 truncate text-sub font-medium text-gil-gray-600">
+                                            {station.localCurrency?.roadAddress ?? "주소 정보 없음"}
+                                        </p>
                                         <span
                                             className={cn(
-                                                "rounded-full px-2 py-0.5 text-xs",
+                                                "shrink-0 rounded-full px-2 py-0.5 text-xs",
                                                 getStatusTone(currencyStatus),
                                             )}
                                         >
                                             {LOCAL_CURRENCY_STATUS_LABELS[currencyStatus]}
                                         </span>
-                                        {station.localCurrency?.currencyName && (
+                                    </div>
+                                    {station.localCurrency?.currencyName && (
+                                        <div className="mt-3 flex items-center justify-end">
                                             <span className="min-w-0 truncate text-tiny font-bold text-gil-gray-600">
                                                 {station.localCurrency.currencyName}
                                             </span>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
                                 </button>
                             );
                         })
