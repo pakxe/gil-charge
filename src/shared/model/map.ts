@@ -5,6 +5,11 @@ export type LatLng = {
     lng: number;
 };
 
+export type MapBounds = {
+    southWest: LatLng;
+    northEast: LatLng;
+};
+
 export type MapInterface = {
     center: LatLng;
     zoomLevel?: number;
@@ -31,6 +36,7 @@ export type MapInstance = {
     setCenter(latLng: LatLng): void;
     setZoom(level: number): void;
     getLevel(): number;
+    getBounds(): MapBounds;
     panBy(deltaX: number, deltaY: number): void;
     getContainer(): HTMLElement;
     clientPointToLatLng(clientX: number, clientY: number): LatLng;

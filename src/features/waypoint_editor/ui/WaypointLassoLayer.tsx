@@ -160,7 +160,6 @@ export function WaypointLassoLayer({ enabled, onComplete }: Props) {
                         style={{
                             width: hitArea.width,
                             height: hitArea.height,
-                            backdropFilter: "blur(1px)",
                             cursor: "crosshair",
                             touchAction: "none",
                         }}
