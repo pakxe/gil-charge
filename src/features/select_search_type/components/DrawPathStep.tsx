@@ -4,6 +4,7 @@ import type { ChangeEvent } from "react";
 import type { Station } from "@/shared/types/map";
 import { useStationsSearch } from "@/shared/hooks/useStationsSearch";
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
+import { useMap } from "@/shared/model/useMap";
 import { useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
 import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
 import { Map } from "@/shared/ui/Map/Map";
@@ -12,6 +13,7 @@ import { WaypointEdgesLayer } from "@/features/waypoint_editor/ui/WaypointEdgesL
 import { WaypointLassoLayer } from "@/features/waypoint_editor/ui/WaypointLassoLayer";
 import { getWaypointIdsInPolygon } from "@/features/waypoint_editor/utils/getWaypointIdsInPolygon";
 import { ResultBottomSheet } from "@/features/select_search_type/components/ResultBottomSheet";
+import { StationMarkersLayer } from "@/features/select_search_type/components/StationMarkersLayer";
 import Box from "@/shared/components/Box/Box";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner/LoadingSpinner";
 import { cn } from "@/shared/utils/cn";
@@ -21,11 +23,19 @@ import {
     getResultSheetDefaultHeight,
     getSearchControlsBottom,
 } from "@/features/select_search_type/model/resultBottomSheet";
+import {
+    getVisibleStations,
+    shouldCenterStation,
+    shouldClearSelectedStation,
+    stationToLatLng,
+    type StationSelectionSource,
+} from "@/features/select_search_type/model/stationSelection";
 
 type DrawMode = "waypoint" | "lasso";
 
 export function DrawPathStep() {
     const { status, data, actions } = useWaypointEditor();
+    const map = useMap();
 
     const hasRequestedLocationRef = useRef(false);
 
@@ -33,11 +43,16 @@ export function DrawPathStep() {
     const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
     const [mode, setMode] = useState<DrawMode>("waypoint");
     const [stations, setStations] = useState<Station[] | null>(null);
+    const [localCurrencyOnly, setLocalCurrencyOnly] = useState(false);
+    const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
+    const [selectionSource, setSelectionSource] = useState<StationSelectionSource | null>(null);
 
     const { requestLocation, location } = useCurrentLocation();
 
     const handleStationsFound = (nextStations: Station[]) => {
         setStations(nextStations);
+        setSelectedStationId(null);
+        setSelectionSource(null);
     };
 
     const { fetchStations, isLoading } = useStationsSearch(handleStationsFound);
@@ -75,10 +90,39 @@ export function DrawPathStep() {
     };
 
     const currentStrokeWeight = useMemo(() => calculateStrokeWeight(zoomLevel, radiusKm), [zoomLevel, radiusKm]);
+    const visibleStations = useMemo(
+        () => (stations ? getVisibleStations(stations, localCurrencyOnly) : []),
+        [localCurrencyOnly, stations],
+    );
     const hasWaypoint = data.waypoints.length > 0;
     const isLassoMode = mode === "lasso";
     const selectedWaypointIds = status.statusName === "selected" ? status.selectedNodeIds : [];
     const hasSelectedWaypoint = selectedWaypointIds.length > 0;
+
+    const changeSelectedStation = (source: StationSelectionSource, stationId: string) => {
+        setSelectedStationId(stationId);
+        setSelectionSource(source);
+
+        if (source !== "list" || !map) return;
+
+        const station = visibleStations.find((visibleStation) => visibleStation.id === stationId);
+        if (!station) return;
+
+        if (shouldCenterStation(station, map.getBounds())) {
+            map.setCenter(stationToLatLng(station));
+        }
+    };
+
+    const handleLocalCurrencyOnlyChange = (nextLocalCurrencyOnly: boolean) => {
+        const nextVisibleStations = stations ? getVisibleStations(stations, nextLocalCurrencyOnly) : [];
+
+        setLocalCurrencyOnly(nextLocalCurrencyOnly);
+
+        if (!shouldClearSelectedStation(selectedStationId, nextVisibleStations)) return;
+
+        setSelectedStationId(null);
+        setSelectionSource(null);
+    };
 
     // const radiusPathPoints = data.penPaths.length > 0 ? data.penPaths : Array.from(data.waypoints.values());
     return (
@@ -123,15 +167,30 @@ export function DrawPathStep() {
                         actions.selectWaypoints(getWaypointIdsInPolygon(data.waypoints, lassoPath));
                     }}
                 />
+                <StationMarkersLayer
+                    stations={visibleStations}
+                    selectedStationId={selectedStationId}
+                    onStationClick={(stationId) => changeSelectedStation("map", stationId)}
+                />
             </Map>
             <BottomSearchOverlay
                 stations={stations}
+                visibleStations={visibleStations}
                 radiusKm={radiusKm}
+                localCurrencyOnly={localCurrencyOnly}
+                selectedStationId={selectedStationId}
+                selectionSource={selectionSource}
                 hasWaypoint={hasWaypoint}
                 isLoading={isLoading}
                 onRadiusChange={handleRadiusChange}
+                onLocalCurrencyOnlyChange={handleLocalCurrencyOnlyChange}
+                onStationClick={(stationId) => changeSelectedStation("list", stationId)}
                 onSubmit={handleSubmit}
-                onClose={() => setStations(null)}
+                onClose={() => {
+                    setStations(null);
+                    setSelectedStationId(null);
+                    setSelectionSource(null);
+                }}
             />
             <div className="absolute left-4 top-4 z-[60] text-sm font-medium transition-colors flex flex-row gap-3">
                 <WaypointHistoryControls
@@ -203,20 +262,32 @@ export function DrawPathStep() {
 
 interface BottomSearchOverlayProps {
     stations: Station[] | null;
+    visibleStations: Station[];
     radiusKm: number;
+    localCurrencyOnly: boolean;
+    selectedStationId: string | null;
+    selectionSource: StationSelectionSource | null;
     hasWaypoint: boolean;
     isLoading: boolean;
     onRadiusChange: (event: ChangeEvent<HTMLInputElement>) => void;
+    onLocalCurrencyOnlyChange: (localCurrencyOnly: boolean) => void;
+    onStationClick: (stationId: string) => void;
     onSubmit: () => void;
     onClose: () => void;
 }
 
 function BottomSearchOverlay({
     stations,
+    visibleStations,
     radiusKm,
+    localCurrencyOnly,
+    selectedStationId,
+    selectionSource,
     hasWaypoint,
     isLoading,
     onRadiusChange,
+    onLocalCurrencyOnlyChange,
+    onStationClick,
     onSubmit,
     onClose,
 }: BottomSearchOverlayProps) {
@@ -309,8 +380,14 @@ function BottomSearchOverlay({
                     containerRef={overlayRef}
                     maxHeight={maxSheetHeight}
                     stations={stations}
+                    visibleStations={visibleStations}
+                    localCurrencyOnly={localCurrencyOnly}
+                    selectedStationId={selectedStationId}
+                    selectionSource={selectionSource}
                     visibleHeight={visibleHeight}
                     onVisibleHeightChange={setVisibleHeight}
+                    onLocalCurrencyOnlyChange={onLocalCurrencyOnlyChange}
+                    onStationClick={onStationClick}
                     onClose={onClose}
                 />
             )}
