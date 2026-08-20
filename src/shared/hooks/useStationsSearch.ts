@@ -1,14 +1,7 @@
 import { useState } from "react";
-import axios from "axios";
+import { searchStationsByPath } from "@/shared/api/stationApi";
+import { toAppError } from "@/shared/lib/appError";
 import { PathSet, Station } from "@/shared/types/map";
-import { env } from "@/shared/config/env";
-import { createAppError, toAppError } from "@/shared/lib/appError";
-
-const API_BASE_URL = env.NODE_ENV === "production" ? `${env.VITE_API_URL}/api` : "/api";
-
-type StationsPathResponse = {
-    stations: Station[];
-};
 
 export function useStationsSearch(onSuccess: (stations: Station[]) => void) {
     const [isLoading, setIsLoading] = useState(false);
@@ -21,12 +14,8 @@ export function useStationsSearch(onSuccess: (stations: Station[]) => void) {
 
         setIsLoading(true);
         try {
-            const response = await axios.post(`${API_BASE_URL}/stations/path`, { paths: allPaths, radiusKm });
-            if (!isStationsPathResponse(response.data)) {
-                throw createAppError("INVALID_RESPONSE");
-            }
-
-            onSuccess(response.data.stations);
+            const stations = await searchStationsByPath({ paths: allPaths, radiusKm });
+            onSuccess(stations);
         } catch (error) {
             const appError = toAppError(error);
 
@@ -42,8 +31,4 @@ export function useStationsSearch(onSuccess: (stations: Station[]) => void) {
     };
 
     return { fetchStations, isLoading };
-}
-
-function isStationsPathResponse(value: unknown): value is StationsPathResponse {
-    return typeof value === "object" && value !== null && "stations" in value && Array.isArray(value.stations);
 }
