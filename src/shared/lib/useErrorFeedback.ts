@@ -12,7 +12,7 @@ export function useErrorFeedback() {
         }
 
         if (feedback.type === "errorBoundary") {
-            throwToErrorBoundary(feedback.error, feedback.action);
+            throwToErrorBoundary(feedback.error);
             return;
         }
 
