@@ -2,12 +2,13 @@ const express = require("express");
 const cors = require("cors");
 const config = require("./config");
 const stationRoutes = require("./routes/stationRoutes");
+const { errorHandler, routeNotFound } = require("./errorMiddleware");
 
 const app = express();
 
 // 미들웨어
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/", (req, res) => {
     res.json({
@@ -29,6 +30,9 @@ app.get("/health", (req, res) => {
         port: config.PORT,
     });
 });
+
+app.use(routeNotFound);
+app.use(errorHandler);
 
 // 서버 실행
 app.listen(config.PORT, () => {
