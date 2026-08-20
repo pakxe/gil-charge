@@ -8,6 +8,7 @@ import { useMap } from "@/shared/model/useMap";
 import { useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
 import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
 import { Map } from "@/shared/ui/Map/Map";
+import { MapErrorFallback, MapLoadingFallback } from "@/shared/ui/Map/MapFallback";
 import { WaypointNodesLayer } from "@/features/waypoint_editor/ui/WaypointNodesLayer";
 import { WaypointEdgesLayer } from "@/features/waypoint_editor/ui/WaypointEdgesLayer";
 import { WaypointLassoLayer } from "@/features/waypoint_editor/ui/WaypointLassoLayer";
@@ -186,13 +187,14 @@ export function DrawPathStep() {
     return (
         <div className="relative flex min-h-0 flex-1 touch-none flex-col items-center justify-end overflow-hidden bg-gil-gray-900">
             <Map
-                loadingFallback={
-                    <div className="absolute inset-0 z-50 bg-black/60 flex flex-col items-center justify-center backdrop-blur-sm">
-                        <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-white mt-4 font-bold">지도를 준비중...</p>
-                    </div>
+                loadingFallback={<MapLoadingFallback />}
+                errorFallback={
+                    <MapErrorFallback
+                        message="지도를 불러오지 못했습니다."
+                        description="네트워크 상태를 확인한 뒤 다시 시도해주세요."
+                        onRetry={reloadPage}
+                    />
                 }
-                errorFallback={<div>error</div>}
                 center={location ?? DEFAULT_MAP_CENTER}
                 // currentLocation={location ?? undefined}
                 zoomLevel={zoomLevel}
@@ -505,4 +507,8 @@ function calculateStrokeWeight(currentLevel: number, radiusKm: number) {
 
 function getResultSheetMaxHeight(container: HTMLElement | null) {
     return container?.getBoundingClientRect().height ?? window.innerHeight;
+}
+
+function reloadPage() {
+    window.location.reload();
 }
