@@ -1,3 +1,4 @@
+import { type ReactNode } from "react";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 
 import { PATHS } from "@/shared/utils/route";
@@ -14,26 +15,26 @@ import PomoGame from "./game/src/App";
 const router = createBrowserRouter([
     {
         path: PATHS.pomo,
-        element: <PomoGame />,
+        element: withPageErrorBoundary(<PomoGame />),
     },
     {
         path: PATHS.showMapPoc,
-        element: <ShowMapPocPage />,
+        element: withPageErrorBoundary(<ShowMapPocPage />),
     },
     {
         path: PATHS.waypointEditorPoc,
-        element: <WaypointEditorPage />,
+        element: withPageErrorBoundary(<WaypointEditorPage />),
     },
     {
         element: <MobileLayout />,
         children: [
             {
                 path: PATHS.home,
-                element: <HomePage />,
+                element: withPageErrorBoundary(<HomePage />),
             },
             {
                 path: PATHS.selectStep,
-                element: <SelectSearchTypePage />,
+                element: withPageErrorBoundary(<SelectSearchTypePage />),
             },
             {
                 path: PATHS.selectSearchType,
@@ -41,11 +42,15 @@ const router = createBrowserRouter([
             },
             {
                 path: PATHS.waypoint,
-                element: <WaypointSearchPage />,
+                element: withPageErrorBoundary(<WaypointSearchPage />),
             },
         ],
     },
 ]);
+
+function withPageErrorBoundary(element: ReactNode) {
+    return <ErrorBoundary>{element}</ErrorBoundary>;
+}
 
 function App() {
     return (
