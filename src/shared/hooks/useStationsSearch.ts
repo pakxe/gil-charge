@@ -1,14 +1,20 @@
 import { useState } from "react";
 import { searchStationsByPath } from "@/shared/api/stationApi";
+import { getDefaultErrorFeedback } from "@/shared/lib/errorFeedback";
 import { toAppError } from "@/shared/lib/appError";
 import { PathSet, Station } from "@/shared/types/map";
+import { useErrorFeedback } from "@/shared/lib/useErrorFeedback";
 
 export function useStationsSearch(onSuccess: (stations: Station[]) => void) {
     const [isLoading, setIsLoading] = useState(false);
+    const { handleFeedback } = useErrorFeedback();
 
     const fetchStations = async (allPaths: PathSet[], radiusKm: number) => {
         if (allPaths.length === 0) {
-            alert("먼저 지도에 검색할 영역을 그려주세요!");
+            handleFeedback({
+                type: "toast",
+                message: "먼저 지도에 검색할 영역을 그려주세요!",
+            });
             return;
         }
 
@@ -18,13 +24,14 @@ export function useStationsSearch(onSuccess: (stations: Station[]) => void) {
             onSuccess(stations);
         } catch (error) {
             const appError = toAppError(error);
-
-            if (appError.code === "REQUEST_CANCELED") {
-                return;
-            }
+            const feedback = getDefaultErrorFeedback(appError, {
+                retry: () => {
+                    void fetchStations(allPaths, radiusKm);
+                },
+            });
 
             console.error("주유소 검색 실패:", appError);
-            alert(appError.message);
+            handleFeedback(feedback);
         } finally {
             setIsLoading(false);
         }

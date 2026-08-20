@@ -7,6 +7,8 @@ import { HomePage } from "@/features/home/pages/HomePage";
 import { MobileLayout } from "@/shared/components/MobileLayout/MobileLayout";
 import { ShowMapPocPage } from "@/features/poc/pages/ShowMapPocPage";
 import { WaypointEditorPage } from "@/features/waypoint_editor/pages/WaypointEditorPage";
+import { ErrorBoundary } from "@/shared/ui/ErrorBoundary/ErrorBoundary";
+import { ToastProvider } from "@/shared/ui/Toast/ToastProvider";
 import PomoGame from "./game/src/App";
 
 const router = createBrowserRouter([
@@ -47,9 +49,11 @@ const router = createBrowserRouter([
 
 function App() {
     return (
-        <>
-            <RouterProvider router={router} />
-        </>
+        <ErrorBoundary>
+            <ToastProvider>
+                <RouterProvider router={router} />
+            </ToastProvider>
+        </ErrorBoundary>
     );
 }
 
