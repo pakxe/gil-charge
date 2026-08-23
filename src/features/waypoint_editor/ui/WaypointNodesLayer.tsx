@@ -157,6 +157,7 @@ export function WaypointNodesLayer({
                         >
                             <button
                                 type="button"
+                                aria-label={`${index + 1}번째 웨이포인트`}
                                 className={[
                                     "flex h-8 min-w-8 cursor-grab items-center justify-center rounded-full border-2 px-2 text-xs font-black shadow-lg active:cursor-grabbing",
                                     isActive
