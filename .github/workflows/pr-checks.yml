@@ -16,6 +16,10 @@ jobs:
         name: Unit tests
         runs-on: ubuntu-latest
         timeout-minutes: 10
+        env:
+            VITE_API_URL: http://localhost:8080
+            VITE_KAKAO_APP_KEY: test-kakao-app-key
+            VITE_MAP_PROVIDER: kakao
 
         steps:
             - name: Checkout source
@@ -45,7 +49,7 @@ jobs:
         env:
             VITE_API_URL: http://localhost:8080
             VITE_KAKAO_APP_KEY: ${{ secrets.VITE_KAKAO_APP_KEY }}
-            VITE_MAP_PROVIDER: kakao
+            VITE_MAP_PROVIDER: ${{ secrets.VITE_MAP_PROVIDER }}
 
         steps:
             - name: Checkout source
@@ -64,6 +68,13 @@ jobs:
 
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
+
+            - name: Validate E2E environment
+              run: |
+                  if [ -z "$VITE_KAKAO_APP_KEY" ]; then
+                      echo "::error::VITE_KAKAO_APP_KEY secret is required for E2E tests."
+                      exit 1
+                  fi
 
             - name: Install Playwright browser
               run: pnpm exec playwright install --with-deps chromium
