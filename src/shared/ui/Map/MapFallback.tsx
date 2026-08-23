@@ -3,7 +3,10 @@ import { LoadingSpinner } from "@/shared/components/LoadingSpinner/LoadingSpinne
 
 export function MapLoadingFallback() {
     return (
-        <div className="absolute inset-0 z-[90] flex flex-col items-center justify-center bg-black/60 px-6 text-center text-gil-light-text backdrop-blur-sm">
+        <div
+            className="absolute inset-0 z-[90] flex flex-col items-center justify-center bg-black/60 px-6 text-center text-gil-light-text backdrop-blur-sm"
+            data-map-state="loading"
+        >
             <LoadingSpinner className="size-10 border-4 text-gil-primary" label="지도 로딩 중" />
             <p className="mt-4 text-body font-bold">지도를 준비 중...</p>
         </div>
@@ -18,7 +21,10 @@ type MapErrorFallbackProps = {
 
 export function MapErrorFallback({ message, description, onRetry }: MapErrorFallbackProps) {
     return (
-        <div className="absolute inset-0 z-[90] flex items-center justify-center bg-gil-gray-950 px-6 text-center text-gil-light-text">
+        <div
+            className="absolute inset-0 z-[90] flex items-center justify-center bg-gil-gray-950 px-6 text-center text-gil-light-text"
+            data-map-state="error"
+        >
             <section className="flex w-full max-w-xs flex-col items-center">
                 <p className="text-section font-black">{message}</p>
                 <p className="mt-3 text-content font-medium leading-6 text-gil-gray-500">{description}</p>

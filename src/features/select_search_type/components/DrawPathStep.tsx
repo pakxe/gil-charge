@@ -185,7 +185,10 @@ export function DrawPathStep() {
 
     // const radiusPathPoints = data.penPaths.length > 0 ? data.penPaths : Array.from(data.waypoints.values());
     return (
-        <div className="relative flex min-h-0 flex-1 touch-none flex-col items-center justify-end overflow-hidden bg-gil-gray-900">
+        <div
+            className="relative flex min-h-0 flex-1 touch-none flex-col items-center justify-end overflow-hidden bg-gil-gray-900"
+            data-map-surface="waypoint-search"
+        >
             <Map
                 loadingFallback={<MapLoadingFallback />}
                 errorFallback={

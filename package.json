@@ -10,7 +10,8 @@
         "build": "tsc && vite build --config vite.production.ts",
         "dev:all": "concurrently \"pnpm run dev\" \"pnpm --dir ./opinet-proxy run dev\"",
         "test": "vitest --config vite.base.ts",
-        "test:run": "vitest run --config vite.base.ts"
+        "test:run": "vitest run --config vite.base.ts",
+        "test:e2e": "playwright test"
     },
     "dependencies": {
         "@tailwindcss/vite": "^4.2.1",
@@ -30,6 +31,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.39.4",
+        "@playwright/test": "^1.55.0",
         "@tailwindcss/cli": "^4.2.1",
         "@types/node": "^24.12.0",
         "@types/proj4": "^2.19.0",

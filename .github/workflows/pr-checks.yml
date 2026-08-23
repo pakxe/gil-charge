@@ -1,0 +1,96 @@
+name: PR Checks
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+
+permissions:
+    contents: read
+
+concurrency:
+    group: pr-checks-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    unit:
+        name: Unit tests
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        env:
+            VITE_API_URL: http://localhost:8080
+            VITE_KAKAO_APP_KEY: test-kakao-app-key
+            VITE_MAP_PROVIDER: kakao
+
+        steps:
+            - name: Checkout source
+              uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+
+            - name: Use Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Run unit tests
+              run: pnpm test:run
+
+    e2e:
+        name: E2E tests
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        env:
+            FRONTEND_ENV_PROD: ${{ secrets.FRONTEND_ENV_PROD }}
+
+        steps:
+            - name: Checkout source
+              uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+
+            - name: Use Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Restore frontend env
+              run: |
+                  if [ -z "$FRONTEND_ENV_PROD" ]; then
+                      echo "::error::FRONTEND_ENV_PROD secret is required for E2E tests. If this is a fork PR, GitHub does not expose repository secrets to pull_request workflows."
+                      exit 1
+                  fi
+
+                  printf '%s\n' "$FRONTEND_ENV_PROD" > .env
+
+                  if ! grep -Eq '^VITE_KAKAO_APP_KEY=.+$' .env; then
+                      echo "::error::FRONTEND_ENV_PROD must include a non-empty VITE_KAKAO_APP_KEY entry."
+                      exit 1
+                  fi
+
+            - name: Install Playwright browser
+              run: pnpm exec playwright install --with-deps chromium
+
+            - name: Run E2E tests
+              run: pnpm test:e2e
+
+            - name: Upload Playwright artifacts
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: playwright-artifacts
+                  path: test-results/
+                  if-no-files-found: ignore
