@@ -47,9 +47,7 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 15
         env:
-            VITE_API_URL: http://localhost:8080
-            VITE_KAKAO_APP_KEY: ${{ secrets.VITE_KAKAO_APP_KEY }}
-            VITE_MAP_PROVIDER: ${{ secrets.VITE_MAP_PROVIDER }}
+            FRONTEND_ENV_PROD: ${{ secrets.FRONTEND_ENV_PROD }}
 
         steps:
             - name: Checkout source
@@ -69,10 +67,17 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
-            - name: Validate E2E environment
+            - name: Restore frontend env
               run: |
-                  if [ -z "$VITE_KAKAO_APP_KEY" ]; then
-                      echo "::error::VITE_KAKAO_APP_KEY secret is required for E2E tests."
+                  if [ -z "$FRONTEND_ENV_PROD" ]; then
+                      echo "::error::FRONTEND_ENV_PROD secret is required for E2E tests. If this is a fork PR, GitHub does not expose repository secrets to pull_request workflows."
+                      exit 1
+                  fi
+
+                  printf '%s\n' "$FRONTEND_ENV_PROD" > .env
+
+                  if ! grep -Eq '^VITE_KAKAO_APP_KEY=.+$' .env; then
+                      echo "::error::FRONTEND_ENV_PROD must include a non-empty VITE_KAKAO_APP_KEY entry."
                       exit 1
                   fi
 
