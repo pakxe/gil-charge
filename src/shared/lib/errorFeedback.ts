@@ -17,7 +17,6 @@ export type ErrorFeedback =
     | {
           type: "errorBoundary";
           error: AppError;
-          action?: ErrorFeedbackAction;
       };
 
 const SILENT_ERROR_CODES = new Set<AppErrorCode>(["REQUEST_CANCELED"]);
@@ -45,7 +44,7 @@ type DefaultErrorFeedbackOptions = {
 export function getDefaultErrorFeedback(error: AppError, options: DefaultErrorFeedbackOptions = {}): ErrorFeedback {
     const feedback = getDefaultErrorFeedbackWithoutAction(error);
 
-    if (feedback.type === "silent" || !options.retry || !DEFAULT_RETRYABLE_ERROR_CODES.has(error.code)) {
+    if (feedback.type !== "toast" || !options.retry || !DEFAULT_RETRYABLE_ERROR_CODES.has(error.code)) {
         return feedback;
     }
 
