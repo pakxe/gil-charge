@@ -11,7 +11,8 @@
         "dev:all": "concurrently \"pnpm run dev\" \"pnpm --dir ./opinet-proxy run dev\"",
         "test": "vitest --config vite.base.ts",
         "test:run": "vitest run --config vite.base.ts",
-        "test:e2e": "playwright test"
+        "test:e2e": "playwright test",
+        "test:e2e-ui": "playwright test --ui"
     },
     "dependencies": {
         "@tailwindcss/vite": "^4.2.1",

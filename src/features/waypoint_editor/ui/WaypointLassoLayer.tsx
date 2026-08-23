@@ -157,6 +157,7 @@ export function WaypointLassoLayer({ enabled, onComplete }: Props) {
                     zIndex={MAP_Z_INDEX.lasso}
                 >
                     <div
+                        data-lasso-surface="waypoint-selection"
                         style={{
                             width: hitArea.width,
                             height: hitArea.height,
