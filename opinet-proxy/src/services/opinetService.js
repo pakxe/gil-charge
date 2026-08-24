@@ -88,6 +88,30 @@ async function fetchStationDetailById(id) {
     return responseData;
 }
 
+async function fetchStationsByName({ osnm, area }) {
+    assertOpinetConfigured();
+    console.log("오피넷 상호 조회:", { osnm, area: area || "ALL" });
+
+    const responseData = await requestOpinet(config.OPINET_SEARCH_BY_NAME_URL, {
+        code: config.OPINET_API_KEY,
+        out: "json",
+        osnm,
+        ...(area ? { area } : {}),
+    });
+
+    const uniqueStationsMap = new Map();
+
+    getNameSearchOilList(responseData).forEach((station) => {
+        const normalizedStation = normalizeNameSearchStation(station);
+
+        if (!uniqueStationsMap.has(normalizedStation.id)) {
+            uniqueStationsMap.set(normalizedStation.id, normalizedStation);
+        }
+    });
+
+    return Array.from(uniqueStationsMap.values());
+}
+
 function assertOpinetConfigured() {
     if (!config.OPINET_API_KEY) {
         throw createAppError("CONFIGURATION_ERROR", {
@@ -140,6 +164,65 @@ function getAroundOilList(responseData) {
     }
 
     return result.OIL;
+}
+
+function getNameSearchOilList(responseData) {
+    const result = responseData?.RESULT;
+
+    if (!result || typeof result !== "object") {
+        throw createOpinetUnavailableError(new Error("Invalid name search response shape"), {
+            reason: "invalid_name_search_response",
+        });
+    }
+
+    if (result.OIL === undefined || result.OIL === null) {
+        return [];
+    }
+
+    if (Array.isArray(result.OIL)) {
+        return result.OIL;
+    }
+
+    if (typeof result.OIL === "object") {
+        return [result.OIL];
+    }
+
+    throw createOpinetUnavailableError(new Error("Invalid OIL response shape"), {
+        reason: "invalid_oil_response",
+    });
+}
+
+function normalizeNameSearchStation(station) {
+    const id = firstString(station?.UNI_ID);
+    const name = firstString(station?.OS_NM);
+    const gisX = Number(station?.GIS_X_COOR);
+    const gisY = Number(station?.GIS_Y_COOR);
+
+    if (!id || !name || !Number.isFinite(gisX) || !Number.isFinite(gisY)) {
+        throw createOpinetUnavailableError(new Error("Invalid station name search response item"), {
+            reason: "invalid_station_item",
+        });
+    }
+
+    const { lat, lng } = toWgs84(gisX, gisY);
+
+    return {
+        id,
+        name,
+        brand: firstString(station.POLL_DIV_CD, station.POLL_DIV_CO) || null,
+        chargingStationBrand: firstString(station.GPOLL_DIV_CD, station.GPOLL_DIV_CO) || null,
+        lotAddress: firstString(station.VAN_ADR) || null,
+        roadAddress: firstString(station.NEW_ADR) || null,
+        sigunCode: firstString(station.SIGUNCD) || null,
+        lpgYn: firstString(station.LPG_YN) || null,
+        gis: {
+            x: gisX,
+            y: gisY,
+            coordinateSystem: "KATEC",
+        },
+        lat,
+        lng,
+    };
 }
 
 function extractOpinetResponseError(responseData) {
@@ -219,4 +302,4 @@ function createOpinetUnavailableError(cause, context = {}) {
     });
 }
 
-module.exports = { fetchStationsAlongPaths, fetchStationDetailById };
+module.exports = { fetchStationsAlongPaths, fetchStationDetailById, fetchStationsByName };

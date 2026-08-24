@@ -14,6 +14,15 @@ function validateStationsPathRequest(req, res, next) {
     }
 }
 
+function validateStationsNameRequest(req, res, next) {
+    try {
+        req.searchCriteria = parseStationNameSearchCriteria(req.query);
+        next();
+    } catch (error) {
+        next(error);
+    }
+}
+
 function parseSearchCriteria(body) {
     const requestBody = body && typeof body === "object" && !Array.isArray(body) ? body : {};
     const hasPaths = Object.prototype.hasOwnProperty.call(requestBody, "paths");
@@ -76,6 +85,51 @@ function parseRadiusKm(radiusKm) {
     return radiusKm;
 }
 
+function parseStationNameSearchCriteria(query) {
+    const requestQuery = query && typeof query === "object" && !Array.isArray(query) ? query : {};
+
+    return {
+        osnm: parseStationName(requestQuery.osnm),
+        area: parseAreaCode(requestQuery.area),
+    };
+}
+
+function parseStationName(value) {
+    if (typeof value !== "string") {
+        throw createInvalidInputError();
+    }
+
+    const stationName = value.trim();
+
+    if (Array.from(stationName).length < 2) {
+        throw createInvalidInputError();
+    }
+
+    return stationName;
+}
+
+function parseAreaCode(value) {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    if (typeof value !== "string") {
+        throw createInvalidInputError();
+    }
+
+    const areaCode = value.trim();
+
+    if (areaCode.length === 0) {
+        return undefined;
+    }
+
+    if (!/^\d{2}$/.test(areaCode)) {
+        throw createInvalidInputError();
+    }
+
+    return areaCode;
+}
+
 function createInvalidInputError() {
     return createAppError("INVALID_INPUT");
 }
@@ -90,5 +144,7 @@ function isValidLongitude(value) {
 
 module.exports = {
     validateStationsPathRequest,
+    validateStationsNameRequest,
     parseSearchCriteria,
+    parseStationNameSearchCriteria,
 };
