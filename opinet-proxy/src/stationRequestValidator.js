@@ -19,15 +19,11 @@ function parseSearchCriteria(body) {
     const hasPaths = Object.prototype.hasOwnProperty.call(requestBody, "paths");
 
     if (!hasPaths) {
-        throw createAppError("MISSING_PATHS");
+        throw createInvalidInputError();
     }
 
-    if (!Array.isArray(requestBody.paths)) {
-        throw createAppError("INVALID_PATHS");
-    }
-
-    if (requestBody.paths.length === 0) {
-        throw createAppError("EMPTY_PATHS");
+    if (!Array.isArray(requestBody.paths) || requestBody.paths.length === 0) {
+        throw createInvalidInputError();
     }
 
     requestBody.paths.forEach(validatePath);
@@ -39,24 +35,28 @@ function parseSearchCriteria(body) {
 }
 
 function validatePath(path) {
-    if (!path || typeof path !== "object" || !ALLOWED_PATH_TYPES.has(path.type)) {
-        throw createAppError("INVALID_PATH_TYPE");
+    if (!path || typeof path !== "object" || Array.isArray(path)) {
+        throw createInvalidInputError();
+    }
+
+    if (!ALLOWED_PATH_TYPES.has(path.type)) {
+        throw createInvalidInputError();
     }
 
     if (!Array.isArray(path.points) || path.points.length === 0) {
-        throw createAppError("INVALID_POINTS");
+        throw createInvalidInputError();
     }
 
     path.points.forEach(validatePoint);
 }
 
 function validatePoint(point) {
-    if (!point || typeof point !== "object") {
-        throw createAppError("INVALID_COORDINATE");
+    if (!point || typeof point !== "object" || Array.isArray(point)) {
+        throw createInvalidInputError();
     }
 
     if (!isValidLatitude(point.lat) || !isValidLongitude(point.lng)) {
-        throw createAppError("INVALID_COORDINATE");
+        throw createInvalidInputError();
     }
 }
 
@@ -66,14 +66,18 @@ function parseRadiusKm(radiusKm) {
     }
 
     if (typeof radiusKm !== "number" || !Number.isFinite(radiusKm) || radiusKm <= 0) {
-        throw createAppError("INVALID_RADIUS");
+        throw createInvalidInputError();
     }
 
     if (radiusKm > MAX_RADIUS_KM) {
-        throw createAppError("RADIUS_TOO_LARGE");
+        throw createInvalidInputError();
     }
 
     return radiusKm;
+}
+
+function createInvalidInputError() {
+    return createAppError("INVALID_INPUT");
 }
 
 function isValidLatitude(value) {

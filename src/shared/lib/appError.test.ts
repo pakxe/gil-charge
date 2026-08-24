@@ -19,13 +19,13 @@ describe("toAppError", () => {
         expect(toAppError(appError)).toBe(appError);
     });
 
-    it("백엔드 에러 응답의 code, message, status를 보존한다", () => {
+    it("백엔드 에러 응답의 code와 status를 보존한다", () => {
         const error = createAxiosError({
             response: {
                 status: 400,
                 data: {
-                    code: "INVALID_RADIUS",
-                    message: "검색 반경은 0보다 큰 숫자여야 합니다.",
+                    code: "INVALID_INPUT",
+                    message: "입력값이 올바르지 않습니다.",
                 },
             },
         });
@@ -33,8 +33,7 @@ describe("toAppError", () => {
         const appError = toAppError(error);
 
         expect(appError).toMatchObject({
-            code: "INVALID_RADIUS",
-            message: "검색 반경은 0보다 큰 숫자여야 합니다.",
+            code: "INVALID_INPUT",
             status: 400,
         });
     });
