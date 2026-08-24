@@ -19,18 +19,14 @@ function parseSearchCriteria(body) {
     const hasPaths = Object.prototype.hasOwnProperty.call(requestBody, "paths");
 
     if (!hasPaths) {
-        throw createAppError("MISSING_PATHS");
+        throw createMissingFieldsError(["paths"]);
     }
 
-    if (!Array.isArray(requestBody.paths)) {
-        throw createAppError("INVALID_PATHS");
+    if (!Array.isArray(requestBody.paths) || requestBody.paths.length === 0) {
+        throw createInvalidFieldsError(["paths"]);
     }
 
-    if (requestBody.paths.length === 0) {
-        throw createAppError("EMPTY_PATHS");
-    }
-
-    requestBody.paths.forEach(validatePath);
+    requestBody.paths.forEach((path, pathIndex) => validatePath(path, `paths[${pathIndex}]`));
 
     return {
         paths: requestBody.paths,
@@ -38,25 +34,39 @@ function parseSearchCriteria(body) {
     };
 }
 
-function validatePath(path) {
-    if (!path || typeof path !== "object" || !ALLOWED_PATH_TYPES.has(path.type)) {
-        throw createAppError("INVALID_PATH_TYPE");
+function validatePath(path, fieldPath) {
+    if (!path || typeof path !== "object" || Array.isArray(path)) {
+        throw createInvalidFieldsError([fieldPath]);
+    }
+
+    if (!ALLOWED_PATH_TYPES.has(path.type)) {
+        throw createInvalidFieldsError([`${fieldPath}.type`]);
     }
 
     if (!Array.isArray(path.points) || path.points.length === 0) {
-        throw createAppError("INVALID_POINTS");
+        throw createInvalidFieldsError([`${fieldPath}.points`]);
     }
 
-    path.points.forEach(validatePoint);
+    path.points.forEach((point, pointIndex) => validatePoint(point, `${fieldPath}.points[${pointIndex}]`));
 }
 
-function validatePoint(point) {
-    if (!point || typeof point !== "object") {
-        throw createAppError("INVALID_COORDINATE");
+function validatePoint(point, fieldPath) {
+    if (!point || typeof point !== "object" || Array.isArray(point)) {
+        throw createInvalidFieldsError([fieldPath]);
     }
 
-    if (!isValidLatitude(point.lat) || !isValidLongitude(point.lng)) {
-        throw createAppError("INVALID_COORDINATE");
+    const invalidFields = [];
+
+    if (!isValidLatitude(point.lat)) {
+        invalidFields.push(`${fieldPath}.lat`);
+    }
+
+    if (!isValidLongitude(point.lng)) {
+        invalidFields.push(`${fieldPath}.lng`);
+    }
+
+    if (invalidFields.length > 0) {
+        throw createInvalidFieldsError(invalidFields);
     }
 }
 
@@ -66,14 +76,32 @@ function parseRadiusKm(radiusKm) {
     }
 
     if (typeof radiusKm !== "number" || !Number.isFinite(radiusKm) || radiusKm <= 0) {
-        throw createAppError("INVALID_RADIUS");
+        throw createInvalidFieldsError(["radiusKm"]);
     }
 
     if (radiusKm > MAX_RADIUS_KM) {
-        throw createAppError("RADIUS_TOO_LARGE");
+        throw createInvalidFieldsError(["radiusKm"]);
     }
 
     return radiusKm;
+}
+
+function createMissingFieldsError(fields) {
+    return createAppError("MISSING_FIELDS", {
+        message: `필수 필드가 누락되었습니다: ${formatFields(fields)}`,
+        context: { fields },
+    });
+}
+
+function createInvalidFieldsError(fields) {
+    return createAppError("INVALID_FIELDS", {
+        message: `필드 값이 올바르지 않습니다: ${formatFields(fields)}`,
+        context: { fields },
+    });
+}
+
+function formatFields(fields) {
+    return fields.join(", ");
 }
 
 function isValidLatitude(value) {
