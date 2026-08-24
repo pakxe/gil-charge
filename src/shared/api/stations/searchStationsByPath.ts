@@ -2,8 +2,9 @@ import { z } from "zod";
 
 import { createRequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
 import { PathSet } from "@/shared/types/map";
-import { isHttpFailure } from "./httpFailure";
-import { httpClient } from "./httpClient";
+import { isHttpFailure } from "../httpFailure";
+import { httpClient } from "../httpClient";
+import { baseStationSchema } from "./stationSchemas";
 
 export const SEARCH_STATIONS_BY_PATH_ERROR_CODES = [
     "INVALID_INPUT",
@@ -25,12 +26,8 @@ type SearchStationsByPathErrorResponse = {
 
 const SEARCH_STATIONS_BY_PATH_ERROR_CODE_SET = new Set<string>(SEARCH_STATIONS_BY_PATH_ERROR_CODES);
 
-const stationSchema = z.object({
-    id: z.string(),
-    name: z.string(),
+const pathStationSchema = baseStationSchema.extend({
     price: z.number(),
-    lat: z.number(),
-    lng: z.number(),
     localCurrency: z.object({
         accepted: z.boolean().nullable(),
         status: z.enum(["UNKNOWN", "ACCEPTED", "NOT_ACCEPTED", "OUT_OF_SCOPE", "MISSING_ROAD_ADDRESS", "ERROR"]),
@@ -41,10 +38,11 @@ const stationSchema = z.object({
     }),
 });
 
-export type Station = z.infer<typeof stationSchema>;
+export type PathStation = z.infer<typeof pathStationSchema>;
+export type Station = PathStation;
 
 const stationsPathResponseSchema = z.object({
-    stations: z.array(stationSchema),
+    stations: z.array(pathStationSchema),
 });
 
 export type SearchStationsByPathParams = {
