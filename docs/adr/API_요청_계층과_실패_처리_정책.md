@@ -42,10 +42,10 @@ HTTP layer의 책임은 다음으로 제한한다.
 - HTTP 통신 주체를 한 곳에 둔다.
 - `baseURL`, 공통 timeout, 공통 header 같은 HTTP 정책을 정의한다.
 - `fetch`, `axios` 같은 HTTP 라이브러리 선택을 감춘다.
-- 원본 HTTP 오류와 네트워크 오류를 정규화된 HTTP 실패로 변환한다.
-- backend error response의 기본 형태를 검증한다.
+- 원본 HTTP 오류와 네트워크 오류를 정규화된 `HttpFailure`로 변환한다.
+- HTTP status와 response body는 보존하되, 앱 실패 코드로 해석하지 않는다.
 
-HTTP layer는 API별 method, url, request DTO, response DTO, 화면 상태, 사용자 메시지, 재시도 UI를 알지 않는다.
+HTTP layer는 API별 method, url, request DTO, response DTO, API별 backend app error code, 화면 상태, 사용자 메시지, 재시도 UI를 알지 않는다.
 
 ## 결정 3. Request layer는 API 계약과 응답 검증을 책임진다
 
@@ -55,7 +55,8 @@ Request layer의 책임은 다음이다.
 - 요청 DTO 타입을 정의한다.
 - 응답 DTO 타입을 정의한다.
 - 응답 body를 런타임에 검증한다.
-- HTTP layer 실패와 응답 검증 실패를 해당 API의 실패 모델로 변환한다.
+- `HttpFailure`와 응답 검증 실패를 해당 API의 실패 모델로 변환한다.
+- API별 backend error response의 기본 형태를 검증하고 앱 실패 코드로 해석한다.
 - `AbortSignal`처럼 요청 생애주기에 필요한 입력은 받되, 생애주기 자체는 관리하지 않는다.
 
 Request layer는 loading, success, error 같은 화면 상태를 관리하지 않는다.

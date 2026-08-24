@@ -1,41 +1,154 @@
-import { useState } from "react";
-import { searchStationsByPath } from "@/shared/api/stationApi";
-import { getDefaultErrorFeedback } from "@/shared/lib/errorFeedback";
-import { toAppError } from "@/shared/lib/appError";
+import { useCallback, useRef, useState } from "react";
+import { searchStationsByPath, type SearchStationsByPathErrorCode } from "@/shared/api/stationApi";
+import { type ClientRequestFailureCode, RequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
 import { PathSet, Station } from "@/shared/types/map";
-import { useErrorFeedback } from "@/shared/lib/useErrorFeedback";
 
-export function useStationsSearch(onSuccess: (stations: Station[]) => void) {
-    const [isLoading, setIsLoading] = useState(false);
-    const { handleFeedback } = useErrorFeedback();
+type StationsSearchInput = {
+    paths: PathSet[];
+    radiusKm: number;
+};
 
-    const fetchStations = async (allPaths: PathSet[], radiusKm: number) => {
-        if (allPaths.length === 0) {
-            handleFeedback({
-                type: "toast",
-                message: "먼저 지도에 검색할 영역을 그려주세요!",
-            });
-            return;
-        }
+export type StationsSearchFailurePolicy = {
+    presentation: "inline" | "toast" | "silent";
+    recovery: "edit-input" | "manual-retry" | "none";
+    report: "none" | "always";
+};
 
-        setIsLoading(true);
+type StationsSearchFailureCode = SearchStationsByPathErrorCode | ClientRequestFailureCode;
+
+export type StationsSearchState =
+    | {
+          status: "idle";
+          stations: null;
+          failure: null;
+          policy: null;
+      }
+    | {
+          status: "loading";
+          stations: Station[] | null;
+          failure: null;
+          policy: null;
+      }
+    | {
+          status: "success";
+          stations: Station[];
+          failure: null;
+          policy: null;
+      }
+    | {
+          status: "error";
+          stations: Station[] | null;
+          failure: RequestFailure;
+          policy: StationsSearchFailurePolicy;
+      };
+
+const INITIAL_STATIONS_SEARCH_STATE: StationsSearchState = {
+    status: "idle",
+    stations: null,
+    failure: null,
+    policy: null,
+};
+
+export function useStationsSearch() {
+    const [state, setState] = useState<StationsSearchState>(INITIAL_STATIONS_SEARCH_STATE);
+    const failedSearchInputRef = useRef<StationsSearchInput | null>(null);
+
+    const search = useCallback(async (allPaths: PathSet[], radiusKm: number) => {
+        failedSearchInputRef.current = null;
+        setState((current) => ({
+            status: "loading",
+            stations: current.stations,
+            failure: null,
+            policy: null,
+        }));
+
         try {
             const stations = await searchStationsByPath({ paths: allPaths, radiusKm });
-            onSuccess(stations);
-        } catch (error) {
-            const appError = toAppError(error);
-            const feedback = getDefaultErrorFeedback(appError, {
-                retry: () => {
-                    void fetchStations(allPaths, radiusKm);
-                },
+
+            setState({
+                status: "success",
+                stations,
+                failure: null,
+                policy: null,
             });
-
-            console.error("주유소 검색 실패:", appError);
-            handleFeedback(feedback);
-        } finally {
-            setIsLoading(false);
+        } catch (error) {
+            const requestFailure = toRequestFailure(error);
+            const policy = decideStationsSearchFailurePolicy(requestFailure.code);
+            failedSearchInputRef.current = {
+                paths: allPaths,
+                radiusKm,
+            };
+            setState((current) => ({
+                status: "error",
+                stations: current.stations,
+                failure: requestFailure,
+                policy,
+            }));
         }
-    };
+    }, []);
 
-    return { fetchStations, isLoading };
+    const retry = useCallback(() => {
+        const failedSearchInput = failedSearchInputRef.current;
+
+        if (!failedSearchInput) return;
+
+        void search(failedSearchInput.paths, failedSearchInput.radiusKm);
+    }, [search]);
+
+    return { state, retry, search };
+}
+
+function decideStationsSearchFailurePolicy(code: string): StationsSearchFailurePolicy {
+    switch (code as StationsSearchFailureCode) {
+        case "INVALID_INPUT":
+        case "PAYLOAD_TOO_LARGE":
+            return {
+                presentation: "inline",
+                recovery: "edit-input",
+                report: "none",
+            };
+
+        case "OFFLINE":
+            return {
+                presentation: "toast",
+                recovery: "manual-retry",
+                report: "none",
+            };
+
+        case "NETWORK_ERROR":
+        case "TIMEOUT":
+        case "OPINET_UNAVAILABLE":
+        case "DATABASE_UNAVAILABLE":
+        case "INTERNAL_SERVER_ERROR":
+            return {
+                presentation: "toast",
+                recovery: "manual-retry",
+                report: "always",
+            };
+
+        case "ROUTE_NOT_FOUND":
+        case "METHOD_NOT_ALLOWED":
+        case "CONFIGURATION_ERROR":
+        case "INVALID_RESPONSE":
+        case "UNKNOWN_ERROR":
+            return {
+                presentation: "toast",
+                recovery: "none",
+                report: "always",
+            };
+
+        case "REQUEST_CANCELED":
+            return {
+                presentation: "silent",
+                recovery: "none",
+                report: "none",
+            };
+
+        default:
+            return {
+                presentation: "toast",
+                recovery: "none",
+                report: "always",
+            };
+    }
 }

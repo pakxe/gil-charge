@@ -12,8 +12,16 @@ type ToastState = ToastOptions & {
 export function ToastProvider({ children }: { children: ReactNode }) {
     const [toasts, setToasts] = useState<ToastState[]>([]);
     const nextIdRef = useRef(1);
+    const timeoutIdsRef = useRef<Map<number, number>>(new Map());
 
     const closeToast = useCallback((id: number) => {
+        const timeoutId = timeoutIdsRef.current.get(id);
+
+        if (timeoutId !== undefined) {
+            window.clearTimeout(timeoutId);
+            timeoutIdsRef.current.delete(id);
+        }
+
         setToasts((currentToasts) => currentToasts.filter((toast) => toast.id !== id));
     }, []);
 
@@ -32,9 +40,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 },
             ]);
 
-            window.setTimeout(() => {
+            const timeoutId = window.setTimeout(() => {
                 closeToast(id);
             }, durationMs);
+            timeoutIdsRef.current.set(id, timeoutId);
+
+            return () => closeToast(id);
         },
         [closeToast],
     );

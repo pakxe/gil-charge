@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 
-import type { Station } from "@/shared/types/map";
-import { useStationsSearch } from "@/shared/hooks/useStationsSearch";
+import { type StationsSearchFailurePolicy, useStationsSearch } from "@/shared/hooks/useStationsSearch";
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
 import { useMap } from "@/shared/model/useMap";
 import { useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
+import { useSearchResultSheetLayout } from "@/features/select_search_type/hooks/useSearchResultSheetLayout";
+import { useStationSelection } from "@/features/select_search_type/hooks/useStationSelection";
 import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
 import { Map } from "@/shared/ui/Map/Map";
 import { MapErrorFallback, MapLoadingFallback } from "@/shared/ui/Map/MapFallback";
@@ -15,85 +16,49 @@ import { WaypointLassoLayer } from "@/features/waypoint_editor/ui/WaypointLassoL
 import { getWaypointIdsInPolygon } from "@/features/waypoint_editor/utils/getWaypointIdsInPolygon";
 import { ResultBottomSheet } from "@/features/select_search_type/components/ResultBottomSheet";
 import { StationMarkersLayer } from "@/features/select_search_type/components/StationMarkersLayer";
+import type { RequestFailure } from "@/shared/lib/requestFailure";
+import { useToast } from "@/shared/ui/Toast/useToast";
 import Box from "@/shared/components/Box/Box";
+import { InlineFailurePresentation } from "@/shared/components/InlineFailurePresentation/InlineFailurePresentation";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner/LoadingSpinner";
+import { Slider } from "@/shared/components/Slider/Slider";
 import { cn } from "@/shared/utils/cn";
 import { WaypointHistoryControls } from "@/features/waypoint_editor/ui/WaypointHistoryControls";
-import {
-    clamp,
-    getResultSheetDefaultHeight,
-    getSearchControlsBottom,
-} from "@/features/select_search_type/model/resultBottomSheet";
-import {
-    getStationCenteringDecision,
-    getVisibleStations,
-    shouldClearSelectedStation,
-    stationToLatLng,
-    type StationSelectionSource,
-} from "@/features/select_search_type/model/stationSelection";
+import { getVisibleStations } from "@/features/select_search_type/model/stationSelection";
 
 type DrawMode = "waypoint" | "lasso";
-
-interface ModeGuideToastState {
-    id: number;
-    message: string;
-}
 
 export function DrawPathStep() {
     const { status, data, actions } = useWaypointEditor();
     const map = useMap();
 
     const hasRequestedLocationRef = useRef(false);
-    const modeGuideToastIdRef = useRef(0);
-    const modeGuideToastTimeoutRef = useRef<number | null>(null);
 
     const [zoomLevel, setZoomLevel] = useState(8);
     const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
     const [mode, setMode] = useState<DrawMode>(INITIAL_DRAW_MODE);
-    const [modeGuideToast, setModeGuideToast] = useState<ModeGuideToastState | null>(null);
-    const [stations, setStations] = useState<Station[] | null>(null);
+    const [isSearchResultDismissed, setIsSearchResultDismissed] = useState(false);
     const [localCurrencyOnly, setLocalCurrencyOnly] = useState(false);
-    const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
-    const [selectionSource, setSelectionSource] = useState<StationSelectionSource | null>(null);
-    const [selectionRevision, setSelectionRevision] = useState(0);
 
     const { requestLocation, location } = useCurrentLocation();
+    const { state: stationsSearchState, retry: retryStationsSearch, search: searchStations } = useStationsSearch();
+    const { showToast } = useToast();
 
-    const handleStationsFound = (nextStations: Station[]) => {
-        setStations(nextStations);
-        setSelectedStationId(null);
-        setSelectionSource(null);
-        setSelectionRevision(0);
-    };
-
-    const { fetchStations, isLoading } = useStationsSearch(handleStationsFound);
+    const stations = isSearchResultDismissed ? null : stationsSearchState.stations;
+    const isLoading = stationsSearchState.status === "loading";
+    const searchFailure = stationsSearchState.status === "error" ? stationsSearchState.failure : null;
+    const searchFailurePolicy = stationsSearchState.status === "error" ? stationsSearchState.policy : null;
 
     const handleRadiusChange = (event: ChangeEvent<HTMLInputElement>) => {
         setRadiusKm(Number(event.target.value));
     };
 
-    const showModeGuideToast = useCallback((nextMode: DrawMode) => {
-        const nextToastId = modeGuideToastIdRef.current + 1;
-
-        modeGuideToastIdRef.current = nextToastId;
-        setModeGuideToast({
-            id: nextToastId,
-            message: MODE_GUIDE_MESSAGES[nextMode],
-        });
-
-        if (modeGuideToastTimeoutRef.current !== null) {
-            window.clearTimeout(modeGuideToastTimeoutRef.current);
-        }
-
-        modeGuideToastTimeoutRef.current = window.setTimeout(() => {
-            setModeGuideToast(null);
-            modeGuideToastTimeoutRef.current = null;
-        }, MODE_GUIDE_TOAST_DURATION_MS);
-    }, []);
-
     useEffect(() => {
-        showModeGuideToast(INITIAL_DRAW_MODE);
-    }, [showModeGuideToast]);
+        return showToast({
+            message: MODE_GUIDE_MESSAGES[INITIAL_DRAW_MODE],
+            durationMs: MODE_GUIDE_TOAST_DURATION_MS,
+        });
+    }, [showToast]);
 
     useEffect(() => {
         if (hasRequestedLocationRef.current === true) return;
@@ -109,17 +74,52 @@ export function DrawPathStep() {
     }, [requestLocation]);
 
     useEffect(() => {
-        return () => {
-            if (modeGuideToastTimeoutRef.current === null) return;
+        if (!searchFailure || !searchFailurePolicy) return;
 
-            window.clearTimeout(modeGuideToastTimeoutRef.current);
-        };
-    }, []);
+        if (searchFailurePolicy.report === "always") {
+            console.error("주유소 검색 실패:", searchFailure);
+        }
+
+        const toast = getStationsSearchFailureToast(searchFailure, searchFailurePolicy, retryStationsSearch);
+
+        if (!toast) return;
+
+        showToast(toast);
+    }, [retryStationsSearch, searchFailure, searchFailurePolicy, showToast]);
+
+    const currentStrokeWeight = useMemo(() => calculateStrokeWeight(zoomLevel, radiusKm), [zoomLevel, radiusKm]);
+    const visibleStations = useMemo(
+        () => (stations ? getVisibleStations(stations, localCurrencyOnly) : []),
+        [localCurrencyOnly, stations],
+    );
+    const {
+        selectedStationId,
+        selectionSource,
+        selectionRevision,
+        selectStation,
+        clearSelectedStation,
+        handleLocalCurrencyOnlyChange,
+    } = useStationSelection({ map, stations, visibleStations });
+    const hasWaypoint = data.waypoints.length > 0;
+    const isLassoMode = mode === "lasso";
+    const selectedWaypointIds = status.statusName === "selected" ? status.selectedNodeIds : [];
+    const hasSelectedWaypoint = selectedWaypointIds.length > 0;
+    const hasSearchResult = stations !== null;
+    const canSubmitSearch = hasWaypoint && !isLoading;
+    const {
+        searchOverlayRef,
+        searchOverlayVisibleHeight,
+        maxSearchSheetHeight,
+        searchControlsBottom,
+        setSearchOverlayVisibleHeight,
+    } = useSearchResultSheetLayout({ hasSearchResult, stations });
 
     const handleSubmit = async () => {
         if (data.waypoints.length === 0) return;
 
-        await fetchStations(
+        setIsSearchResultDismissed(false);
+        clearSelectedStation();
+        await searchStations(
             [
                 {
                     type: "waypoint",
@@ -131,59 +131,14 @@ export function DrawPathStep() {
         );
     };
 
-    const currentStrokeWeight = useMemo(() => calculateStrokeWeight(zoomLevel, radiusKm), [zoomLevel, radiusKm]);
-    const visibleStations = useMemo(
-        () => (stations ? getVisibleStations(stations, localCurrencyOnly) : []),
-        [localCurrencyOnly, stations],
-    );
-    const hasWaypoint = data.waypoints.length > 0;
-    const isLassoMode = mode === "lasso";
-    const selectedWaypointIds = status.statusName === "selected" ? status.selectedNodeIds : [];
-    const hasSelectedWaypoint = selectedWaypointIds.length > 0;
-
-    const changeSelectedStation = (source: StationSelectionSource, stationId: string, bottomSheetVisibleHeight = 0) => {
-        setSelectedStationId(stationId);
-        setSelectionSource(source);
-        setSelectionRevision((prev) => prev + 1);
-
-        if (source !== "list" || !map) return;
-
-        const station = visibleStations.find((visibleStation) => visibleStation.id === stationId);
-        if (!station) return;
-
-        const mapContainer = map.getContainer();
-        const containerSize = {
-            width: mapContainer.clientWidth,
-            height: mapContainer.clientHeight,
-        };
-
-        if (containerSize.width <= 0 || containerSize.height <= 0) return;
-
-        const stationPoint = map.latLngToContainerPoint(stationToLatLng(station));
-        const centeringDecision = getStationCenteringDecision(stationPoint, containerSize, bottomSheetVisibleHeight);
-
-        if (centeringDecision.shouldCenter) {
-            map.setCenter(map.containerPointToLatLng(centeringDecision.nextCenterPoint));
-        }
-    };
-
     const handleModeChange = (nextMode: DrawMode) => {
         setMode(nextMode);
-        showModeGuideToast(nextMode);
+        showToast({
+            message: MODE_GUIDE_MESSAGES[nextMode],
+            durationMs: MODE_GUIDE_TOAST_DURATION_MS,
+        });
     };
 
-    const handleLocalCurrencyOnlyChange = (nextLocalCurrencyOnly: boolean) => {
-        const nextVisibleStations = stations ? getVisibleStations(stations, nextLocalCurrencyOnly) : [];
-
-        setLocalCurrencyOnly(nextLocalCurrencyOnly);
-
-        if (!shouldClearSelectedStation(selectedStationId, nextVisibleStations)) return;
-
-        setSelectedStationId(null);
-        setSelectionSource(null);
-    };
-
-    // const radiusPathPoints = data.penPaths.length > 0 ? data.penPaths : Array.from(data.waypoints.values());
     return (
         <div
             className="relative flex min-h-0 flex-1 touch-none flex-col items-center justify-end overflow-hidden bg-gil-gray-900"
@@ -199,11 +154,9 @@ export function DrawPathStep() {
                     />
                 }
                 center={location ?? DEFAULT_MAP_CENTER}
-                // currentLocation={location ?? undefined}
                 zoomLevel={zoomLevel}
                 isDraggable={!isLassoMode && !isMoveActive(status.statusName)}
                 isZoomable={!isLassoMode}
-                // isTracking={isTracking}
                 onZoomLevelChange={(zoomLevel) => setZoomLevel(zoomLevel)}
                 onClick={(latLng) => {
                     if (isLassoMode) return;
@@ -233,33 +186,86 @@ export function DrawPathStep() {
                 <StationMarkersLayer
                     stations={visibleStations}
                     selectedStationId={selectedStationId}
-                    onStationClick={(stationId) => changeSelectedStation("map", stationId)}
+                    onStationClick={(stationId) => selectStation("map", stationId)}
                 />
             </Map>
-            <BottomSearchOverlay
-                stations={stations}
-                visibleStations={visibleStations}
-                radiusKm={radiusKm}
-                localCurrencyOnly={localCurrencyOnly}
-                selectedStationId={selectedStationId}
-                selectionSource={selectionSource}
-                selectionRevision={selectionRevision}
-                hasWaypoint={hasWaypoint}
-                isLoading={isLoading}
-                onRadiusChange={handleRadiusChange}
-                onLocalCurrencyOnlyChange={handleLocalCurrencyOnlyChange}
-                onStationClick={(stationId, bottomSheetVisibleHeight) =>
-                    changeSelectedStation("list", stationId, bottomSheetVisibleHeight)
-                }
-                onSubmit={handleSubmit}
-                onClose={() => {
-                    setStations(null);
-                    setSelectedStationId(null);
-                    setSelectionSource(null);
-                    setSelectionRevision(0);
-                }}
-            />
-            <ModeGuideToast toast={modeGuideToast} />
+            <div ref={searchOverlayRef} className="pointer-events-none absolute inset-0 z-70">
+                <div
+                    className="pointer-events-auto absolute left-0 flex w-full flex-row justify-between gap-4 px-4"
+                    style={{ bottom: searchControlsBottom }}
+                >
+                    <Box className="h-fit min-w-0 flex-1 flex flex-col rounded-2xl gap-0">
+                        <Slider
+                            id="radius-range"
+                            min={1}
+                            max={5}
+                            step={0.1}
+                            value={radiusKm}
+                            onChange={handleRadiusChange}
+                            topSlot={
+                                <>
+                                    <label htmlFor="radius-range" className="text-white text-xs">
+                                        반경
+                                    </label>
+                                    <span className="font-bold text-gil-yellow-400 text-xs">
+                                        {formatRadius(radiusKm)} km
+                                    </span>
+                                </>
+                            }
+                            bottomSlot={
+                                <InlineFailurePresentation
+                                    message={
+                                        searchFailure && searchFailurePolicy?.presentation === "inline"
+                                            ? getStationsSearchFailureMessage(searchFailure)
+                                            : null
+                                    }
+                                />
+                            }
+                        />
+                    </Box>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (!canSubmitSearch) return;
+
+                            void handleSubmit();
+                        }}
+                        disabled={!canSubmitSearch}
+                        aria-label={isLoading ? "탐색 중" : "찾기"}
+                        className={cn(
+                            "flex min-w-20 items-center justify-center rounded-2xl px-6 text-lg font-bold shadow-lg transition-colors",
+                            hasWaypoint ? "bg-gil-yellow-400 text-gil-brown-900" : "bg-gil-gray-850 text-gil-gray-600",
+                            canSubmitSearch ? "cursor-pointer" : "cursor-not-allowed",
+                        )}
+                    >
+                        {isLoading ? <LoadingSpinner /> : "찾기"}
+                    </button>
+                </div>
+
+                {hasSearchResult && (
+                    <ResultBottomSheet
+                        containerRef={searchOverlayRef}
+                        maxHeight={maxSearchSheetHeight}
+                        stations={stations}
+                        visibleStations={visibleStations}
+                        localCurrencyOnly={localCurrencyOnly}
+                        selectedStationId={selectedStationId}
+                        selectionSource={selectionSource}
+                        selectionRevision={selectionRevision}
+                        visibleHeight={searchOverlayVisibleHeight}
+                        onVisibleHeightChange={setSearchOverlayVisibleHeight}
+                        onLocalCurrencyOnlyChange={(nextLocalCurrencyOnly) => {
+                            setLocalCurrencyOnly(nextLocalCurrencyOnly);
+                            handleLocalCurrencyOnlyChange(nextLocalCurrencyOnly);
+                        }}
+                        onStationClick={(stationId) => selectStation("list", stationId, searchOverlayVisibleHeight)}
+                        onClose={() => {
+                            setIsSearchResultDismissed(true);
+                            clearSelectedStation();
+                        }}
+                    />
+                )}
+            </div>
             <div className="absolute left-4 top-4 z-60 text-sm font-medium transition-colors flex flex-row gap-2 h-9">
                 <WaypointHistoryControls
                     canUndo={data.canUndo}
@@ -329,163 +335,6 @@ export function DrawPathStep() {
     );
 }
 
-function ModeGuideToast({ toast }: { toast: ModeGuideToastState | null }) {
-    if (!toast) return null;
-
-    return (
-        <div
-            key={toast.id}
-            role="status"
-            aria-live="polite"
-            className="pointer-events-none absolute left-1/2 top-16 z-[80] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-lg bg-gil-gray-950/90 px-4 py-3 text-center text-sub font-bold text-white shadow-lg backdrop-blur-[15px]"
-        >
-            {toast.message}
-        </div>
-    );
-}
-
-interface BottomSearchOverlayProps {
-    stations: Station[] | null;
-    visibleStations: Station[];
-    radiusKm: number;
-    localCurrencyOnly: boolean;
-    selectedStationId: string | null;
-    selectionSource: StationSelectionSource | null;
-    selectionRevision: number;
-    hasWaypoint: boolean;
-    isLoading: boolean;
-    onRadiusChange: (event: ChangeEvent<HTMLInputElement>) => void;
-    onLocalCurrencyOnlyChange: (localCurrencyOnly: boolean) => void;
-    onStationClick: (stationId: string, bottomSheetVisibleHeight: number) => void;
-    onSubmit: () => void;
-    onClose: () => void;
-}
-
-function BottomSearchOverlay({
-    stations,
-    visibleStations,
-    radiusKm,
-    localCurrencyOnly,
-    selectedStationId,
-    selectionSource,
-    selectionRevision,
-    hasWaypoint,
-    isLoading,
-    onRadiusChange,
-    onLocalCurrencyOnlyChange,
-    onStationClick,
-    onSubmit,
-    onClose,
-}: BottomSearchOverlayProps) {
-    const overlayRef = useRef<HTMLDivElement | null>(null);
-    const [visibleHeight, setVisibleHeight] = useState(0);
-    const [maxSheetHeight, setMaxSheetHeight] = useState(0);
-
-    const hasSearchResult = stations !== null;
-    const searchControlsBottom = getSearchControlsBottom(visibleHeight, hasSearchResult);
-    const canSubmit = hasWaypoint && !isLoading;
-
-    useEffect(() => {
-        if (!hasSearchResult) return;
-
-        const overlay = overlayRef.current;
-        if (!overlay) return;
-
-        const updateMaxHeight = () => {
-            const nextMaxHeight = getResultSheetMaxHeight(overlay);
-
-            setMaxSheetHeight(nextMaxHeight);
-            setVisibleHeight((prev) => clamp(prev, 0, nextMaxHeight));
-        };
-
-        const frameId = requestAnimationFrame(() => {
-            const nextMaxHeight = getResultSheetMaxHeight(overlay);
-
-            setMaxSheetHeight(nextMaxHeight);
-            setVisibleHeight(getResultSheetDefaultHeight(nextMaxHeight));
-        });
-
-        const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateMaxHeight);
-        observer?.observe(overlay);
-
-        return () => {
-            cancelAnimationFrame(frameId);
-            observer?.disconnect();
-        };
-    }, [hasSearchResult, stations]);
-
-    return (
-        <div ref={overlayRef} className="pointer-events-none absolute inset-0 z-[70]">
-            <div
-                className="pointer-events-auto absolute left-0 flex w-full flex-row justify-between gap-4 px-4"
-                style={{ bottom: searchControlsBottom }}
-            >
-                <Box className="h-fit min-w-0 flex-1 flex flex-col rounded-2xl gap-0">
-                    <div className="flex flex-row justify-between w-full">
-                        <label htmlFor="radius-range" className=" text-white text-xs">
-                            반경
-                        </label>
-                        <span className="font-bold text-gil-yellow-400 text-xs">{formatRadius(radiusKm)} km</span>
-                    </div>
-
-                    <div className="w-full">
-                        <input
-                            id="radius-range"
-                            type="range"
-                            min="1"
-                            max="5"
-                            step="0.1"
-                            value={radiusKm}
-                            onChange={onRadiusChange}
-                            className="mt-2 block h-4.5 w-full cursor-pointer appearance-none rounded-full bg-transparent bg-center bg-no-repeat focus:outline-none focus-visible:ring-2 focus-visible:ring-gil-yellow-400/70 [&::-moz-range-progress]:h-[6px] [&::-moz-range-progress]:rounded-full [&::-moz-range-progress]:bg-gil-yellow-400 [&::-moz-range-thumb]:h-[18px] [&::-moz-range-thumb]:w-[18px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gil-yellow-400 [&::-moz-range-thumb]:shadow-[inset_0_0_0_2px_#fff] [&::-moz-range-track]:h-[6px] [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-black [&::-webkit-slider-runnable-track]:h-[6px] [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:h-[18px] [&::-webkit-slider-thumb]:w-[18px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gil-yellow-400 [&::-webkit-slider-thumb]:shadow-[inset_0_0_0_2px_#fff]"
-                            style={{
-                                backgroundImage: `linear-gradient(to right, #f0c243 0%, #f0c243 ${((radiusKm - 1) / 4) * 100}%, #000 ${((radiusKm - 1) / 4) * 100}%, #000 100%)`,
-                                backgroundSize: "100% 6px",
-                                backgroundClip: "content-box",
-                            }}
-                        />
-                    </div>
-                </Box>
-                <button
-                    type="button"
-                    onClick={() => {
-                        if (!canSubmit) return;
-
-                        onSubmit();
-                    }}
-                    disabled={!canSubmit}
-                    aria-label={isLoading ? "탐색 중" : "찾기"}
-                    className={cn(
-                        "flex min-w-20 items-center justify-center rounded-2xl px-6 text-lg font-bold shadow-lg transition-colors",
-                        hasWaypoint ? "bg-gil-yellow-400 text-gil-brown-900" : "bg-gil-gray-850 text-gil-gray-600",
-                        canSubmit ? "cursor-pointer" : "cursor-not-allowed",
-                    )}
-                >
-                    {isLoading ? <LoadingSpinner /> : "찾기"}
-                </button>
-            </div>
-
-            {hasSearchResult && (
-                <ResultBottomSheet
-                    containerRef={overlayRef}
-                    maxHeight={maxSheetHeight}
-                    stations={stations}
-                    visibleStations={visibleStations}
-                    localCurrencyOnly={localCurrencyOnly}
-                    selectedStationId={selectedStationId}
-                    selectionSource={selectionSource}
-                    selectionRevision={selectionRevision}
-                    visibleHeight={visibleHeight}
-                    onVisibleHeightChange={setVisibleHeight}
-                    onLocalCurrencyOnlyChange={onLocalCurrencyOnlyChange}
-                    onStationClick={(stationId) => onStationClick(stationId, visibleHeight)}
-                    onClose={onClose}
-                />
-            )}
-        </div>
-    );
-}
-
 function formatRadius(radiusKm: number) {
     return Number.isInteger(radiusKm) ? String(radiusKm) : radiusKm.toFixed(1);
 }
@@ -508,10 +357,55 @@ function calculateStrokeWeight(currentLevel: number, radiusKm: number) {
     return BASE_STROKE_WEIGHT * radiusKm * Math.pow(2, BASE_LEVEL - currentLevel);
 }
 
-function getResultSheetMaxHeight(container: HTMLElement | null) {
-    return container?.getBoundingClientRect().height ?? window.innerHeight;
-}
-
 function reloadPage() {
     window.location.reload();
+}
+
+function getStationsSearchFailureToast(
+    failure: RequestFailure,
+    policy: StationsSearchFailurePolicy,
+    retry: () => void,
+) {
+    if (policy.presentation !== "toast") {
+        return null;
+    }
+
+    const message = getStationsSearchFailureMessage(failure);
+
+    if (policy.recovery !== "manual-retry") {
+        return { message };
+    }
+
+    return {
+        message,
+        action: {
+            label: "다시 시도",
+            onClick: retry,
+        },
+    };
+}
+
+function getStationsSearchFailureMessage(failure: RequestFailure) {
+    switch (failure.code) {
+        case "INVALID_INPUT":
+        case "PAYLOAD_TOO_LARGE":
+            return "입력값을 확인해주세요.";
+        case "ROUTE_NOT_FOUND":
+        case "METHOD_NOT_ALLOWED":
+        case "INVALID_RESPONSE":
+            return "요청을 처리할 수 없습니다.";
+        case "OPINET_UNAVAILABLE":
+        case "DATABASE_UNAVAILABLE":
+        case "INTERNAL_SERVER_ERROR":
+            return "요청이 실패했습니다.";
+        case "OFFLINE":
+            return "인터넷 연결을 확인해주세요.";
+        case "NETWORK_ERROR":
+        case "TIMEOUT":
+            return "일시적으로 문제가 발생했습니다.";
+        case "CONFIGURATION_ERROR":
+        case "UNKNOWN_ERROR":
+        default:
+            return "예상하지 못한 문제가 발생했습니다.";
+    }
 }
