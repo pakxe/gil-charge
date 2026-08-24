@@ -24,8 +24,8 @@ describe("toAppError", () => {
             response: {
                 status: 400,
                 data: {
-                    code: "INVALID_FIELDS",
-                    message: "필드 값이 올바르지 않습니다: radiusKm",
+                    code: "INVALID_INPUT",
+                    message: "입력값이 올바르지 않습니다.",
                 },
             },
         });
@@ -33,7 +33,7 @@ describe("toAppError", () => {
         const appError = toAppError(error);
 
         expect(appError).toMatchObject({
-            code: "INVALID_FIELDS",
+            code: "INVALID_INPUT",
             status: 400,
         });
     });

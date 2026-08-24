@@ -52,7 +52,7 @@ function normalizeError(error) {
     }
 
     if (isMalformedJsonError(error)) {
-        return createAppError("MALFORMED_JSON", { cause: error });
+        return createAppError("INVALID_INPUT", { cause: error });
     }
 
     if (isDatabaseError(error)) {

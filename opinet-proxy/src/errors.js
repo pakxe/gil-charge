@@ -1,15 +1,7 @@
 const ERROR_DEFINITIONS = Object.freeze({
-    MALFORMED_JSON: {
+    INVALID_INPUT: {
         status: 400,
-        message: "요청 JSON 형식이 올바르지 않습니다.",
-    },
-    MISSING_FIELDS: {
-        status: 400,
-        message: "필수 필드가 누락되었습니다.",
-    },
-    INVALID_FIELDS: {
-        status: 400,
-        message: "필드 값이 올바르지 않습니다.",
+        message: "입력값이 올바르지 않습니다.",
     },
     PAYLOAD_TOO_LARGE: {
         status: 413,
@@ -42,14 +34,14 @@ const ERROR_DEFINITIONS = Object.freeze({
 });
 
 class AppError extends Error {
-    constructor(code, { cause, context, message } = {}) {
+    constructor(code, { cause, context } = {}) {
         const definition = ERROR_DEFINITIONS[code];
 
         if (!definition) {
             throw new Error(`Unknown error code: ${code}`);
         }
 
-        super(message ?? definition.message);
+        super(definition.message);
         this.name = "AppError";
         this.code = code;
         this.status = definition.status;

@@ -1,9 +1,7 @@
 import axios, { AxiosError } from "axios";
 
 export const BACKEND_APP_ERROR_CODES = [
-    "MALFORMED_JSON",
-    "MISSING_FIELDS",
-    "INVALID_FIELDS",
+    "INVALID_INPUT",
     "PAYLOAD_TOO_LARGE",
     "ROUTE_NOT_FOUND",
     "METHOD_NOT_ALLOWED",
@@ -38,9 +36,7 @@ export type BackendAppErrorResponse = {
 };
 
 const APP_ERROR_MESSAGES: Record<AppErrorCode, string> = {
-    MALFORMED_JSON: "요청 JSON 형식이 올바르지 않습니다.",
-    MISSING_FIELDS: "필수 필드가 누락되었습니다.",
-    INVALID_FIELDS: "필드 값이 올바르지 않습니다.",
+    INVALID_INPUT: "입력값이 올바르지 않습니다.",
     PAYLOAD_TOO_LARGE: "요청 데이터가 너무 큽니다.",
     ROUTE_NOT_FOUND: "요청한 API를 찾을 수 없습니다.",
     METHOD_NOT_ALLOWED: "지원하지 않는 HTTP 메서드입니다.",
