@@ -54,7 +54,7 @@ export function DrawPathStep() {
     };
 
     useEffect(() => {
-        showToast({
+        return showToast({
             message: MODE_GUIDE_MESSAGES[INITIAL_DRAW_MODE],
             durationMs: MODE_GUIDE_TOAST_DURATION_MS,
         });
