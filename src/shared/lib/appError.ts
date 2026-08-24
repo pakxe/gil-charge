@@ -1,5 +1,3 @@
-import axios, { AxiosError } from "axios";
-
 export const BACKEND_APP_ERROR_CODES = [
     "INVALID_INPUT",
     "PAYLOAD_TOO_LARGE",
@@ -86,10 +84,6 @@ export function toAppError(error: unknown): AppError {
         return error;
     }
 
-    if (axios.isAxiosError(error)) {
-        return axiosErrorToAppError(error);
-    }
-
     return createAppError("UNKNOWN_ERROR", { cause: error });
 }
 
@@ -101,54 +95,8 @@ export function isBackendAppErrorResponse(value: unknown): value is BackendAppEr
     return isBackendAppErrorCode(value.code) && typeof value.message === "string";
 }
 
-function axiosErrorToAppError(error: AxiosError): AppError {
-    if (isCanceledAxiosError(error)) {
-        return createAppError("REQUEST_CANCELED", { cause: error });
-    }
-
-    if (error.response) {
-        const status = error.response.status;
-
-        if (isBackendAppErrorResponse(error.response.data)) {
-            return createAppError(error.response.data.code, {
-                message: error.response.data.message,
-                status,
-                cause: error,
-            });
-        }
-
-        return createAppError("INVALID_RESPONSE", { status, cause: error });
-    }
-
-    if (isBrowserOffline()) {
-        return createAppError("OFFLINE", { cause: error });
-    }
-
-    if (isTimeoutAxiosError(error)) {
-        return createAppError("TIMEOUT", { cause: error });
-    }
-
-    if (error.request) {
-        return createAppError("NETWORK_ERROR", { cause: error });
-    }
-
-    return createAppError("UNKNOWN_ERROR", { cause: error });
-}
-
 function isBackendAppErrorCode(value: unknown): value is BackendAppErrorCode {
     return typeof value === "string" && BACKEND_APP_ERROR_CODE_SET.has(value);
-}
-
-function isCanceledAxiosError(error: AxiosError) {
-    return axios.isCancel(error) || error.code === "ERR_CANCELED" || error.name === "CanceledError";
-}
-
-function isTimeoutAxiosError(error: AxiosError) {
-    return error.code === "ECONNABORTED" || error.code === "ETIMEDOUT";
-}
-
-function isBrowserOffline() {
-    return typeof navigator !== "undefined" && navigator.onLine === false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -1,7 +1,7 @@
 import { AxiosError } from "axios";
 import { describe, expect, it } from "vitest";
 
-import { isAppError } from "@/shared/lib/appError";
+import { isHttpFailure } from "./httpFailure";
 
 import { API_BASE_URL, HTTP_TIMEOUT_MS, httpClient } from "./httpClient";
 
@@ -12,11 +12,11 @@ describe("httpClient", () => {
         expect(httpClient.defaults.timeout).toBe(HTTP_TIMEOUT_MS);
     });
 
-    it("response error interceptor에서 axios error를 AppError로 변환한다", async () => {
+    it("response error interceptor에서 axios error를 HttpFailure로 변환한다", async () => {
         await expect(
             httpClient.get("/stations/path", {
                 adapter: () => Promise.reject(new AxiosError("timeout", "ECONNABORTED")),
             }),
-        ).rejects.toSatisfy((error: unknown) => isAppError(error) && error.code === "TIMEOUT");
+        ).rejects.toSatisfy((error: unknown) => isHttpFailure(error) && error.reason === "TIMEOUT");
     });
 });
