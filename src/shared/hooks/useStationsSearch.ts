@@ -8,7 +8,7 @@ type StationsSearchInput = {
     radiusKm: number;
 };
 
-export type FailurePolicy = {
+export type StationsSearchFailurePolicy = {
     presentation: "inline" | "toast" | "silent";
     recovery: "edit-input" | "manual-retry" | "none";
     report: "none" | "always";
@@ -39,7 +39,7 @@ export type StationsSearchState =
           status: "error";
           stations: Station[] | null;
           failure: RequestFailure;
-          policy: FailurePolicy;
+          policy: StationsSearchFailurePolicy;
       };
 
 const INITIAL_STATIONS_SEARCH_STATE: StationsSearchState = {
@@ -103,7 +103,7 @@ export function useStationsSearch() {
     return { state, retry, search };
 }
 
-function decideStationsSearchFailurePolicy(code: string): FailurePolicy {
+function decideStationsSearchFailurePolicy(code: string): StationsSearchFailurePolicy {
     switch (code as StationsSearchFailureCode) {
         case "INVALID_INPUT":
         case "PAYLOAD_TOO_LARGE":
