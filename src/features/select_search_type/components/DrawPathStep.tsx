@@ -19,6 +19,7 @@ import { useToast } from "@/shared/ui/Toast/useToast";
 import Box from "@/shared/components/Box/Box";
 import { InlineFailurePresentation } from "@/shared/components/InlineFailurePresentation/InlineFailurePresentation";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner/LoadingSpinner";
+import { Slider } from "@/shared/components/Slider/Slider";
 import { cn } from "@/shared/utils/cn";
 import { WaypointHistoryControls } from "@/features/waypoint_editor/ui/WaypointHistoryControls";
 import {
@@ -275,31 +276,25 @@ export function DrawPathStep() {
                     style={{ bottom: searchControlsBottom }}
                 >
                     <Box className="h-fit min-w-0 flex-1 flex flex-col rounded-2xl gap-0">
-                        <div className="flex flex-row justify-between w-full">
-                            <label htmlFor="radius-range" className=" text-white text-xs">
-                                반경
-                            </label>
-                            <span className="font-bold text-gil-yellow-400 text-xs">{formatRadius(radiusKm)} km</span>
-                        </div>
-
-                        <div className="w-full">
-                            <input
-                                id="radius-range"
-                                type="range"
-                                min="1"
-                                max="5"
-                                step="0.1"
-                                value={radiusKm}
-                                onChange={handleRadiusChange}
-                                className="mt-2 block h-4.5 w-full cursor-pointer appearance-none rounded-full bg-transparent bg-center bg-no-repeat focus:outline-none focus-visible:ring-2 focus-visible:ring-gil-yellow-400/70 [&::-moz-range-progress]:h-1.5 [&::-moz-range-progress]:rounded-full [&::-moz-range-progress]:bg-gil-yellow-400 [&::-moz-range-thumb]:h-4.5 [&::-moz-range-thumb]:w-4.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gil-yellow-400 [&::-moz-range-thumb]:shadow-[inset_0_0_0_2px_#fff] [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-black [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-1.5 [&::-webkit-slider-thumb]:h-4.5 [&::-webkit-slider-thumb]:w-4.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gil-yellow-400 [&::-webkit-slider-thumb]:shadow-[inset_0_0_0_2px_#fff]"
-                                style={{
-                                    backgroundImage: `linear-gradient(to right, #f0c243 0%, #f0c243 ${((radiusKm - 1) / 4) * 100}%, #000 ${((radiusKm - 1) / 4) * 100}%, #000 100%)`,
-                                    backgroundSize: "100% 6px",
-                                    backgroundClip: "content-box",
-                                }}
-                            />
-                        </div>
-                        {inlineFailureMessage && <InlineFailurePresentation message={inlineFailureMessage} />}
+                        <Slider
+                            id="radius-range"
+                            min={1}
+                            max={5}
+                            step={0.1}
+                            value={radiusKm}
+                            onChange={handleRadiusChange}
+                            topSlot={
+                                <>
+                                    <label htmlFor="radius-range" className="text-white text-xs">
+                                        반경
+                                    </label>
+                                    <span className="font-bold text-gil-yellow-400 text-xs">
+                                        {formatRadius(radiusKm)} km
+                                    </span>
+                                </>
+                            }
+                            bottomSlot={<InlineFailurePresentation message={inlineFailureMessage} />}
+                        />
                     </Box>
                     <button
                         type="button"
