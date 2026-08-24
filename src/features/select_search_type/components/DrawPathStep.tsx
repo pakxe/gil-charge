@@ -6,6 +6,7 @@ import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
 import { useMap } from "@/shared/model/useMap";
 import { useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
 import { useSearchResultSheetLayout } from "@/features/select_search_type/hooks/useSearchResultSheetLayout";
+import { useStationSelection } from "@/features/select_search_type/hooks/useStationSelection";
 import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
 import { Map } from "@/shared/ui/Map/Map";
 import { MapErrorFallback, MapLoadingFallback } from "@/shared/ui/Map/MapFallback";
@@ -23,13 +24,7 @@ import { LoadingSpinner } from "@/shared/components/LoadingSpinner/LoadingSpinne
 import { Slider } from "@/shared/components/Slider/Slider";
 import { cn } from "@/shared/utils/cn";
 import { WaypointHistoryControls } from "@/features/waypoint_editor/ui/WaypointHistoryControls";
-import {
-    getStationCenteringDecision,
-    getVisibleStations,
-    shouldClearSelectedStation,
-    stationToLatLng,
-    type StationSelectionSource,
-} from "@/features/select_search_type/model/stationSelection";
+import { getVisibleStations } from "@/features/select_search_type/model/stationSelection";
 
 type DrawMode = "waypoint" | "lasso";
 
@@ -44,9 +39,6 @@ export function DrawPathStep() {
     const [mode, setMode] = useState<DrawMode>(INITIAL_DRAW_MODE);
     const [isSearchResultDismissed, setIsSearchResultDismissed] = useState(false);
     const [localCurrencyOnly, setLocalCurrencyOnly] = useState(false);
-    const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
-    const [selectionSource, setSelectionSource] = useState<StationSelectionSource | null>(null);
-    const [selectionRevision, setSelectionRevision] = useState(0);
 
     const { requestLocation, location } = useCurrentLocation();
     const { state: stationsSearchState, retry: retryStationsSearch, search: searchStations } = useStationsSearch();
@@ -95,30 +87,19 @@ export function DrawPathStep() {
         showToast(toast);
     }, [retryStationsSearch, searchFailure, searchFailurePolicy, showToast]);
 
-    const handleSubmit = async () => {
-        if (data.waypoints.length === 0) return;
-
-        setIsSearchResultDismissed(false);
-        setSelectedStationId(null);
-        setSelectionSource(null);
-        setSelectionRevision(0);
-        await searchStations(
-            [
-                {
-                    type: "waypoint",
-                    points: data.waypoints.map((w) => w.latLng),
-                    id: "test",
-                },
-            ],
-            radiusKm,
-        );
-    };
-
     const currentStrokeWeight = useMemo(() => calculateStrokeWeight(zoomLevel, radiusKm), [zoomLevel, radiusKm]);
     const visibleStations = useMemo(
         () => (stations ? getVisibleStations(stations, localCurrencyOnly) : []),
         [localCurrencyOnly, stations],
     );
+    const {
+        selectedStationId,
+        selectionSource,
+        selectionRevision,
+        selectStation,
+        clearSelectedStation,
+        handleLocalCurrencyOnlyChange,
+    } = useStationSelection({ map, stations, visibleStations });
     const hasWaypoint = data.waypoints.length > 0;
     const isLassoMode = mode === "lasso";
     const selectedWaypointIds = status.statusName === "selected" ? status.selectedNodeIds : [];
@@ -133,30 +114,21 @@ export function DrawPathStep() {
         setSearchOverlayVisibleHeight,
     } = useSearchResultSheetLayout({ hasSearchResult, stations });
 
-    const changeSelectedStation = (source: StationSelectionSource, stationId: string, bottomSheetVisibleHeight = 0) => {
-        setSelectedStationId(stationId);
-        setSelectionSource(source);
-        setSelectionRevision((prev) => prev + 1);
+    const handleSubmit = async () => {
+        if (data.waypoints.length === 0) return;
 
-        if (source !== "list" || !map) return;
-
-        const station = visibleStations.find((visibleStation) => visibleStation.id === stationId);
-        if (!station) return;
-
-        const mapContainer = map.getContainer();
-        const containerSize = {
-            width: mapContainer.clientWidth,
-            height: mapContainer.clientHeight,
-        };
-
-        if (containerSize.width <= 0 || containerSize.height <= 0) return;
-
-        const stationPoint = map.latLngToContainerPoint(stationToLatLng(station));
-        const centeringDecision = getStationCenteringDecision(stationPoint, containerSize, bottomSheetVisibleHeight);
-
-        if (centeringDecision.shouldCenter) {
-            map.setCenter(map.containerPointToLatLng(centeringDecision.nextCenterPoint));
-        }
+        setIsSearchResultDismissed(false);
+        clearSelectedStation();
+        await searchStations(
+            [
+                {
+                    type: "waypoint",
+                    points: data.waypoints.map((w) => w.latLng),
+                    id: "test",
+                },
+            ],
+            radiusKm,
+        );
     };
 
     const handleModeChange = (nextMode: DrawMode) => {
@@ -165,17 +137,6 @@ export function DrawPathStep() {
             message: MODE_GUIDE_MESSAGES[nextMode],
             durationMs: MODE_GUIDE_TOAST_DURATION_MS,
         });
-    };
-
-    const handleLocalCurrencyOnlyChange = (nextLocalCurrencyOnly: boolean) => {
-        const nextVisibleStations = stations ? getVisibleStations(stations, nextLocalCurrencyOnly) : [];
-
-        setLocalCurrencyOnly(nextLocalCurrencyOnly);
-
-        if (!shouldClearSelectedStation(selectedStationId, nextVisibleStations)) return;
-
-        setSelectedStationId(null);
-        setSelectionSource(null);
     };
 
     return (
@@ -225,7 +186,7 @@ export function DrawPathStep() {
                 <StationMarkersLayer
                     stations={visibleStations}
                     selectedStationId={selectedStationId}
-                    onStationClick={(stationId) => changeSelectedStation("map", stationId)}
+                    onStationClick={(stationId) => selectStation("map", stationId)}
                 />
             </Map>
             <div ref={searchOverlayRef} className="pointer-events-none absolute inset-0 z-70">
@@ -293,15 +254,14 @@ export function DrawPathStep() {
                         selectionRevision={selectionRevision}
                         visibleHeight={searchOverlayVisibleHeight}
                         onVisibleHeightChange={setSearchOverlayVisibleHeight}
-                        onLocalCurrencyOnlyChange={handleLocalCurrencyOnlyChange}
-                        onStationClick={(stationId) =>
-                            changeSelectedStation("list", stationId, searchOverlayVisibleHeight)
-                        }
+                        onLocalCurrencyOnlyChange={(nextLocalCurrencyOnly) => {
+                            setLocalCurrencyOnly(nextLocalCurrencyOnly);
+                            handleLocalCurrencyOnlyChange(nextLocalCurrencyOnly);
+                        }}
+                        onStationClick={(stationId) => selectStation("list", stationId, searchOverlayVisibleHeight)}
                         onClose={() => {
                             setIsSearchResultDismissed(true);
-                            setSelectedStationId(null);
-                            setSelectionSource(null);
-                            setSelectionRevision(0);
+                            clearSelectedStation();
                         }}
                     />
                 )}
