@@ -10,7 +10,7 @@ export type ToastOptions = {
 };
 
 export type ToastContextValue = {
-    showToast: (toast: ToastOptions) => void;
+    showToast: (toast: ToastOptions) => () => void;
     closeToast: (id: number) => void;
 };
 
