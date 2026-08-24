@@ -1,41 +1,87 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { searchStationsByPath } from "@/shared/api/stationApi";
-import { getDefaultErrorFeedback } from "@/shared/lib/errorFeedback";
-import { toAppError } from "@/shared/lib/appError";
+import { RequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
 import { PathSet, Station } from "@/shared/types/map";
-import { useErrorFeedback } from "@/shared/lib/useErrorFeedback";
 
-export function useStationsSearch(onSuccess: (stations: Station[]) => void) {
-    const [isLoading, setIsLoading] = useState(false);
-    const { handleFeedback } = useErrorFeedback();
+type StationsSearchInput = {
+    paths: PathSet[];
+    radiusKm: number;
+};
 
-    const fetchStations = async (allPaths: PathSet[], radiusKm: number) => {
-        if (allPaths.length === 0) {
-            handleFeedback({
-                type: "toast",
-                message: "먼저 지도에 검색할 영역을 그려주세요!",
-            });
-            return;
-        }
+export type StationsSearchState =
+    | {
+          status: "idle";
+          stations: null;
+          failure: null;
+      }
+    | {
+          status: "loading";
+          stations: Station[] | null;
+          failure: null;
+      }
+    | {
+          status: "success";
+          stations: Station[];
+          failure: null;
+      }
+    | {
+          status: "error";
+          stations: Station[] | null;
+          failure: RequestFailure;
+      };
 
-        setIsLoading(true);
+const INITIAL_STATIONS_SEARCH_STATE: StationsSearchState = {
+    status: "idle",
+    stations: null,
+    failure: null,
+};
+
+export function useStationsSearch() {
+    const [state, setState] = useState<StationsSearchState>(INITIAL_STATIONS_SEARCH_STATE);
+    const failedSearchInputRef = useRef<StationsSearchInput | null>(null);
+    const searchRef = useRef<((paths: PathSet[], radiusKm: number) => Promise<void>) | null>(null);
+
+    const retry = useCallback(() => {
+        const failedSearchInput = failedSearchInputRef.current;
+
+        if (!failedSearchInput || !searchRef.current) return;
+
+        void searchRef.current(failedSearchInput.paths, failedSearchInput.radiusKm);
+    }, []);
+
+    const search = useCallback(async (allPaths: PathSet[], radiusKm: number) => {
+        failedSearchInputRef.current = null;
+        setState((current) => ({
+            status: "loading",
+            stations: current.stations,
+            failure: null,
+        }));
+
         try {
             const stations = await searchStationsByPath({ paths: allPaths, radiusKm });
-            onSuccess(stations);
-        } catch (error) {
-            const appError = toAppError(error);
-            const feedback = getDefaultErrorFeedback(appError, {
-                retry: () => {
-                    void fetchStations(allPaths, radiusKm);
-                },
+
+            setState({
+                status: "success",
+                stations,
+                failure: null,
             });
-
-            console.error("주유소 검색 실패:", appError);
-            handleFeedback(feedback);
-        } finally {
-            setIsLoading(false);
+        } catch (error) {
+            const requestFailure = toRequestFailure(error);
+            failedSearchInputRef.current = {
+                paths: allPaths,
+                radiusKm,
+            };
+            setState((current) => ({
+                status: "error",
+                stations: current.stations,
+                failure: requestFailure,
+            }));
         }
-    };
+    }, []);
 
-    return { fetchStations, isLoading };
+    useEffect(() => {
+        searchRef.current = search;
+    }, [search]);
+
+    return { state, retry, search };
 }
