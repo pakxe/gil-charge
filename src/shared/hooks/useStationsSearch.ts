@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { searchStationsByPath, type SearchStationsByPathBackendErrorCode } from "@/shared/api/stationApi";
+import { searchStationsByPath, type SearchStationsByPathErrorCode } from "@/shared/api/stationApi";
 import { type ClientRequestFailureCode, RequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
 import { PathSet, Station } from "@/shared/types/map";
 
@@ -14,7 +14,7 @@ export type StationsSearchFailurePolicy = {
     report: "none" | "always";
 };
 
-type StationsSearchFailureCode = SearchStationsByPathBackendErrorCode | ClientRequestFailureCode;
+type StationsSearchFailureCode = SearchStationsByPathErrorCode | ClientRequestFailureCode;
 
 export type StationsSearchState =
     | {
