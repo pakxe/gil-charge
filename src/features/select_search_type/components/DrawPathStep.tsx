@@ -5,6 +5,7 @@ import { type StationsSearchFailurePolicy, useStationsSearch } from "@/shared/ho
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
 import { useMap } from "@/shared/model/useMap";
 import { useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
+import { useSearchResultSheetLayout } from "@/features/select_search_type/hooks/useSearchResultSheetLayout";
 import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
 import { Map } from "@/shared/ui/Map/Map";
 import { MapErrorFallback, MapLoadingFallback } from "@/shared/ui/Map/MapFallback";
@@ -23,11 +24,6 @@ import { Slider } from "@/shared/components/Slider/Slider";
 import { cn } from "@/shared/utils/cn";
 import { WaypointHistoryControls } from "@/features/waypoint_editor/ui/WaypointHistoryControls";
 import {
-    clamp,
-    getResultSheetDefaultHeight,
-    getSearchControlsBottom,
-} from "@/features/select_search_type/model/resultBottomSheet";
-import {
     getStationCenteringDecision,
     getVisibleStations,
     shouldClearSelectedStation,
@@ -42,8 +38,6 @@ export function DrawPathStep() {
     const map = useMap();
 
     const hasRequestedLocationRef = useRef(false);
-    const handledSearchFailureRef = useRef<unknown>(null);
-    const searchOverlayRef = useRef<HTMLDivElement | null>(null);
 
     const [zoomLevel, setZoomLevel] = useState(8);
     const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
@@ -53,8 +47,6 @@ export function DrawPathStep() {
     const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
     const [selectionSource, setSelectionSource] = useState<StationSelectionSource | null>(null);
     const [selectionRevision, setSelectionRevision] = useState(0);
-    const [searchOverlayVisibleHeight, setSearchOverlayVisibleHeight] = useState(0);
-    const [maxSearchSheetHeight, setMaxSearchSheetHeight] = useState(0);
 
     const { requestLocation, location } = useCurrentLocation();
     const { state: stationsSearchState, retry: retryStationsSearch, search: searchStations } = useStationsSearch();
@@ -64,10 +56,6 @@ export function DrawPathStep() {
     const isLoading = stationsSearchState.status === "loading";
     const searchFailure = stationsSearchState.status === "error" ? stationsSearchState.failure : null;
     const searchFailurePolicy = stationsSearchState.status === "error" ? stationsSearchState.policy : null;
-    const inlineFailureMessage =
-        searchFailure && searchFailurePolicy?.presentation === "inline"
-            ? getStationsSearchFailureMessage(searchFailure)
-            : null;
 
     const handleRadiusChange = (event: ChangeEvent<HTMLInputElement>) => {
         setRadiusKm(Number(event.target.value));
@@ -94,14 +82,7 @@ export function DrawPathStep() {
     }, [requestLocation]);
 
     useEffect(() => {
-        if (!searchFailure || !searchFailurePolicy) {
-            handledSearchFailureRef.current = null;
-            return;
-        }
-
-        if (handledSearchFailureRef.current === searchFailure) return;
-
-        handledSearchFailureRef.current = searchFailure;
+        if (!searchFailure || !searchFailurePolicy) return;
 
         if (searchFailurePolicy.report === "always") {
             console.error("주유소 검색 실패:", searchFailure);
@@ -143,37 +124,14 @@ export function DrawPathStep() {
     const selectedWaypointIds = status.statusName === "selected" ? status.selectedNodeIds : [];
     const hasSelectedWaypoint = selectedWaypointIds.length > 0;
     const hasSearchResult = stations !== null;
-    const searchControlsBottom = getSearchControlsBottom(searchOverlayVisibleHeight, hasSearchResult);
     const canSubmitSearch = hasWaypoint && !isLoading;
-
-    useEffect(() => {
-        if (!hasSearchResult) return;
-
-        const overlay = searchOverlayRef.current;
-        if (!overlay) return;
-
-        const updateMaxHeight = () => {
-            const nextMaxHeight = getResultSheetMaxHeight(overlay);
-
-            setMaxSearchSheetHeight(nextMaxHeight);
-            setSearchOverlayVisibleHeight((prev) => clamp(prev, 0, nextMaxHeight));
-        };
-
-        const frameId = requestAnimationFrame(() => {
-            const nextMaxHeight = getResultSheetMaxHeight(overlay);
-
-            setMaxSearchSheetHeight(nextMaxHeight);
-            setSearchOverlayVisibleHeight(getResultSheetDefaultHeight(nextMaxHeight));
-        });
-
-        const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateMaxHeight);
-        observer?.observe(overlay);
-
-        return () => {
-            cancelAnimationFrame(frameId);
-            observer?.disconnect();
-        };
-    }, [hasSearchResult, stations]);
+    const {
+        searchOverlayRef,
+        searchOverlayVisibleHeight,
+        maxSearchSheetHeight,
+        searchControlsBottom,
+        setSearchOverlayVisibleHeight,
+    } = useSearchResultSheetLayout({ hasSearchResult, stations });
 
     const changeSelectedStation = (source: StationSelectionSource, stationId: string, bottomSheetVisibleHeight = 0) => {
         setSelectedStationId(stationId);
@@ -293,7 +251,15 @@ export function DrawPathStep() {
                                     </span>
                                 </>
                             }
-                            bottomSlot={<InlineFailurePresentation message={inlineFailureMessage} />}
+                            bottomSlot={
+                                <InlineFailurePresentation
+                                    message={
+                                        searchFailure && searchFailurePolicy?.presentation === "inline"
+                                            ? getStationsSearchFailureMessage(searchFailure)
+                                            : null
+                                    }
+                                />
+                            }
                         />
                     </Box>
                     <button
@@ -429,10 +395,6 @@ function isMoveActive(statusName: string) {
 
 function calculateStrokeWeight(currentLevel: number, radiusKm: number) {
     return BASE_STROKE_WEIGHT * radiusKm * Math.pow(2, BASE_LEVEL - currentLevel);
-}
-
-function getResultSheetMaxHeight(container: HTMLElement | null) {
-    return container?.getBoundingClientRect().height ?? window.innerHeight;
 }
 
 function reloadPage() {
