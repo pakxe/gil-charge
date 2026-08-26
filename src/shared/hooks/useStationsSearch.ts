@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { searchStationsByPath, type SearchStationsByPathErrorCode } from "@/shared/api/stations/searchStationsByPath";
 import { type ClientRequestFailureCode, RequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
 import { PathSet, Station } from "@/shared/types/map";
@@ -37,7 +37,7 @@ export type StationsSearchState =
       }
     | {
           status: "error";
-          stations: Station[] | null;
+          stations: null;
           failure: RequestFailure;
           policy: StationsSearchFailurePolicy;
       };
@@ -52,8 +52,14 @@ const INITIAL_STATIONS_SEARCH_STATE: StationsSearchState = {
 export function useStationsSearch() {
     const [state, setState] = useState<StationsSearchState>(INITIAL_STATIONS_SEARCH_STATE);
     const failedSearchInputRef = useRef<StationsSearchInput | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const search = useCallback(async (allPaths: PathSet[], radiusKm: number) => {
+        abortControllerRef.current?.abort();
+
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
+
         failedSearchInputRef.current = null;
         setState((current) => ({
             status: "loading",
@@ -63,7 +69,13 @@ export function useStationsSearch() {
         }));
 
         try {
-            const stations = await searchStationsByPath({ paths: allPaths, radiusKm });
+            const stations = await searchStationsByPath({
+                paths: allPaths,
+                radiusKm,
+                signal: abortController.signal,
+            });
+
+            if (abortController.signal.aborted) return;
 
             setState({
                 status: "success",
@@ -72,19 +84,31 @@ export function useStationsSearch() {
                 policy: null,
             });
         } catch (error) {
+            if (abortController.signal.aborted) return;
+
             const requestFailure = toRequestFailure(error);
             const policy = decideStationsSearchFailurePolicy(requestFailure.code);
             failedSearchInputRef.current = {
                 paths: allPaths,
                 radiusKm,
             };
-            setState((current) => ({
+            setState({
                 status: "error",
-                stations: current.stations,
+                stations: null,
                 failure: requestFailure,
                 policy,
-            }));
+            });
+        } finally {
+            if (abortControllerRef.current === abortController) {
+                abortControllerRef.current = null;
+            }
         }
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            abortControllerRef.current?.abort();
+        };
     }, []);
 
     const retry = useCallback(() => {
