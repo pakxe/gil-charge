@@ -77,9 +77,9 @@ export function useSearchStationsByName() {
     const [inlineFailure, setInlineFailure] = useState<SearchStationsByNameInlineFailure | null>(null);
     const failedSearchInputRef = useRef<SearchStationsByNameRequestInput | null>(null);
 
-    const resetInlineFailure = useCallback(() => {
+    const resetInlineFailure = () => {
         setInlineFailure(null);
-    }, []);
+    };
 
     const requestStationsByName = useCallback(async ({ osnm, area }: SearchStationsByNameRequestInput) => {
         failedSearchInputRef.current = null;
@@ -120,21 +120,18 @@ export function useSearchStationsByName() {
         }
     }, []);
 
-    const search = useCallback(
-        async (stationName: string, area?: string) => {
-            failedSearchInputRef.current = null;
+    const search = async (stationName: string, area?: string) => {
+        failedSearchInputRef.current = null;
 
-            const validation = validateStationNameSearchInput(stationName);
+        const validation = validateStationNameSearchInput(stationName);
 
-            if (!validation.isValid) {
-                setInlineFailure(validation.inlineFailure);
-                return;
-            }
+        if (!validation.isValid) {
+            setInlineFailure(validation.inlineFailure);
+            return;
+        }
 
-            await requestStationsByName({ osnm: validation.osnm, area });
-        },
-        [requestStationsByName],
-    );
+        await requestStationsByName({ osnm: validation.osnm, area });
+    };
 
     const retry = useCallback(() => {
         const failedSearchInput = failedSearchInputRef.current;
