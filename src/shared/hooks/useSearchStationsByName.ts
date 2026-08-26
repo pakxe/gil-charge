@@ -48,7 +48,7 @@ export type SearchStationsByNameState =
       }
     | {
           status: "error";
-          stations: StationNameSearchResult[] | null;
+          stations: null;
           failure: RequestFailure;
           policy: SearchStationsByNameFailurePolicy;
       };
@@ -121,12 +121,12 @@ export function useSearchStationsByName() {
                 });
             }
 
-            setState((current) => ({
+            setState({
                 status: "error",
-                stations: current.stations,
+                stations: null,
                 failure: requestFailure,
                 policy,
-            }));
+            });
         } finally {
             if (abortControllerRef.current === abortController) {
                 abortControllerRef.current = null;

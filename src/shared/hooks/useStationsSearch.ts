@@ -37,7 +37,7 @@ export type StationsSearchState =
       }
     | {
           status: "error";
-          stations: Station[] | null;
+          stations: null;
           failure: RequestFailure;
           policy: StationsSearchFailurePolicy;
       };
@@ -92,12 +92,12 @@ export function useStationsSearch() {
                 paths: allPaths,
                 radiusKm,
             };
-            setState((current) => ({
+            setState({
                 status: "error",
-                stations: current.stations,
+                stations: null,
                 failure: requestFailure,
                 policy,
-            }));
+            });
         } finally {
             if (abortControllerRef.current === abortController) {
                 abortControllerRef.current = null;
