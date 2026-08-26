@@ -39,6 +39,8 @@ export function SearchStationNamePage() {
             <form
                 className="flex flex-row gap-2"
                 onSubmit={(event) => {
+                    if (isLoading) return;
+
                     event.preventDefault();
                     search(stationName);
                 }}
