@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 
 import { PATHS } from "@/shared/utils/route";
 import { SelectSearchTypePage } from "@/features/select_search_type/pages/SelectSearchTypePage";
+import { SearchStationNamePage } from "@/features/select_search_type/pages/SearchStationNamePage";
 import { WaypointSearchPage } from "@/features/select_search_type/pages/WaypointSearchPage";
 import { HomePage } from "@/features/home/pages/HomePage";
 import { MobileLayout } from "@/shared/components/MobileLayout/MobileLayout";
@@ -43,6 +44,10 @@ const router = createBrowserRouter([
             {
                 path: PATHS.waypoint,
                 element: withPageErrorBoundary(<WaypointSearchPage />),
+            },
+            {
+                path: PATHS.searchStationName,
+                element: withPageErrorBoundary(<SearchStationNamePage />),
             },
         ],
     },

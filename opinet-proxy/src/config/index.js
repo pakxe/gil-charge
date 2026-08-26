@@ -9,6 +9,7 @@ module.exports = {
     OPINET_API_KEY: process.env.OPINET_API_KEY,
     OPINET_BASE_URL: "http://www.opinet.co.kr/api/aroundAll.do",
     OPINET_DETAIL_BY_ID_URL: "http://www.opinet.co.kr/api/detailById.do",
+    OPINET_SEARCH_BY_NAME_URL: "https://www.opinet.co.kr/api/searchByName.do",
     MAX_RADIUS_METERS: 5000, // 오피넷 API 최대 허용 반경
     GYEONGGI_LOCAL_CURRENCY_API_URL:
         process.env.GYEONGGI_LOCAL_CURRENCY_API_URL || "https://openapi.gg.go.kr/RegionMnyFacltStus",

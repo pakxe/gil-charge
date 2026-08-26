@@ -13,4 +13,10 @@ async function getStationsByPath(req, res) {
     res.json({ stations: stationsWithLocalCurrency });
 }
 
-module.exports = { getStationsByPath };
+async function getStationsByName(req, res) {
+    const stations = await opinetService.fetchStationsByName(req.searchCriteria);
+
+    res.json({ stations });
+}
+
+module.exports = { getStationsByPath, getStationsByName };

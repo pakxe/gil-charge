@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { searchStationsByPath, type SearchStationsByPathErrorCode } from "@/shared/api/stationApi";
+import { searchStationsByPath, type SearchStationsByPathErrorCode } from "@/shared/api/stations/searchStationsByPath";
 import { type ClientRequestFailureCode, RequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
 import { PathSet, Station } from "@/shared/types/map";
 

@@ -1,9 +1,9 @@
 import { AxiosResponse } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createHttpFailure } from "./httpFailure";
-import { httpClient } from "./httpClient";
-import { searchStationsByPath } from "./stationApi";
+import { createHttpFailure } from "../httpFailure";
+import { httpClient } from "../httpClient";
+import { searchStationsByPath } from "./searchStationsByPath";
 
 import { PathSet, Station } from "@/shared/types/map";
 

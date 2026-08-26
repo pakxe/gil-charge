@@ -16,6 +16,7 @@ app.get("/", (req, res) => {
         service: "opinet-proxy",
         health: "/health",
         stationsPath: "POST /api/stations/path",
+        stationsName: "GET /api/stations/name?osnm=보라매&area=01",
     });
 });
 
