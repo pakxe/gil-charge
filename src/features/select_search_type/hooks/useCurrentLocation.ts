@@ -22,7 +22,7 @@ const GEOLOCATION_OPTIONS: PositionOptions = {
     maximumAge: 1000 * 60 * 5,
 };
 
-const STALE_TOAST_INTERVAL_MS = 10_000;
+const STALE_NOTIFICATION_INTERVAL_MS = 10_000;
 
 export function useCurrentLocation({
     onCenterLocation,
@@ -38,10 +38,8 @@ export function useCurrentLocation({
     const locationRef = useRef<LatLng | null>(null);
     const lastRenderedLocationRef = useRef<LatLng | null>(null);
     const lastRenderedAtRef = useRef(0);
-    const lastStaleToastAtRef = useRef(-STALE_TOAST_INTERVAL_MS);
-    const hasReceivedPositionRef = useRef(false);
+    const lastStaleNotifiedAtRef = useRef(-STALE_NOTIFICATION_INTERVAL_MS);
     const hasUserStartedTrackingRef = useRef(false);
-    const shouldCenterOnNextPositionRef = useRef(false);
     const handlersRef = useRef<CurrentLocationEventHandlers>({});
 
     useEffect(() => {
@@ -69,6 +67,7 @@ export function useCurrentLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
         };
+        const isFirstPosition = locationRef.current === null;
         const now = Date.now();
         const shouldRender = shouldRenderLocationUpdate(
             {
@@ -79,7 +78,6 @@ export function useCurrentLocation({
             now,
         );
 
-        hasReceivedPositionRef.current = true;
         locationRef.current = nextLocation;
         setStatus((currentStatus) => getNextCurrentLocationStatus(currentStatus, { type: "success" }));
 
@@ -89,8 +87,7 @@ export function useCurrentLocation({
             setLocation(nextLocation);
         }
 
-        if (shouldCenterOnNextPositionRef.current) {
-            shouldCenterOnNextPositionRef.current = false;
+        if (isFirstPosition) {
             handlersRef.current.onCenterLocation?.(nextLocation);
         }
     }, []);
@@ -100,8 +97,6 @@ export function useCurrentLocation({
             if (error.code === error.PERMISSION_DENIED) {
                 clearWatcher();
                 hasUserStartedTrackingRef.current = false;
-                shouldCenterOnNextPositionRef.current = false;
-                hasReceivedPositionRef.current = false;
                 locationRef.current = null;
                 lastRenderedLocationRef.current = null;
                 setLocation(null);
@@ -112,10 +107,9 @@ export function useCurrentLocation({
                 return;
             }
 
-            if (!hasReceivedPositionRef.current) {
+            if (!locationRef.current) {
                 clearWatcher();
                 hasUserStartedTrackingRef.current = false;
-                shouldCenterOnNextPositionRef.current = false;
                 setStatus((currentStatus) => getNextCurrentLocationStatus(currentStatus, { type: "initialFailure" }));
                 handlersRef.current.onInitialError?.();
                 return;
@@ -124,8 +118,8 @@ export function useCurrentLocation({
             setStatus((currentStatus) => getNextCurrentLocationStatus(currentStatus, { type: "trackingFailure" }));
 
             const now = Date.now();
-            if (now - lastStaleToastAtRef.current >= STALE_TOAST_INTERVAL_MS) {
-                lastStaleToastAtRef.current = now;
+            if (now - lastStaleNotifiedAtRef.current >= STALE_NOTIFICATION_INTERVAL_MS) {
+                lastStaleNotifiedAtRef.current = now;
                 handlersRef.current.onStale?.();
             }
         },
@@ -162,8 +156,6 @@ export function useCurrentLocation({
 
         if (locationRef.current) {
             handlersRef.current.onCenterLocation?.(locationRef.current);
-        } else {
-            shouldCenterOnNextPositionRef.current = true;
         }
 
         startWatcher();
