@@ -175,6 +175,37 @@ describe("useCurrentLocation", () => {
         expect(onStale).toHaveBeenCalledTimes(1);
     });
 
+    it("stale 상태 진입 시 한 번 알리고 정상화 후 다시 stale이 되면 다시 알린다", () => {
+        const onStale = vi.fn();
+        const { result } = renderHook(() => useCurrentLocation({ onStale }));
+
+        act(() => {
+            result.current.requestCurrentLocation();
+            emitSuccess(0, { lat: 37.5665, lng: 126.978 });
+        });
+
+        act(() => {
+            emitError(0, createGeolocationError(2));
+            emitError(0, createGeolocationError(2));
+        });
+
+        expect(result.current.status).toBe("stale");
+        expect(onStale).toHaveBeenCalledTimes(1);
+
+        act(() => {
+            emitSuccess(0, { lat: 37.5666, lng: 126.978 });
+        });
+
+        expect(result.current.status).toBe("tracking");
+
+        act(() => {
+            emitError(0, createGeolocationError(2));
+        });
+
+        expect(result.current.status).toBe("stale");
+        expect(onStale).toHaveBeenCalledTimes(2);
+    });
+
     it("visibilitychange에 따라 watcher를 정리하고 다시 생성한다", () => {
         const { result } = renderHook(() => useCurrentLocation());
 
