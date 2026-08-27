@@ -1,6 +1,7 @@
 import { LatLng } from "@/shared/types/map";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+    type CurrentLocationEvent,
     type CurrentLocationStatus,
     getNextCurrentLocationStatus,
     shouldRenderLocationUpdate,
@@ -22,8 +23,6 @@ const GEOLOCATION_OPTIONS: PositionOptions = {
     maximumAge: 1000 * 60 * 5,
 };
 
-const STALE_NOTIFICATION_INTERVAL_MS = 10_000;
-
 export function useCurrentLocation({
     onCenterLocation,
     onBlocked,
@@ -34,11 +33,13 @@ export function useCurrentLocation({
     const [location, setLocation] = useState<LatLng | null>(null);
     const [status, setStatus] = useState<CurrentLocationStatus>(isGeolocationSupported() ? "idle" : "unavailable");
 
+    const statusRef = useRef<CurrentLocationStatus>(status);
     const watcherIdRef = useRef<number | null>(null);
     const locationRef = useRef<LatLng | null>(null);
-    const lastRenderedLocationRef = useRef<LatLng | null>(null);
-    const lastRenderedAtRef = useRef(0);
-    const lastStaleNotifiedAtRef = useRef(-STALE_NOTIFICATION_INTERVAL_MS);
+    const lastRenderedRef = useRef<{ location: LatLng | null; at: number }>({
+        location: null,
+        at: 0,
+    });
     const hasUserStartedTrackingRef = useRef(false);
     const handlersRef = useRef<CurrentLocationEventHandlers>({});
 
@@ -62,35 +63,50 @@ export function useCurrentLocation({
         watcherIdRef.current = null;
     }, []);
 
-    const handlePositionSuccess = useCallback((position: GeolocationPosition) => {
-        const nextLocation: LatLng = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-        };
-        const isFirstPosition = locationRef.current === null;
-        const now = Date.now();
-        const shouldRender = shouldRenderLocationUpdate(
-            {
-                lastRenderedLocation: lastRenderedLocationRef.current,
-                lastRenderedAt: lastRenderedAtRef.current,
-            },
-            nextLocation,
-            now,
-        );
+    const transitionStatus = useCallback((event: CurrentLocationEvent) => {
+        const currentStatus = statusRef.current;
+        const nextStatus = getNextCurrentLocationStatus(currentStatus, event);
 
-        locationRef.current = nextLocation;
-        setStatus((currentStatus) => getNextCurrentLocationStatus(currentStatus, { type: "success" }));
+        statusRef.current = nextStatus;
+        setStatus(nextStatus);
 
-        if (shouldRender) {
-            lastRenderedLocationRef.current = nextLocation;
-            lastRenderedAtRef.current = now;
-            setLocation(nextLocation);
-        }
-
-        if (isFirstPosition) {
-            handlersRef.current.onCenterLocation?.(nextLocation);
-        }
+        return { currentStatus, nextStatus };
     }, []);
+
+    const handlePositionSuccess = useCallback(
+        (position: GeolocationPosition) => {
+            const nextLocation: LatLng = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+            };
+            const isFirstPosition = locationRef.current === null;
+            const now = Date.now();
+            const shouldRender = shouldRenderLocationUpdate(
+                {
+                    lastRenderedLocation: lastRenderedRef.current.location,
+                    lastRenderedAt: lastRenderedRef.current.at,
+                },
+                nextLocation,
+                now,
+            );
+
+            locationRef.current = nextLocation;
+            transitionStatus({ type: "success" });
+
+            if (shouldRender) {
+                lastRenderedRef.current = {
+                    location: nextLocation,
+                    at: now,
+                };
+                setLocation(nextLocation);
+            }
+
+            if (isFirstPosition) {
+                handlersRef.current.onCenterLocation?.(nextLocation);
+            }
+        },
+        [transitionStatus],
+    );
 
     const handlePositionError = useCallback(
         (error: GeolocationPositionError) => {
@@ -98,11 +114,12 @@ export function useCurrentLocation({
                 clearWatcher();
                 hasUserStartedTrackingRef.current = false;
                 locationRef.current = null;
-                lastRenderedLocationRef.current = null;
+                lastRenderedRef.current = {
+                    location: null,
+                    at: 0,
+                };
                 setLocation(null);
-                setStatus((currentStatus) =>
-                    getNextCurrentLocationStatus(currentStatus, { type: "permissionDenied" }),
-                );
+                transitionStatus({ type: "permissionDenied" });
                 handlersRef.current.onBlocked?.();
                 return;
             }
@@ -110,25 +127,23 @@ export function useCurrentLocation({
             if (!locationRef.current) {
                 clearWatcher();
                 hasUserStartedTrackingRef.current = false;
-                setStatus((currentStatus) => getNextCurrentLocationStatus(currentStatus, { type: "initialFailure" }));
+                transitionStatus({ type: "initialFailure" });
                 handlersRef.current.onInitialError?.();
                 return;
             }
 
-            setStatus((currentStatus) => getNextCurrentLocationStatus(currentStatus, { type: "trackingFailure" }));
+            const { currentStatus, nextStatus } = transitionStatus({ type: "trackingFailure" });
 
-            const now = Date.now();
-            if (now - lastStaleNotifiedAtRef.current >= STALE_NOTIFICATION_INTERVAL_MS) {
-                lastStaleNotifiedAtRef.current = now;
+            if (currentStatus !== "stale" && nextStatus === "stale") {
                 handlersRef.current.onStale?.();
             }
         },
-        [clearWatcher],
+        [clearWatcher, transitionStatus],
     );
 
     const startWatcher = useCallback(() => {
         if (!isGeolocationSupported()) {
-            setStatus((currentStatus) => getNextCurrentLocationStatus(currentStatus, { type: "unavailable" }));
+            transitionStatus({ type: "unavailable" });
             handlersRef.current.onUnavailable?.();
             return;
         }
@@ -137,17 +152,17 @@ export function useCurrentLocation({
             return;
         }
 
-        setStatus((currentStatus) => getNextCurrentLocationStatus(currentStatus, { type: "request" }));
+        transitionStatus({ type: "request" });
         watcherIdRef.current = navigator.geolocation.watchPosition(
             handlePositionSuccess,
             handlePositionError,
             GEOLOCATION_OPTIONS,
         );
-    }, [handlePositionError, handlePositionSuccess]);
+    }, [handlePositionError, handlePositionSuccess, transitionStatus]);
 
     const requestCurrentLocation = useCallback(() => {
         if (!isGeolocationSupported()) {
-            setStatus((currentStatus) => getNextCurrentLocationStatus(currentStatus, { type: "unavailable" }));
+            transitionStatus({ type: "unavailable" });
             handlersRef.current.onUnavailable?.();
             return;
         }
@@ -159,7 +174,7 @@ export function useCurrentLocation({
         }
 
         startWatcher();
-    }, [startWatcher]);
+    }, [startWatcher, transitionStatus]);
 
     useEffect(() => {
         const handleVisibilityChange = () => {
@@ -169,11 +184,11 @@ export function useCurrentLocation({
 
             if (document.visibilityState === "hidden") {
                 clearWatcher();
-                setStatus((currentStatus) => getNextCurrentLocationStatus(currentStatus, { type: "pause" }));
+                transitionStatus({ type: "pause" });
                 return;
             }
 
-            setStatus((currentStatus) => getNextCurrentLocationStatus(currentStatus, { type: "resume" }));
+            transitionStatus({ type: "resume" });
             startWatcher();
         };
 
@@ -183,7 +198,7 @@ export function useCurrentLocation({
             document.removeEventListener("visibilitychange", handleVisibilityChange);
             clearWatcher();
         };
-    }, [clearWatcher, startWatcher]);
+    }, [clearWatcher, startWatcher, transitionStatus]);
 
     return {
         location,
