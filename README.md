@@ -1,74 +1,76 @@
-# React + TypeScript + Vite
+# 길충전 (gil-charge)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+지도 위에 이동 경로를 직접 그리고, 경로 주변의 주유소를 찾아 가격을 확인하는 모바일 우선 웹 애플리케이션입니다.
 
-Currently, two official plugins are available:
+## 미리보기
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## React Compiler
+https://github.com/user-attachments/assets/f6df4149-4bbe-402d-bb18-5b173fae5dcd
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the ESLint configuration
+## 주요 기능
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 검색 방식 선택
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- 경로 기반 주유소 검색과 주유소명 검색 중 원하는 방식을 선택합니다.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 경로 기반 주유소 검색
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- 카카오 지도 위를 터치하거나 클릭해 웨이포인트를 추가합니다.
+- 웨이포인트를 선으로 연결해 이동 경로를 만들고, 반경 슬라이더로 검색 범위를 조절합니다.
+- 경로 주변 주유소를 검색하고 가격 낮은 순으로 결과를 표시합니다.
+- 검색 결과는 지도 마커와 하단 바텀 시트에 함께 표시됩니다.
+- 지도 마커 또는 결과 목록에서 주유소를 선택하면 양쪽 UI가 동기화됩니다.
+- 바텀 시트가 지도 위 주유소를 가리지 않도록 검색 컨트롤과 표시 영역을 조정합니다.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 웨이포인트 편집
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- 웨이포인트 추가, 삭제, 전체 삭제를 지원합니다.
+- 웨이포인트를 드래그해 위치를 변경할 수 있습니다.
+- 올가미 선택 모드로 여러 웨이포인트를 선택합니다.
+- 선택된 웨이포인트를 일괄 이동하거나 삭제할 수 있습니다.
+- undo / redo로 편집 이력을 되돌리거나 다시 적용할 수 있습니다.
+- 모드 변경 시 토스트 메시지로 현재 조작 방식을 안내합니다.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-# gil-charge
+### 주유소명 검색
+
+- 주유소명을 입력해 오피넷 주유소 검색 API를 조회합니다.
+- 검색 중 로딩 상태와 입력 오류 피드백을 표시합니다.
+- 결과가 없을 때 빈 상태를 표시합니다.
+
+### 현재 위치
+
+- 브라우저 위치 권한을 사용해 현재 위치를 지도에 표시하고 중심을 이동합니다.
+- 위치 권한 차단, 위치 조회 실패, 오래된 위치, 미지원 브라우저 상태를 구분해 안내합니다.
+
+### 오류 처리
+
+- API 응답 오류를 표준 실패 코드로 정규화합니다.
+- `zod`로 응답 body를 런타임 검증합니다.
+- HTTP, Request, Controller, View 계층을 나눠 요청과 실패 처리를 관리합니다.
+- 최신 검색 요청만 화면 상태에 반영해 race condition을 방지합니다.
+- 페이지 단위 `ErrorBoundary`와 지도 fallback UI를 제공합니다.
+
+## 기술 스택
+
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- Axios
+- Zod
+- Vitest
+- Playwright
+- Express
+
+## 설계 문서
+
+주요 의사결정은 `docs/adr`에 정리되어 있습니다.
+
+- 지도 어댑터 설계
+- 웨이포인트 에디터 모델 / 훅 API 구조
+- 웨이포인트 undo / redo 히스토리 관리
+- 웨이포인트 라쏘 hit layer CustomOverlay 사용
+- API 요청 계층과 실패 처리 정책
+- 프론트엔드 검색 요청 취소와 race condition 방지
+- 백엔드 에러 응답 코드와 오피넷 오류 정규화
