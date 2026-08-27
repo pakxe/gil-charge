@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 
 import { type StationsSearchFailurePolicy, useStationsSearch } from "@/shared/hooks/useStationsSearch";
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
 import { useMap } from "@/shared/model/useMap";
-import { useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
+import { type CurrentLocationStatus, useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
 import { useSearchResultSheetLayout } from "@/features/select_search_type/hooks/useSearchResultSheetLayout";
 import { useStationSelection } from "@/features/select_search_type/hooks/useStationSelection";
 import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
@@ -32,17 +32,47 @@ export function DrawPathStep() {
     const { status, data, actions } = useWaypointEditor();
     const map = useMap();
 
-    const hasRequestedLocationRef = useRef(false);
-
     const [zoomLevel, setZoomLevel] = useState(8);
     const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
     const [mode, setMode] = useState<DrawMode>(INITIAL_DRAW_MODE);
     const [isSearchResultDismissed, setIsSearchResultDismissed] = useState(false);
     const [localCurrencyOnly, setLocalCurrencyOnly] = useState(false);
 
-    const { requestLocation, location } = useCurrentLocation();
     const { state: stationsSearchState, retry: retryStationsSearch, search: searchStations } = useStationsSearch();
     const { showToast } = useToast();
+    const centerCurrentLocation = useCallback(
+        (location: { lat: number; lng: number }) => {
+            map?.setCenter(location);
+        },
+        [map],
+    );
+    const {
+        requestCurrentLocation,
+        location,
+        status: currentLocationStatus,
+    } = useCurrentLocation({
+        onCenterLocation: centerCurrentLocation,
+        onBlocked: () => {
+            showToast({
+                message: "브라우저 설정에서 위치 권한을 허용한 뒤 다시 시도해주세요.",
+            });
+        },
+        onInitialError: () => {
+            showToast({
+                message: "현재 위치를 얻어오는데 실패했습니다.",
+            });
+        },
+        onStale: () => {
+            showToast({
+                message: "현재 위치를 새로 확인하지 못해 마지막 위치를 표시하고 있습니다.",
+            });
+        },
+        onUnavailable: () => {
+            showToast({
+                message: "이 브라우저에서는 현재 위치를 사용할 수 없습니다.",
+            });
+        },
+    });
 
     const stations = isSearchResultDismissed ? null : stationsSearchState.stations;
     const isLoading = stationsSearchState.status === "loading";
@@ -59,19 +89,6 @@ export function DrawPathStep() {
             durationMs: MODE_GUIDE_TOAST_DURATION_MS,
         });
     }, [showToast]);
-
-    useEffect(() => {
-        if (hasRequestedLocationRef.current === true) return;
-
-        requestLocation({
-            onSuccess: () => {
-                // setIsTracking(true);
-            },
-            onFinally: () => {
-                hasRequestedLocationRef.current = true;
-            },
-        });
-    }, [requestLocation]);
 
     useEffect(() => {
         if (!searchFailure || !searchFailurePolicy) return;
@@ -153,7 +170,7 @@ export function DrawPathStep() {
                         onRetry={reloadPage}
                     />
                 }
-                center={location ?? DEFAULT_MAP_CENTER}
+                center={DEFAULT_MAP_CENTER}
                 zoomLevel={zoomLevel}
                 isDraggable={!isLassoMode && !isMoveActive(status.statusName)}
                 isZoomable={!isLassoMode}
@@ -188,6 +205,7 @@ export function DrawPathStep() {
                     selectedStationId={selectedStationId}
                     onStationClick={(stationId) => selectStation("map", stationId)}
                 />
+                {location && <CurrentLocationMarker location={location} isStale={currentLocationStatus === "stale"} />}
             </Map>
             <div ref={searchOverlayRef} className="pointer-events-none absolute inset-0 z-70">
                 <div
@@ -331,7 +349,43 @@ export function DrawPathStep() {
                     전체 삭제
                 </Box>
             </div>
+            <button
+                type="button"
+                aria-label="현재 위치로 이동"
+                aria-busy={currentLocationStatus === "locating"}
+                className={cn(
+                    "absolute left-4 top-16 z-60 flex h-11 min-w-11 items-center justify-center rounded-full border border-white/20 px-3 text-xs font-bold shadow-lg backdrop-blur-[15px] transition-colors",
+                    getCurrentLocationButtonClassName(currentLocationStatus),
+                )}
+                onClick={requestCurrentLocation}
+            >
+                {currentLocationStatus === "locating" ? (
+                    <LoadingSpinner className="size-4" label="현재 위치 확인 중" />
+                ) : (
+                    getCurrentLocationButtonLabel(currentLocationStatus)
+                )}
+            </button>
         </div>
+    );
+}
+
+function CurrentLocationMarker({ location, isStale }: { location: { lat: number; lng: number }; isStale: boolean }) {
+    return (
+        <Map.CustomOverlay position={location} xAnchor={0.5} yAnchor={0.5} zIndex={CURRENT_LOCATION_MARKER_Z_INDEX}>
+            <div
+                className={cn(
+                    "relative flex h-5 w-5 items-center justify-center rounded-full border-2 border-white shadow-lg",
+                    isStale ? "bg-gil-gray-500" : "bg-blue-500",
+                )}
+                aria-label={isStale ? "마지막으로 확인된 현재 위치" : "현재 위치"}
+                role="img"
+            >
+                <span
+                    className={cn("absolute h-9 w-9 rounded-full", isStale ? "bg-gil-gray-500/20" : "bg-blue-500/20")}
+                />
+                <span className="relative h-2 w-2 rounded-full bg-white" />
+            </div>
+        </Map.CustomOverlay>
     );
 }
 
@@ -339,9 +393,48 @@ function formatRadius(radiusKm: number) {
     return Number.isInteger(radiusKm) ? String(radiusKm) : radiusKm.toFixed(1);
 }
 
+function getCurrentLocationButtonLabel(status: CurrentLocationStatus) {
+    switch (status) {
+        case "locating":
+            return "확인 중";
+        case "tracking":
+            return "현위치";
+        case "stale":
+            return "이전 위치";
+        case "blocked":
+            return "권한 필요";
+        case "paused":
+            return "일시 정지";
+        case "unavailable":
+            return "사용 불가";
+        case "idle":
+        default:
+            return "현위치";
+    }
+}
+
+function getCurrentLocationButtonClassName(status: CurrentLocationStatus) {
+    switch (status) {
+        case "locating":
+            return "bg-gil-yellow-400 text-gil-brown-900";
+        case "tracking":
+            return "bg-blue-500 text-white";
+        case "stale":
+        case "paused":
+            return "bg-gil-gray-850/90 text-gil-light-text";
+        case "blocked":
+        case "unavailable":
+            return "bg-gil-gray-850/90 text-gil-gray-500";
+        case "idle":
+        default:
+            return "bg-[#1f1f1f]/40 text-white";
+    }
+}
+
 const BASE_LEVEL = 6;
 const BASE_STROKE_WEIGHT = 250;
 const DEFAULT_RADIUS_KM = 1;
+const CURRENT_LOCATION_MARKER_Z_INDEX = 45;
 const INITIAL_DRAW_MODE: DrawMode = "waypoint";
 const MODE_GUIDE_TOAST_DURATION_MS = 2500;
 const MODE_GUIDE_MESSAGES: Record<DrawMode, string> = {
