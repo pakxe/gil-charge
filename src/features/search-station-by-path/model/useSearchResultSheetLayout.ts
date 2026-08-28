@@ -25,6 +25,11 @@ export function useSearchResultSheetLayout({ hasSearchResult, stations }: Params
         const overlay = searchOverlayRef.current;
         if (!overlay) return;
 
+        const initialMaxHeight = getResultSheetMaxHeight(overlay);
+
+        setMaxSearchSheetHeight(initialMaxHeight);
+        setSearchOverlayVisibleHeight(getResultSheetDefaultHeight(initialMaxHeight));
+
         const updateMaxHeight = () => {
             const nextMaxHeight = getResultSheetMaxHeight(overlay);
 
@@ -32,22 +37,14 @@ export function useSearchResultSheetLayout({ hasSearchResult, stations }: Params
             setSearchOverlayVisibleHeight((prev) => clamp(prev, 0, nextMaxHeight));
         };
 
-        const frameId = requestAnimationFrame(() => {
-            const nextMaxHeight = getResultSheetMaxHeight(overlay);
-
-            setMaxSearchSheetHeight(nextMaxHeight);
-            setSearchOverlayVisibleHeight(getResultSheetDefaultHeight(nextMaxHeight));
-        });
-
         const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateMaxHeight);
+
         observer?.observe(overlay);
 
         return () => {
-            cancelAnimationFrame(frameId);
             observer?.disconnect();
         };
     }, [hasSearchResult, stations]);
-
     return {
         searchOverlayRef,
         searchOverlayVisibleHeight,
