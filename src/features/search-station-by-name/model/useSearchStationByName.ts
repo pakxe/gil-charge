@@ -159,7 +159,7 @@ export function useSearchStationByName() {
         async (stationName: string, area?: string) => {
             failedRequestInputRef.current = null;
 
-            const validation = validate(stationName);
+            const validation = validateSearchStationByNameInput(stationName);
 
             if (!validation.isValid) {
                 const failure: SearchStationByNameFailure = {
@@ -222,7 +222,7 @@ export function useSearchStationByName() {
     };
 }
 
-function validate(stationName: string): SearchStationByNameValidation {
+export function validateSearchStationByNameInput(stationName: string): SearchStationByNameValidation {
     const osnm = stationName.trim();
     const length = Array.from(osnm).length;
 
