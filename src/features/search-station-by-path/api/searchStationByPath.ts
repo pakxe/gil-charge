@@ -1,10 +1,12 @@
 import { z } from "zod";
 
-import { createRequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
+import { createRequestFailure } from "@/shared/lib/requestFailure";
 import { PathSet } from "@/shared/types/map";
-import { isHttpFailure } from "@/shared/api/httpFailure";
+
 import { httpClient } from "@/shared/api/httpClient";
 import { baseStationSchema } from "@/shared/api/stationSchemas";
+import { toApiRequestFailure } from "@/shared/api/toApiRequestFailure";
+import { createApiErrorSchema } from "@/shared/api/createApiErrorSchema";
 
 export const SEARCH_STATION_BY_PATH_ERROR_CODES = [
     "INVALID_INPUT",
@@ -19,12 +21,7 @@ export const SEARCH_STATION_BY_PATH_ERROR_CODES = [
 
 export type SearchStationByPathErrorCode = (typeof SEARCH_STATION_BY_PATH_ERROR_CODES)[number];
 
-type SearchStationByPathErrorResponse = {
-    code: SearchStationByPathErrorCode;
-    message: string;
-};
-
-const SEARCH_STATION_BY_PATH_ERROR_CODE_SET = new Set<string>(SEARCH_STATION_BY_PATH_ERROR_CODES);
+const searchStationByPathErrorSchema = createApiErrorSchema(SEARCH_STATION_BY_PATH_ERROR_CODES);
 
 const pathStationSchema = baseStationSchema.extend({
     price: z.number(),
@@ -39,6 +36,7 @@ const pathStationSchema = baseStationSchema.extend({
 });
 
 export type PathStation = z.infer<typeof pathStationSchema>;
+
 export type Station = PathStation;
 
 const searchStationByPathResponseSchema = z.object({
@@ -52,7 +50,11 @@ export type SearchStationByPathParams = {
 };
 
 export async function searchStationByPath({ paths, radiusKm, signal }: SearchStationByPathParams) {
-    const response = await postSearchStationByPath({ paths, radiusKm, signal });
+    const response = await postSearchStationByPath({
+        paths,
+        radiusKm,
+        signal,
+    });
 
     const parsed = searchStationByPathResponseSchema.safeParse(response.data);
 
@@ -65,56 +67,17 @@ export async function searchStationByPath({ paths, radiusKm, signal }: SearchSta
 
 async function postSearchStationByPath({ paths, radiusKm, signal }: SearchStationByPathParams) {
     try {
-        return await httpClient.post<unknown>("/stations/path", { paths, radiusKm }, { signal });
+        return await httpClient.post<unknown>(
+            "/stations/path",
+            {
+                paths,
+                radiusKm,
+            },
+            {
+                signal,
+            },
+        );
     } catch (error) {
-        throw toSearchStationByPathFailure(error);
-    }
-}
-
-function isErrorResponse(value: unknown): value is SearchStationByPathErrorResponse {
-    if (!isRecord(value)) {
-        return false;
-    }
-
-    return isErrorCode(value.code) && typeof value.message === "string";
-}
-
-function isErrorCode(value: unknown): value is SearchStationByPathErrorCode {
-    return typeof value === "string" && SEARCH_STATION_BY_PATH_ERROR_CODE_SET.has(value);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function toSearchStationByPathFailure(error: unknown) {
-    if (!isHttpFailure(error)) {
-        return toRequestFailure(error);
-    }
-
-    switch (error.reason) {
-        case "HTTP_ERROR":
-            if (isErrorResponse(error.data)) {
-                return createRequestFailure(error.data.code, {
-                    message: error.data.message,
-                    status: error.status,
-                    cause: error,
-                });
-            }
-
-            return createRequestFailure("INVALID_RESPONSE", {
-                status: error.status,
-                cause: error,
-            });
-        case "OFFLINE":
-            return createRequestFailure("OFFLINE", { cause: error });
-        case "NETWORK_ERROR":
-            return createRequestFailure("NETWORK_ERROR", { cause: error });
-        case "TIMEOUT":
-            return createRequestFailure("TIMEOUT", { cause: error });
-        case "REQUEST_CANCELED":
-            return createRequestFailure("REQUEST_CANCELED", { cause: error });
-        case "UNKNOWN_ERROR":
-            return createRequestFailure("UNKNOWN_ERROR", { cause: error });
+        throw toApiRequestFailure(error, searchStationByPathErrorSchema);
     }
 }

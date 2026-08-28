@@ -1,9 +1,11 @@
 import { z } from "zod";
 
-import { createRequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
-import { isHttpFailure } from "@/shared/api/httpFailure";
+import { createRequestFailure } from "@/shared/lib/requestFailure";
+
 import { httpClient } from "@/shared/api/httpClient";
 import { baseStationSchema } from "@/shared/api/stationSchemas";
+import { toApiRequestFailure } from "@/shared/api/toApiRequestFailure";
+import { createApiErrorSchema } from "@/shared/api/createApiErrorSchema";
 
 export const SEARCH_STATION_BY_NAME_ERROR_CODES = [
     "INVALID_INPUT",
@@ -18,12 +20,7 @@ export const SEARCH_STATION_BY_NAME_ERROR_CODES = [
 
 export type SearchStationByNameErrorCode = (typeof SEARCH_STATION_BY_NAME_ERROR_CODES)[number];
 
-type SearchStationByNameErrorResponse = {
-    code: SearchStationByNameErrorCode;
-    message: string;
-};
-
-const SEARCH_STATION_BY_NAME_ERROR_CODE_SET = new Set<string>(SEARCH_STATION_BY_NAME_ERROR_CODES);
+const searchStationByNameErrorSchema = createApiErrorSchema(SEARCH_STATION_BY_NAME_ERROR_CODES);
 
 const stationNameSearchResultSchema = baseStationSchema.extend({
     brand: z.string().nullable(),
@@ -52,7 +49,11 @@ export type SearchStationByNameParams = {
 };
 
 export async function searchStationByName({ osnm, area, signal }: SearchStationByNameParams) {
-    const response = await getSearchStationByName({ osnm, area, signal });
+    const response = await getSearchStationByName({
+        osnm,
+        area,
+        signal,
+    });
 
     const parsed = searchStationByNameResponseSchema.safeParse(response.data);
 
@@ -73,54 +74,6 @@ async function getSearchStationByName({ osnm, area, signal }: SearchStationByNam
             signal,
         });
     } catch (error) {
-        throw toSearchStationByNameFailure(error);
-    }
-}
-
-function isErrorResponse(value: unknown): value is SearchStationByNameErrorResponse {
-    if (!isRecord(value)) {
-        return false;
-    }
-
-    return isErrorCode(value.code) && typeof value.message === "string";
-}
-
-function isErrorCode(value: unknown): value is SearchStationByNameErrorCode {
-    return typeof value === "string" && SEARCH_STATION_BY_NAME_ERROR_CODE_SET.has(value);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function toSearchStationByNameFailure(error: unknown) {
-    if (!isHttpFailure(error)) {
-        return toRequestFailure(error);
-    }
-
-    switch (error.reason) {
-        case "HTTP_ERROR":
-            if (isErrorResponse(error.data)) {
-                return createRequestFailure(error.data.code, {
-                    message: error.data.message,
-                    status: error.status,
-                    cause: error,
-                });
-            }
-
-            return createRequestFailure("INVALID_RESPONSE", {
-                status: error.status,
-                cause: error,
-            });
-        case "OFFLINE":
-            return createRequestFailure("OFFLINE", { cause: error });
-        case "NETWORK_ERROR":
-            return createRequestFailure("NETWORK_ERROR", { cause: error });
-        case "TIMEOUT":
-            return createRequestFailure("TIMEOUT", { cause: error });
-        case "REQUEST_CANCELED":
-            return createRequestFailure("REQUEST_CANCELED", { cause: error });
-        case "UNKNOWN_ERROR":
-            return createRequestFailure("UNKNOWN_ERROR", { cause: error });
+        throw toApiRequestFailure(error, searchStationByNameErrorSchema);
     }
 }
