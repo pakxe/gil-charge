@@ -6,4 +6,5 @@ export const MAP_Z_INDEX = {
     lasso: 20,
     searchStationByPath: 30,
     selectedWaypoint: 31,
+    waypoint: 30,
 };
