@@ -1,6 +1,6 @@
 import { Map } from "@/shared/ui/Map/Map";
 import type { LatLng } from "@/shared/model/map";
-import { useWaypointEditor } from "@/features/waypoint_editor/hooks/useWaypointEditor";
+import { useWaypointEditor } from "@/features/waypoint_editor/model/useWaypointEditor";
 import { WaypointNodesLayer } from "@/features/waypoint_editor/ui/WaypointNodesLayer";
 import { WaypointHistoryControls } from "@/features/waypoint_editor/ui/WaypointHistoryControls";
 

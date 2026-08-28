@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
-import { Button } from "@/shared/components/Button/Button";
+import { Button } from "@/shared/ui/Button/Button";
 
 type ErrorBoundaryProps = {
     children: ReactNode;

@@ -3,7 +3,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useCurrentLocation } from "@/features/select_search_type/hooks/useCurrentLocation";
+import { useCurrentLocation } from "@/features/select_search_type/model/useCurrentLocation";
 
 type WatchSuccess = PositionCallback;
 type WatchError = PositionErrorCallback;

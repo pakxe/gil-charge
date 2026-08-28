@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getWaypointIdsInPolygon } from "@/features/waypoint_editor/utils/getWaypointIdsInPolygon";
+import { getWaypointIdsInPolygon } from "@/features/waypoint_editor/lib/getWaypointIdsInPolygon";
 import type { WaypointNode } from "@/features/waypoint_editor/model/waypointEditor";
 import type { LatLng } from "@/shared/model/map";
 

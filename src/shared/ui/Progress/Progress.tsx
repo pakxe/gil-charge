@@ -1,4 +1,4 @@
-import { Button } from "@/shared/components/Button/Button";
+import { Button } from "@/shared/ui/Button/Button";
 import { cn } from "@/shared/utils/cn";
 import { cva, VariantProps } from "class-variance-authority";
 

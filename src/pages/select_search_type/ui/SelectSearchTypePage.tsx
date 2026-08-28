@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import {
     SelectTypeStep,
     type SearchTypeId,
-} from "@/features/select_search_type/components/SelectTypeStep";
+} from "@/features/select_search_type/ui/SelectTypeStep";
 import { PATHS } from "@/shared/utils/route";
 
 const SEARCH_TYPE_PATHS: Record<SearchTypeId, string> = {

@@ -1,4 +1,4 @@
-import { Top } from "@/shared/components/Top/Top";
+import { Top } from "@/shared/ui/Top/Top";
 
 const SEARCH_TYPES = [
     {

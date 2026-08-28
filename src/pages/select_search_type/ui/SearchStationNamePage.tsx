@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 
-import { Button } from "@/shared/components/Button/Button";
-import { InlineFailurePresentation } from "@/shared/components/InlineFailurePresentation/InlineFailurePresentation";
-import { LoadingSpinner } from "@/shared/components/LoadingSpinner/LoadingSpinner";
+import { Button } from "@/shared/ui/Button/Button";
+import { InlineFailurePresentation } from "@/shared/ui/InlineFailurePresentation/InlineFailurePresentation";
+import { LoadingSpinner } from "@/shared/ui/LoadingSpinner/LoadingSpinner";
 import {
     getSearchStationsByNameFailureMessage,
     type SearchStationsByNameFailurePolicy,

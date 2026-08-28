@@ -1,4 +1,4 @@
-import Box from "@/shared/components/Box/Box";
+import Box from "@/shared/ui/Box/Box";
 import { cn } from "@/shared/utils/cn";
 
 type Props = {
