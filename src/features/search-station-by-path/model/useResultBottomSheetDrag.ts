@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+
 import type { PointerEvent, RefObject } from "react";
 
 import { clamp, snapResultSheetHeight } from "@/features/search-station-by-path/model/resultBottomSheet";
@@ -37,10 +38,14 @@ export function useResultBottomSheetDrag({
 
         event.currentTarget.setPointerCapture(event.pointerId);
 
+        const containerBottom = getContainerBottom(containerRef.current);
+
         const nextVisibleHeight = clamp(visibleHeight, 0, maxHeight);
 
+        const sheetTop = containerBottom - nextVisibleHeight;
+
         dragRef.current = {
-            pointerOffsetFromSheetTop: getContainerBottom(containerRef.current) - event.clientY - nextVisibleHeight,
+            pointerOffsetFromSheetTop: event.clientY - sheetTop,
         };
 
         latestVisibleHeightRef.current = nextVisibleHeight;
@@ -55,11 +60,11 @@ export function useResultBottomSheetDrag({
 
         event.preventDefault();
 
-        const nextVisibleHeight = clamp(
-            getContainerBottom(containerRef.current) - event.clientY - drag.pointerOffsetFromSheetTop,
-            0,
-            maxHeight,
-        );
+        const containerBottom = getContainerBottom(containerRef.current);
+
+        const sheetTop = event.clientY - drag.pointerOffsetFromSheetTop;
+
+        const nextVisibleHeight = clamp(containerBottom - sheetTop, 0, maxHeight);
 
         latestVisibleHeightRef.current = nextVisibleHeight;
 
