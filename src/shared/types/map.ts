@@ -43,4 +43,3 @@ export interface Station {
 
 export type DrawingType = "pen" | "waypoint";
 export type PathSet = { id: string; type: DrawingType; points: LatLng[] };
-export type Tool = "pen" | "waypoint" | "eraser";

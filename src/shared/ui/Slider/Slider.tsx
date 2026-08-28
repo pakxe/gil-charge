@@ -1,6 +1,6 @@
 import type { ComponentPropsWithRef, CSSProperties, ReactNode } from "react";
 
-import { cn } from "@/shared/utils/cn";
+import { cn } from "@/shared/lib/cn";
 
 type Props = Omit<ComponentPropsWithRef<"input">, "children" | "className" | "max" | "min" | "step" | "style" | "type" | "value"> & {
     value: number;

@@ -52,6 +52,8 @@ Custom hook, 타입, 상태 로직은 별도 `hooks`, `types` 폴더를 먼저 �
 
 공통 React 컴포넌트도 `shared/components`를 따로 두지 않고 `shared/ui`에 둔다.
 `features` 내부 React 컴포넌트도 `components`를 따로 두지 않고 해당 slice의 `ui`에 둔다.
+`shared/api`에는 HTTP client와 공통 HTTP 실패 처리만 둔다.
+특정 기능의 API 계약, DTO, 응답 schema는 해당 feature의 `api`에 둔다.
 
 한 번에 전체 구조를 바꾸지 않고, import 변경 범위가 작은 단위로 이동한다.
 

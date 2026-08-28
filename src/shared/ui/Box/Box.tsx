@@ -1,4 +1,4 @@
-import { cn } from "@/shared/utils/cn";
+import { cn } from "@/shared/lib/cn";
 import type { ComponentPropsWithRef, CSSProperties, ReactNode } from "react";
 
 type BoxPadding = number | string;

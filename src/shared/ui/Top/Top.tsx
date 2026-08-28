@@ -1,4 +1,4 @@
-import { cn } from "@/shared/utils/cn";
+import { cn } from "@/shared/lib/cn";
 import { ComponentPropsWithRef, ReactNode } from "react";
 
 type Props = Omit<ComponentPropsWithRef<"div">, "title"> & {

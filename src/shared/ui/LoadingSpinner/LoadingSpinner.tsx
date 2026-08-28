@@ -1,6 +1,6 @@
 import type { ComponentPropsWithRef } from "react";
 
-import { cn } from "@/shared/utils/cn";
+import { cn } from "@/shared/lib/cn";
 
 type Props = Omit<ComponentPropsWithRef<"span">, "children"> & {
     label?: string;

@@ -1,4 +1,4 @@
-import { PATHS } from "@/shared/utils/route";
+import { PATHS } from "@/shared/lib/route";
 import { Navigate } from "react-router";
 
 export function HomePage() {
