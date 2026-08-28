@@ -1,16 +1,12 @@
 import type { Station } from "@/shared/types/map";
 import { Map } from "@/shared/ui/Map/Map";
 import { cn } from "@/shared/lib/cn";
+import { MAP_Z_INDEX } from "@/shared/constants/map";
 
 type Props = {
     stations: Station[];
     selectedStationId: string | null;
     onStationClick: (stationId: string) => void;
-};
-
-const STATION_MARKER_Z_INDEX = {
-    default: 32,
-    selected: 40,
 };
 
 export function StationMarkersLayer({ stations, selectedStationId, onStationClick }: Props) {
@@ -26,7 +22,7 @@ export function StationMarkersLayer({ stations, selectedStationId, onStationClic
                         clickable
                         xAnchor={0.5}
                         yAnchor={isSelected ? 1 : 0.5}
-                        zIndex={isSelected ? STATION_MARKER_Z_INDEX.selected : STATION_MARKER_Z_INDEX.default}
+                        zIndex={isSelected ? MAP_Z_INDEX.stationMarkerDefault : MAP_Z_INDEX.stationMakerSelected}
                     >
                         <button
                             type="button"
@@ -47,7 +43,7 @@ export function StationMarkersLayer({ stations, selectedStationId, onStationClic
                                     <span className="text-black font-bold text-body">
                                         {station.price.toLocaleString()}원
                                     </span>
-                                    <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-[10px] border-t-[12px] border-x-transparent border-t-white" />
+                                    <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-10 border-t-12 border-x-transparent border-t-white" />
                                     <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-[7px] border-t-[9px] border-x-transparent border-t-gil-yellow-400" />
                                 </>
                             ) : (

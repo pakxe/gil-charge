@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 
-import { type SearchStationByPathFailurePolicy, useSearchStationByPath } from "@/features/search-station-by-path/model/useSearchStationByPath";
+import {
+    type SearchStationByPathFailurePolicy,
+    useSearchStationByPath,
+} from "@/features/search-station-by-path/model/useSearchStationByPath";
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
 import { useMap } from "@/shared/model/useMap";
-import { type CurrentLocationStatus, useCurrentLocation } from "@/features/search-station-by-path/model/useCurrentLocation";
+import { useCurrentLocation } from "@/features/search-station-by-path/model/useCurrentLocation";
 import { useSearchResultSheetLayout } from "@/features/search-station-by-path/model/useSearchResultSheetLayout";
 import { useStationSelection } from "@/features/search-station-by-path/model/useStationSelection";
 import { useWaypointEditor } from "@/features/waypoint_editor/model/useWaypointEditor";
@@ -25,6 +28,9 @@ import { Slider } from "@/shared/ui/Slider/Slider";
 import { cn } from "@/shared/lib/cn";
 import { WaypointHistoryControls } from "@/features/waypoint_editor/ui/WaypointHistoryControls";
 import { getVisibleStations } from "@/features/search-station-by-path/model/stationSelection";
+import { getSearchStationByPathFailureMessage } from "@/features/search-station-by-path/ui/getSearchStationByPathFailureMessage";
+import { CurrentLocationMarker } from "@/features/search-station-by-path/ui/CurrentLocationMarker";
+import { CurrentLocationButton } from "@/features/search-station-by-path/ui/CurrentLocationButton";
 
 type DrawMode = "waypoint" | "lasso";
 
@@ -38,7 +44,11 @@ export function SearchStationByPathStep() {
     const [isSearchResultDismissed, setIsSearchResultDismissed] = useState(false);
     const [localCurrencyOnly, setLocalCurrencyOnly] = useState(false);
 
-    const { state: searchStationByPathState, retry: retrySearchStationByPath, search: searchStations } = useSearchStationByPath();
+    const {
+        state: searchStationByPathState,
+        retry: retrySearchStationByPath,
+        search: searchStations,
+    } = useSearchStationByPath();
     const { showToast } = useToast();
     const centerCurrentLocation = useCallback(
         (location: { lat: number; lng: number }) => {
@@ -349,43 +359,8 @@ export function SearchStationByPathStep() {
                     전체 삭제
                 </Box>
             </div>
-            <button
-                type="button"
-                aria-label="현재 위치로 이동"
-                aria-busy={currentLocationStatus === "locating"}
-                className={cn(
-                    "absolute left-4 top-16 z-60 flex h-11 min-w-11 items-center justify-center rounded-full border border-white/20 px-3 text-xs font-bold shadow-lg backdrop-blur-[15px] transition-colors",
-                    getCurrentLocationButtonClassName(currentLocationStatus),
-                )}
-                onClick={requestCurrentLocation}
-            >
-                {currentLocationStatus === "locating" ? (
-                    <LoadingSpinner className="size-4" label="현재 위치 확인 중" />
-                ) : (
-                    getCurrentLocationButtonLabel(currentLocationStatus)
-                )}
-            </button>
+            <CurrentLocationButton status={currentLocationStatus} onClick={requestCurrentLocation} />
         </div>
-    );
-}
-
-function CurrentLocationMarker({ location, isStale }: { location: { lat: number; lng: number }; isStale: boolean }) {
-    return (
-        <Map.CustomOverlay position={location} xAnchor={0.5} yAnchor={0.5} zIndex={CURRENT_LOCATION_MARKER_Z_INDEX}>
-            <div
-                className={cn(
-                    "relative flex h-5 w-5 items-center justify-center rounded-full border-2 border-white shadow-lg",
-                    isStale ? "bg-gil-gray-500" : "bg-blue-500",
-                )}
-                aria-label={isStale ? "마지막으로 확인된 현재 위치" : "현재 위치"}
-                role="img"
-            >
-                <span
-                    className={cn("absolute h-9 w-9 rounded-full", isStale ? "bg-gil-gray-500/20" : "bg-blue-500/20")}
-                />
-                <span className="relative h-2 w-2 rounded-full bg-white" />
-            </div>
-        </Map.CustomOverlay>
     );
 }
 
@@ -393,48 +368,9 @@ function formatRadius(radiusKm: number) {
     return Number.isInteger(radiusKm) ? String(radiusKm) : radiusKm.toFixed(1);
 }
 
-function getCurrentLocationButtonLabel(status: CurrentLocationStatus) {
-    switch (status) {
-        case "locating":
-            return "확인 중";
-        case "tracking":
-            return "현위치";
-        case "stale":
-            return "이전 위치";
-        case "blocked":
-            return "권한 필요";
-        case "paused":
-            return "일시 정지";
-        case "unavailable":
-            return "사용 불가";
-        case "idle":
-        default:
-            return "현위치";
-    }
-}
-
-function getCurrentLocationButtonClassName(status: CurrentLocationStatus) {
-    switch (status) {
-        case "locating":
-            return "bg-gil-yellow-400 text-gil-brown-900";
-        case "tracking":
-            return "bg-blue-500 text-white";
-        case "stale":
-        case "paused":
-            return "bg-gil-gray-850/90 text-gil-light-text";
-        case "blocked":
-        case "unavailable":
-            return "bg-gil-gray-850/90 text-gil-gray-500";
-        case "idle":
-        default:
-            return "bg-[#1f1f1f]/40 text-white";
-    }
-}
-
 const BASE_LEVEL = 6;
 const BASE_STROKE_WEIGHT = 250;
 const DEFAULT_RADIUS_KM = 1;
-const CURRENT_LOCATION_MARKER_Z_INDEX = 45;
 const INITIAL_DRAW_MODE: DrawMode = "waypoint";
 const MODE_GUIDE_TOAST_DURATION_MS = 2500;
 const MODE_GUIDE_MESSAGES: Record<DrawMode, string> = {
@@ -476,29 +412,4 @@ function getSearchStationByPathFailureToast(
             onClick: retry,
         },
     };
-}
-
-function getSearchStationByPathFailureMessage(failure: RequestFailure) {
-    switch (failure.code) {
-        case "INVALID_INPUT":
-        case "PAYLOAD_TOO_LARGE":
-            return "입력값을 확인해주세요.";
-        case "ROUTE_NOT_FOUND":
-        case "METHOD_NOT_ALLOWED":
-        case "INVALID_RESPONSE":
-            return "요청을 처리할 수 없습니다.";
-        case "OPINET_UNAVAILABLE":
-        case "DATABASE_UNAVAILABLE":
-        case "INTERNAL_SERVER_ERROR":
-            return "요청이 실패했습니다.";
-        case "OFFLINE":
-            return "인터넷 연결을 확인해주세요.";
-        case "NETWORK_ERROR":
-        case "TIMEOUT":
-            return "일시적으로 문제가 발생했습니다.";
-        case "CONFIGURATION_ERROR":
-        case "UNKNOWN_ERROR":
-        default:
-            return "예상하지 못한 문제가 발생했습니다.";
-    }
 }

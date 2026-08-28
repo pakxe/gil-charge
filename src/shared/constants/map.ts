@@ -7,4 +7,7 @@ export const MAP_Z_INDEX = {
     searchStationByPath: 30,
     selectedWaypoint: 31,
     waypoint: 30,
+    stationMarkerDefault: 32,
+    stationMakerSelected: 40,
+    currentLocation: 45,
 };
