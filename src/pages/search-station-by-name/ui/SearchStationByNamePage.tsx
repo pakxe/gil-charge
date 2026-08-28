@@ -1,27 +1,38 @@
 import { useEffect, useState } from "react";
 
-import { Button } from "@/shared/ui/Button/Button";
-import { InlineFailurePresentation } from "@/shared/ui/InlineFailurePresentation/InlineFailurePresentation";
-import { LoadingSpinner } from "@/shared/ui/LoadingSpinner/LoadingSpinner";
 import {
-    getSearchStationByNameFailureMessage,
+    type SearchStationByNameFailure,
     type SearchStationByNameFailurePolicy,
     useSearchStationByName,
 } from "@/features/search-station-by-name/model/useSearchStationByName";
-import type { RequestFailure } from "@/shared/lib/requestFailure";
+import { Button } from "@/shared/ui/Button/Button";
+import { InlineFailurePresentation } from "@/shared/ui/InlineFailurePresentation/InlineFailurePresentation";
+import { LoadingSpinner } from "@/shared/ui/LoadingSpinner/LoadingSpinner";
 import { useToast } from "@/shared/ui/Toast/useToast";
+import { getSearchStationByNameFailureMessage } from "@/features/search-station-by-name/ui/getSearchStationByNameFailureMessage";
 
 export function SearchStationByNamePage() {
     const [stationName, setStationName] = useState("");
-    const { state, inlineFailure, resetInlineFailure, retry, search } = useSearchStationByName();
+
+    const { state, resetValidationError, retry, search } = useSearchStationByName();
+
     const { showToast } = useToast();
 
     const isLoading = state.status === "loading";
-    const searchFailure = state.status === "error" ? state.failure : null;
-    const searchFailurePolicy = state.status === "error" ? state.policy : null;
+
+    const searchFailure = state.status === "failure" ? state.failure : null;
+
+    const searchFailurePolicy = state.status === "failure" ? state.policy : null;
+
+    const inlineFailureMessage =
+        searchFailure && searchFailurePolicy?.presentation === "inline"
+            ? getSearchStationByNameFailureMessage(searchFailure)
+            : null;
 
     useEffect(() => {
-        if (!searchFailure || !searchFailurePolicy) return;
+        if (!searchFailure || !searchFailurePolicy) {
+            return;
+        }
 
         if (searchFailurePolicy.report === "always") {
             console.error("주유소 이름 검색 실패:", searchFailure);
@@ -29,7 +40,9 @@ export function SearchStationByNamePage() {
 
         const toast = getSearchStationByNameFailureToast(searchFailure, searchFailurePolicy, retry);
 
-        if (!toast) return;
+        if (!toast) {
+            return;
+        }
 
         showToast(toast);
     }, [retry, searchFailure, searchFailurePolicy, showToast]);
@@ -41,9 +54,11 @@ export function SearchStationByNamePage() {
                 onSubmit={(event) => {
                     event.preventDefault();
 
-                    if (isLoading) return;
+                    if (isLoading) {
+                        return;
+                    }
 
-                    search(stationName);
+                    void search(stationName);
                 }}
             >
                 <input
@@ -51,20 +66,25 @@ export function SearchStationByNamePage() {
                     value={stationName}
                     onChange={(event) => {
                         setStationName(event.target.value);
-                        resetInlineFailure();
+
+                        resetValidationError();
                     }}
                     placeholder="주유소명을 입력해주세요"
                     aria-label="주유소명"
                     className="h-14 min-w-0 flex-1 rounded-lg bg-gil-gray-850 px-4 text-gil-light-text outline-none placeholder:text-gil-gray-600 focus:ring-2 focus:ring-gil-primary"
                 />
+
                 <Button type="submit" disabled={isLoading} className="shrink-0">
                     {isLoading ? <LoadingSpinner label="검색 중" /> : "검색"}
                 </Button>
             </form>
-            <InlineFailurePresentation message={inlineFailure?.message ?? null} />
+
+            <InlineFailurePresentation message={inlineFailureMessage} />
+
             {state.status === "success" && (
                 <section className="mt-6 flex min-h-0 flex-1 flex-col gap-3">
                     <p className="typo-content-medium text-gil-sub-text">검색 결과 {state.stations.length}개</p>
+
                     {state.stations.length === 0 ? (
                         <p className="typo-content-medium text-gil-gray-500">검색 결과가 없습니다.</p>
                     ) : (
@@ -75,6 +95,7 @@ export function SearchStationByNamePage() {
                                     className="rounded-lg bg-gil-gray-850 px-4 py-3 text-gil-light-text"
                                 >
                                     <p className="typo-body-bold">{station.name}</p>
+
                                     <p className="typo-content-medium mt-1 text-gil-gray-500">
                                         {station.roadAddress ?? station.lotAddress ?? "주소 정보 없음"}
                                     </p>
@@ -89,7 +110,7 @@ export function SearchStationByNamePage() {
 }
 
 function getSearchStationByNameFailureToast(
-    failure: RequestFailure,
+    failure: SearchStationByNameFailure,
     policy: SearchStationByNameFailurePolicy,
     retry: () => void,
 ) {
@@ -100,7 +121,9 @@ function getSearchStationByNameFailureToast(
     const message = getSearchStationByNameFailureMessage(failure);
 
     if (policy.recovery !== "manual-retry") {
-        return { message };
+        return {
+            message,
+        };
     }
 
     return {

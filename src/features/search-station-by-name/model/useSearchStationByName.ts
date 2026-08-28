@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-
 import {
     searchStationByName,
     type SearchStationByNameErrorCode,
     type SearchStationByNameResult,
 } from "@/features/search-station-by-name/api/searchStationByName";
 import { type ClientRequestFailureCode, type RequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export const MIN_STATION_NAME_SEARCH_LENGTH = 2;
 export const MAX_STATION_NAME_SEARCH_LENGTH = 30;
@@ -15,15 +14,23 @@ type SearchStationByNameRequestInput = {
     area?: string;
 };
 
-export type SearchStationByNameInlineFailure = {
-    message: string;
-};
-
 export type SearchStationByNameFailurePolicy = {
     presentation: "inline" | "toast" | "silent";
     recovery: "edit-input" | "manual-retry" | "none";
     report: "none" | "always";
 };
+
+export type SearchStationByNameValidationFailureCode = "TOO_LONG" | "TOO_SHORT";
+
+export type SearchStationByNameFailure =
+    | {
+          type: "validation";
+          code: SearchStationByNameValidationFailureCode;
+      }
+    | {
+          type: "request";
+          failure: RequestFailure;
+      };
 
 type SearchStationByNameFailureCode = SearchStationByNameErrorCode | ClientRequestFailureCode;
 
@@ -47,25 +54,23 @@ export type SearchStationByNameState =
           policy: null;
       }
     | {
-          status: "error";
-          stations: null;
-          failure: RequestFailure;
+          status: "failure";
+          stations: SearchStationByNameResult[] | null;
+          failure: SearchStationByNameFailure;
           policy: SearchStationByNameFailurePolicy;
       };
 
-export type SearchStationByNameInputValidation =
+export type SearchStationByNameValidation =
     | {
           isValid: true;
           osnm: string;
-          inlineFailure: null;
       }
     | {
           isValid: false;
-          osnm: null;
-          inlineFailure: SearchStationByNameInlineFailure;
+          code: SearchStationByNameValidationFailureCode;
       };
 
-const INITIAL_SEARCH_STATIONS_BY_NAME_STATE: SearchStationByNameState = {
+const INITIAL_SEARCH_STATION_BY_NAME_STATE: SearchStationByNameState = {
     status: "idle",
     stations: null,
     failure: null,
@@ -73,23 +78,21 @@ const INITIAL_SEARCH_STATIONS_BY_NAME_STATE: SearchStationByNameState = {
 };
 
 export function useSearchStationByName() {
-    const [state, setState] = useState<SearchStationByNameState>(INITIAL_SEARCH_STATIONS_BY_NAME_STATE);
-    const [inlineFailure, setInlineFailure] = useState<SearchStationByNameInlineFailure | null>(null);
-    const failedSearchInputRef = useRef<SearchStationByNameRequestInput | null>(null);
-    const abortControllerRef = useRef<AbortController | null>(null);
+    const [state, setState] = useState<SearchStationByNameState>(INITIAL_SEARCH_STATION_BY_NAME_STATE);
 
-    const resetInlineFailure = () => {
-        setInlineFailure(null);
-    };
+    const failedRequestInputRef = useRef<SearchStationByNameRequestInput | null>(null);
+
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const requestStationsByName = useCallback(async ({ osnm, area }: SearchStationByNameRequestInput) => {
         abortControllerRef.current?.abort();
 
         const abortController = new AbortController();
+
         abortControllerRef.current = abortController;
 
-        failedSearchInputRef.current = null;
-        setInlineFailure(null);
+        failedRequestInputRef.current = null;
+
         setState((current) => ({
             status: "loading",
             stations: current.stations,
@@ -98,9 +101,15 @@ export function useSearchStationByName() {
         }));
 
         try {
-            const stations = await searchStationByName({ osnm, area, signal: abortController.signal });
+            const stations = await searchStationByName({
+                osnm,
+                area,
+                signal: abortController.signal,
+            });
 
-            if (abortController.signal.aborted) return;
+            if (abortController.signal.aborted) {
+                return;
+            }
 
             setState({
                 status: "success",
@@ -109,22 +118,28 @@ export function useSearchStationByName() {
                 policy: null,
             });
         } catch (error) {
-            if (abortController.signal.aborted) return;
-
-            const requestFailure = toRequestFailure(error);
-            const policy = decideSearchStationByNameFailurePolicy(requestFailure.code);
-            failedSearchInputRef.current = { osnm, area };
-
-            if (policy.presentation === "inline") {
-                setInlineFailure({
-                    message: getSearchStationByNameFailureMessage(requestFailure),
-                });
+            if (abortController.signal.aborted) {
+                return;
             }
 
-            setState({
-                status: "error",
-                stations: null,
+            const requestFailure = toRequestFailure(error);
+
+            const failure: SearchStationByNameFailure = {
+                type: "request",
                 failure: requestFailure,
+            };
+
+            const policy = decideFailurePolicy(failure);
+
+            failedRequestInputRef.current = {
+                osnm,
+                area,
+            };
+
+            setState({
+                status: "failure",
+                stations: null,
+                failure,
                 policy,
             });
         } finally {
@@ -140,94 +155,107 @@ export function useSearchStationByName() {
         };
     }, []);
 
-    const search = async (stationName: string, area?: string) => {
-        failedSearchInputRef.current = null;
+    const search = useCallback(
+        async (stationName: string, area?: string) => {
+            failedRequestInputRef.current = null;
 
-        const validation = validateSearchStationByNameInput(stationName);
+            const validation = validate(stationName);
 
-        if (!validation.isValid) {
-            setInlineFailure(validation.inlineFailure);
+            if (!validation.isValid) {
+                const failure: SearchStationByNameFailure = {
+                    type: "validation",
+                    code: validation.code,
+                };
+
+                setState((current) => ({
+                    status: "failure",
+                    stations: current.stations,
+                    failure,
+                    policy: decideFailurePolicy(failure),
+                }));
+
+                return;
+            }
+
+            await requestStationsByName({
+                osnm: validation.osnm,
+                area,
+            });
+        },
+        [requestStationsByName],
+    );
+
+    const retry = useCallback(() => {
+        const failedRequestInput = failedRequestInputRef.current;
+
+        if (!failedRequestInput) {
             return;
         }
 
-        await requestStationsByName({ osnm: validation.osnm, area });
-    };
-
-    const retry = useCallback(() => {
-        const failedSearchInput = failedSearchInputRef.current;
-
-        if (!failedSearchInput) return;
-
-        void requestStationsByName(failedSearchInput);
+        void requestStationsByName(failedRequestInput);
     }, [requestStationsByName]);
+
+    const resetValidationError = useCallback(() => {
+        setState((current) => {
+            if (current.status !== "failure" || current.failure.type !== "validation") {
+                return current;
+            }
+
+            if (current.stations !== null) {
+                return {
+                    status: "success",
+                    stations: current.stations,
+                    failure: null,
+                    policy: null,
+                };
+            }
+
+            return INITIAL_SEARCH_STATION_BY_NAME_STATE;
+        });
+    }, []);
 
     return {
         state,
-        inlineFailure,
-        resetInlineFailure,
         retry,
         search,
+        resetValidationError,
     };
 }
 
-export function validateSearchStationByNameInput(stationName: string): SearchStationByNameInputValidation {
+function validate(stationName: string): SearchStationByNameValidation {
     const osnm = stationName.trim();
     const length = Array.from(osnm).length;
 
     if (length < MIN_STATION_NAME_SEARCH_LENGTH) {
         return {
             isValid: false,
-            osnm: null,
-            inlineFailure: {
-                message: "주유소명을 2자 이상 입력해주세요.",
-            },
+            code: "TOO_SHORT",
         };
     }
 
     if (length > MAX_STATION_NAME_SEARCH_LENGTH) {
         return {
             isValid: false,
-            osnm: null,
-            inlineFailure: {
-                message: "주유소명을 30자 이하로 입력해주세요.",
-            },
+            code: "TOO_LONG",
         };
     }
 
     return {
         isValid: true,
         osnm,
-        inlineFailure: null,
     };
 }
 
-export function getSearchStationByNameFailureMessage(failure: RequestFailure) {
-    switch (failure.code) {
-        case "INVALID_INPUT":
-        case "PAYLOAD_TOO_LARGE":
-            return "입력값을 확인해주세요.";
-        case "ROUTE_NOT_FOUND":
-        case "METHOD_NOT_ALLOWED":
-        case "INVALID_RESPONSE":
-            return "요청을 처리할 수 없습니다.";
-        case "OPINET_UNAVAILABLE":
-        case "DATABASE_UNAVAILABLE":
-        case "INTERNAL_SERVER_ERROR":
-            return "요청이 실패했습니다.";
-        case "OFFLINE":
-            return "인터넷 연결을 확인해주세요.";
-        case "NETWORK_ERROR":
-        case "TIMEOUT":
-            return "일시적으로 문제가 발생했습니다.";
-        case "CONFIGURATION_ERROR":
-        case "UNKNOWN_ERROR":
-        default:
-            return "예상하지 못한 문제가 발생했습니다.";
+function decideFailurePolicy(failure: SearchStationByNameFailure): SearchStationByNameFailurePolicy {
+    if (failure.type === "validation") {
+        return {
+            presentation: "inline",
+            recovery: "edit-input",
+            report: "none",
+        };
     }
-}
 
-function decideSearchStationByNameFailurePolicy(code: string): SearchStationByNameFailurePolicy {
-    switch (code as SearchStationByNameFailureCode) {
+    switch (failure.failure.code as SearchStationByNameFailureCode) {
         case "INVALID_INPUT":
         case "PAYLOAD_TOO_LARGE":
             return {
