@@ -29,10 +29,15 @@ type StationCenteringDecision =
 /**
  * 지도 마커와 바텀 시트가 같은 주유소 목록을 바라보도록 필터와 정렬을 한 곳에서 적용한다.
  */
-export function getVisibleStations(stations: Station[], localCurrencyOnly: boolean) {
-    const filteredStations = localCurrencyOnly
-        ? stations.filter((station) => station.localCurrency?.accepted === true)
-        : stations;
+export function getVisibleStations(stations: Station[], localCurrencyOnly: boolean, selectedBrandCodes: string[] = []) {
+    const selectedBrandCodeSet = new Set(selectedBrandCodes);
+    const filteredStations = stations.filter((station) => {
+        if (localCurrencyOnly && station.localCurrency?.accepted !== true) {
+            return false;
+        }
+
+        return selectedBrandCodeSet.size === 0 || selectedBrandCodeSet.has(station.brandCode ?? "");
+    });
 
     return [...filteredStations].sort((a, b) => a.price - b.price);
 }

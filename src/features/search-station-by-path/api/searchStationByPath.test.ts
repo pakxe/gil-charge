@@ -19,6 +19,28 @@ describe("stationApi", () => {
         await expect(searchStationByPath({ paths: [createPath()], radiusKm: 3 })).resolves.toEqual(stations);
     });
 
+    it("brandCode가 없는 기존 응답은 null로 정규화한다", async () => {
+        const stationWithoutBrandCode = {
+            id: "station-1",
+            name: "테스트 주유소",
+            price: 1_700,
+            lat: 37.5665,
+            lng: 126.978,
+            localCurrency: {
+                accepted: null,
+                status: "UNKNOWN",
+            },
+        };
+        vi.spyOn(httpClient, "post").mockResolvedValue(createAxiosResponse({ stations: [stationWithoutBrandCode] }));
+
+        await expect(searchStationByPath({ paths: [createPath()], radiusKm: 3 })).resolves.toEqual([
+            {
+                ...stationWithoutBrandCode,
+                brandCode: null,
+            },
+        ]);
+    });
+
     it("응답 body가 기대 형식이 아니면 INVALID_RESPONSE를 던진다", async () => {
         vi.spyOn(httpClient, "post").mockResolvedValue(createAxiosResponse({ items: [] }));
 
@@ -93,6 +115,7 @@ function createStation(): Station {
         id: "station-1",
         name: "테스트 주유소",
         price: 1_700,
+        brandCode: "SKE",
         lat: 37.5665,
         lng: 126.978,
         localCurrency: {
