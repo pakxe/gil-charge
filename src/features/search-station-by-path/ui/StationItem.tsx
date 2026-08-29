@@ -1,5 +1,6 @@
 import type { Station } from "@/shared/types/map";
 import { cn } from "@/shared/lib/cn";
+import { BRAND_BY_CODE } from "@/features/search-station-by-path/ui/stationBrand";
 
 type LocalCurrencyStatus = Station["localCurrency"]["status"];
 
@@ -12,6 +13,7 @@ type StationItemProps = {
 
 export function StationItem({ station, isSelected, buttonRef, onClick }: StationItemProps) {
     const currencyStatus = station.localCurrency?.status ?? "UNKNOWN";
+    const brand = station.brandCode ? BRAND_BY_CODE[station.brandCode] : undefined;
 
     const shouldShowCurrencyStatusTag = currencyStatus === "ACCEPTED" || currencyStatus === "NOT_ACCEPTED";
 
@@ -39,11 +41,15 @@ export function StationItem({ station, isSelected, buttonRef, onClick }: Station
                     {station.localCurrency?.roadAddress ?? "주소 정보 없음"}
                 </p>
 
-                {shouldShowCurrencyStatusTag && (
-                    <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs", getStatusTone(currencyStatus))}>
-                        {LOCAL_CURRENCY_STATUS_LABELS[currencyStatus]}
-                    </span>
-                )}
+                <div className="flex shrink-0 items-center gap-1.5">
+                    {brand && <span className={cn("rounded-full px-2 py-0.5 text-xs", brand.tone)}>{brand.label}</span>}
+
+                    {shouldShowCurrencyStatusTag && (
+                        <span className={cn("rounded-full px-2 py-0.5 text-xs", getStatusTone(currencyStatus))}>
+                            {LOCAL_CURRENCY_STATUS_LABELS[currencyStatus]}
+                        </span>
+                    )}
+                </div>
             </div>
 
             {station.localCurrency?.currencyName && (
