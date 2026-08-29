@@ -5,7 +5,7 @@
 
 ## 배경
 
-프론트엔드에는 주유소명으로 검색하는 `useSearchStationsByName`과 경로 및 반경으로 검색하는 `useStationsSearch`가 있다.
+프론트엔드에는 주유소명으로 검색하는 `useSearchStationByName`과 경로 및 반경으로 검색하는 `useSearchStationByPath`가 있다.
 두 훅은 요청 상태와 실패한 요청의 입력을 관리하고, View에 `search`와 `retry`를 제공한다.
 
 현재 View는 요청 중일 때 검색 버튼을 비활성화하고 click 또는 submit handler에서도 `isLoading`을 확인한다.
@@ -38,7 +38,7 @@ Controller의 요청 취소는 호출 경로와 관계없이 상태 일관성을
 
 ## 결정 2. 요청 생애주기는 Controller에서 AbortController로 관리한다
 
-`useSearchStationsByName`과 `useStationsSearch`는 현재 요청의 `AbortController`를 ref에 보관한다.
+`useSearchStationByName`과 `useSearchStationByPath`는 현재 요청의 `AbortController`를 ref에 보관한다.
 
 각 요청은 다음 순서로 실행한다.
 
@@ -48,7 +48,7 @@ Controller의 요청 취소는 호출 경로와 관계없이 상태 일관성을
 4. 요청이 완료되어도 해당 signal이 취소된 상태라면 React 상태를 갱신하지 않는다.
 5. 현재 ref가 해당 요청의 컨트롤러일 때만 `finally`에서 ref를 비운다.
 
-Request layer의 `searchStationsByName`과 `searchStationsByPath`는 `AbortSignal`을 입력으로 받고 HTTP client에 전달한다.
+Request layer의 `searchStationByName`과 `searchStationByPath`는 `AbortSignal`을 입력으로 받고 HTTP client에 전달한다.
 Request layer는 signal의 전달만 책임지고, 어떤 요청을 언제 취소할지는 Controller가 결정한다.
 
 ## 결정 3. 취소된 요청은 실패 상태와 재시도 입력을 만들지 않는다

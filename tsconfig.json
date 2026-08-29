@@ -9,10 +9,9 @@
         "skipLibCheck": true,
         "paths": {
             "@/shared/*": ["shared/*"],
-            "@/assets/*": ["assets/*"],
-            "@/utils/*": ["utils/*"],
-            "@/icons/*": ["assets/icons/*"],
             "@/features/*": ["features/*"],
+            "@/pages/*": ["pages/*"],
+            "@/app/*": ["app/*"],
             "@/constants/*": ["constants/*"]
         },
         "outDir": "./dist",

@@ -1,5 +1,5 @@
-import { Button } from "@/shared/components/Button/Button";
-import { LoadingSpinner } from "@/shared/components/LoadingSpinner/LoadingSpinner";
+import { Button } from "@/shared/ui/Button/Button";
+import { LoadingSpinner } from "@/shared/ui/LoadingSpinner/LoadingSpinner";
 
 export function MapLoadingFallback() {
     return (

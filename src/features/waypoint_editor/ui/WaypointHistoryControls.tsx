@@ -1,5 +1,5 @@
-import Box from "@/shared/components/Box/Box";
-import { cn } from "@/shared/utils/cn";
+import Box from "@/shared/ui/Box/Box";
+import { cn } from "@/shared/lib/cn";
 
 type Props = {
     canUndo: boolean;

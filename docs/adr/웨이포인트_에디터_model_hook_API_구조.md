@@ -63,7 +63,7 @@ setEditorState((prev) => {
     - `drag`, `pointer` 같은 입력 장치 용어를 쓰지 않는다.
     - 상태명과 명령명은 `move`, `moving`처럼 도메인 용어를 사용한다.
     - export는 `waypointEditor` 객체 하나로 묶는다.
-- `hooks/useWaypointEditor.ts`
+- `model/useWaypointEditor.ts`
     - 상태 원본은 React state 하나다.
     - model 명령은 함수형 `setState(prev => ...)` 안에서 호출한다.
     - UI가 바로 쓸 수 있는 파생 데이터는 hook에서 계산한다.
