@@ -14,7 +14,7 @@ import { getSearchStationByNameFailureMessage } from "@/features/search-station-
 export function SearchStationByNamePage() {
     const [stationName, setStationName] = useState("");
 
-    const { state, resetValidationError, retry, search } = useSearchStationByName();
+    const { state, resetEditInputFailure, retry, search } = useSearchStationByName();
 
     const { showToast } = useToast();
 
@@ -67,7 +67,7 @@ export function SearchStationByNamePage() {
                     onChange={(event) => {
                         setStationName(event.target.value);
 
-                        resetValidationError();
+                        resetEditInputFailure();
                     }}
                     placeholder="주유소명을 입력해주세요"
                     aria-label="주유소명"

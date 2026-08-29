@@ -195,9 +195,9 @@ export function useSearchStationByName() {
         void requestStationsByName(failedRequestInput);
     }, [requestStationsByName]);
 
-    const resetValidationError = useCallback(() => {
+    const resetEditInputFailure = useCallback(() => {
         setState((current) => {
-            if (current.status !== "failure" || current.failure.type !== "validation") {
+            if (current.status !== "failure" || current.policy.recovery !== "edit-input") {
                 return current;
             }
 
@@ -218,7 +218,7 @@ export function useSearchStationByName() {
         state,
         retry,
         search,
-        resetValidationError,
+        resetEditInputFailure,
     };
 }
 
