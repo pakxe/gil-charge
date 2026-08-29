@@ -93,6 +93,7 @@ function createStation(): Station {
         id: "station-1",
         name: "테스트 주유소",
         price: 1_700,
+        brandCode: "SKE",
         lat: 37.5665,
         lng: 126.978,
         localCurrency: {

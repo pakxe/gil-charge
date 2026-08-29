@@ -25,6 +25,7 @@ const searchStationByPathErrorSchema = createApiErrorSchema(SEARCH_STATION_BY_PA
 
 const pathStationSchema = baseStationSchema.extend({
     price: z.number(),
+    brandCode: z.string().nullable(),
     localCurrency: z.object({
         accepted: z.boolean().nullable(),
         status: z.enum(["UNKNOWN", "ACCEPTED", "NOT_ACCEPTED", "OUT_OF_SCOPE", "MISSING_ROAD_ADDRESS", "ERROR"]),

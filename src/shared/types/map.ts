@@ -29,6 +29,7 @@ export interface Station {
     id: string;
     name: string;
     price: number;
+    brandCode: string | null;
     lat: number;
     lng: number;
     localCurrency: {
