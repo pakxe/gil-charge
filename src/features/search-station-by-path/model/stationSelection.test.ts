@@ -37,6 +37,21 @@ describe("stationSelection", () => {
         ).toEqual(["cheap", "expensive"]);
     });
 
+    it("선택한 브랜드 코드에 해당하는 주유소만 표시한다", () => {
+        expect(
+            getVisibleStations(
+                [
+                    createStation({ id: "gs", brandCode: "GSC", price: 1_800 }),
+                    createStation({ id: "sk", brandCode: "SKE", price: 1_700 }),
+                    createStation({ id: "soil", brandCode: "SOL", price: 1_600 }),
+                    createStation({ id: "other", brandCode: "HDO", price: 1_500 }),
+                ],
+                false,
+                ["GSC", "SOL"],
+            ).map((station) => station.id),
+        ).toEqual(["soil", "gs"]);
+    });
+
     it("좌표가 지도 bounds 안에 있는지 확인한다", () => {
         const bounds = {
             southWest: { lat: 37, lng: 126 },
@@ -111,15 +126,18 @@ function createStation({
     id,
     price = 1_700,
     accepted = true,
+    brandCode = "SKE",
 }: {
     id: string;
     price?: number;
     accepted?: boolean | null;
+    brandCode?: string | null;
 }): Station {
     return {
         id,
         name: id,
         price,
+        brandCode,
         lat: 37.5,
         lng: 126.5,
         localCurrency: {
