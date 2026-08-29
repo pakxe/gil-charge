@@ -25,7 +25,10 @@ const searchStationByPathErrorSchema = createApiErrorSchema(SEARCH_STATION_BY_PA
 
 const pathStationSchema = baseStationSchema.extend({
     price: z.number(),
-    brandCode: z.string().nullable(),
+    brandCode: z
+        .string()
+        .nullish()
+        .transform((brandCode) => brandCode ?? null),
     localCurrency: z.object({
         accepted: z.boolean().nullable(),
         status: z.enum(["UNKNOWN", "ACCEPTED", "NOT_ACCEPTED", "OUT_OF_SCOPE", "MISSING_ROAD_ADDRESS", "ERROR"]),
@@ -60,7 +63,7 @@ export async function searchStationByPath({ paths, radiusKm, signal }: SearchSta
     const parsed = searchStationByPathResponseSchema.safeParse(response.data);
 
     if (!parsed.success) {
-        throw createRequestFailure("INVALID_RESPONSE");
+        throw createRequestFailure("INVALID_RESPONSE", { cause: parsed.error });
     }
 
     return parsed.data.stations;
