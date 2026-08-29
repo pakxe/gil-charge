@@ -20,7 +20,17 @@ describe("stationApi", () => {
     });
 
     it("brandCode가 없는 기존 응답은 null로 정규화한다", async () => {
-        const { brandCode: _brandCode, ...stationWithoutBrandCode } = createStation();
+        const stationWithoutBrandCode = {
+            id: "station-1",
+            name: "테스트 주유소",
+            price: 1_700,
+            lat: 37.5665,
+            lng: 126.978,
+            localCurrency: {
+                accepted: null,
+                status: "UNKNOWN",
+            },
+        };
         vi.spyOn(httpClient, "post").mockResolvedValue(createAxiosResponse({ stations: [stationWithoutBrandCode] }));
 
         await expect(searchStationByPath({ paths: [createPath()], radiusKm: 3 })).resolves.toEqual([
