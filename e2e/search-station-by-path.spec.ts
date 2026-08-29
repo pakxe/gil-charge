@@ -225,7 +225,7 @@ async function getCenterPoint(locator: Locator) {
     };
 }
 
-async function expectWaypointNearPoint(searchStationByPath: Locator, point: { x: number; y: number }) {
+async function expectWaypointNearPoint(waypoint: Locator, point: { x: number; y: number }) {
     await expect
         .poll(
             async () => {
