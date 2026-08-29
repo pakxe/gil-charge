@@ -10,6 +10,7 @@ import { useMap } from "@/shared/model/useMap";
 import { useCurrentLocation } from "@/features/search-station-by-path/model/useCurrentLocation";
 import { useSearchResultSheetLayout } from "@/features/search-station-by-path/model/useSearchResultSheetLayout";
 import { useStationSelection } from "@/features/search-station-by-path/model/useStationSelection";
+import { useStationBrandFilter } from "@/features/search-station-by-path/model/useStationBrandFilter";
 import { useWaypointEditor } from "@/features/waypoint_editor/model/useWaypointEditor";
 import { Map } from "@/shared/ui/Map/Map";
 import { MapErrorFallback, MapLoadingFallback } from "@/shared/ui/Map/MapFallback";
@@ -85,6 +86,11 @@ export function SearchStationByPathStep() {
     });
 
     const stations = isSearchResultDismissed ? null : searchStationByPathState.stations;
+    const {
+        brandFilterCodes,
+        selectedBrandCodes,
+        toggleBrandCode,
+    } = useStationBrandFilter(stations);
     const isLoading = searchStationByPathState.status === "loading";
     const searchFailure = searchStationByPathState.status === "error" ? searchStationByPathState.failure : null;
     const searchFailurePolicy = searchStationByPathState.status === "error" ? searchStationByPathState.policy : null;
@@ -116,8 +122,8 @@ export function SearchStationByPathStep() {
 
     const currentStrokeWeight = useMemo(() => calculateStrokeWeight(zoomLevel, radiusKm), [zoomLevel, radiusKm]);
     const visibleStations = useMemo(
-        () => (stations ? getVisibleStations(stations, localCurrencyOnly) : []),
-        [localCurrencyOnly, stations],
+        () => (stations ? getVisibleStations(stations, localCurrencyOnly, selectedBrandCodes) : []),
+        [localCurrencyOnly, selectedBrandCodes, stations],
     );
     const {
         selectedStationId,
@@ -277,6 +283,8 @@ export function SearchStationByPathStep() {
                         stations={stations}
                         visibleStations={visibleStations}
                         localCurrencyOnly={localCurrencyOnly}
+                        brandFilterCodes={brandFilterCodes}
+                        selectedBrandCodes={selectedBrandCodes}
                         selectedStationId={selectedStationId}
                         selectionSource={selectionSource}
                         selectionRevision={selectionRevision}
@@ -286,6 +294,7 @@ export function SearchStationByPathStep() {
                             setLocalCurrencyOnly(nextLocalCurrencyOnly);
                             handleLocalCurrencyOnlyChange(nextLocalCurrencyOnly);
                         }}
+                        onBrandFilterToggle={toggleBrandCode}
                         onStationClick={(stationId) => selectStation("list", stationId, searchOverlayVisibleHeight)}
                         onClose={() => {
                             setIsSearchResultDismissed(true);
