@@ -275,6 +275,59 @@ describe("useSearchStationByName request lifecycle", () => {
             area: "01",
         });
     });
+
+    it("입력 수정으로 복구 가능한 실패는 초기화한다", async () => {
+        searchStationByNameMock.mockRejectedValueOnce(createRequestFailure("INVALID_INPUT"));
+
+        const { result } = renderHook(() => useSearchStationByName());
+
+        await act(async () => {
+            await result.current.search("보라매");
+        });
+
+        expect(result.current.state).toMatchObject({
+            status: "failure",
+            policy: {
+                recovery: "edit-input",
+            },
+        });
+
+        act(() => {
+            result.current.resetEditInputFailure();
+        });
+
+        expect(result.current.state).toMatchObject({
+            status: "idle",
+            stations: null,
+            failure: null,
+            policy: null,
+        });
+    });
+
+    it("입력 수정으로 복구하지 않는 실패는 초기화하지 않는다", async () => {
+        searchStationByNameMock.mockRejectedValueOnce(createRequestFailure("TIMEOUT"));
+
+        const { result } = renderHook(() => useSearchStationByName());
+
+        await act(async () => {
+            await result.current.search("보라매");
+        });
+
+        const failureState = result.current.state;
+
+        expect(failureState).toMatchObject({
+            status: "failure",
+            policy: {
+                recovery: "manual-retry",
+            },
+        });
+
+        act(() => {
+            result.current.resetEditInputFailure();
+        });
+
+        expect(result.current.state).toBe(failureState);
+    });
 });
 
 function getRequest(index: number): SearchStationByNameParams {
