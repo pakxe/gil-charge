@@ -5,6 +5,7 @@ import { useResultBottomSheetDrag } from "@/features/search-station-by-path/mode
 import { StationList } from "@/features/search-station-by-path/ui/StationList";
 import type { Station } from "@/shared/types/map";
 import { cn } from "@/shared/lib/cn";
+import { BRAND_BY_CODE } from "@/features/search-station-by-path/ui/stationBrand";
 
 interface ResultBottomSheetProps {
     containerRef: RefObject<HTMLElement | null>;
@@ -12,12 +13,15 @@ interface ResultBottomSheetProps {
     stations: Station[];
     visibleStations: Station[];
     localCurrencyOnly: boolean;
+    brandFilterCodes: string[];
+    selectedBrandCodes: string[];
     selectedStationId: string | null;
     selectionSource: StationSelectionSource | null;
     selectionRevision: number;
     visibleHeight: number;
     onVisibleHeightChange: (visibleHeight: number) => void;
     onLocalCurrencyOnlyChange: (localCurrencyOnly: boolean) => void;
+    onBrandFilterToggle: (brandCode: string) => void;
     onStationClick: (stationId: string) => void;
     onClose: () => void;
 }
@@ -28,12 +32,15 @@ export function ResultBottomSheet({
     stations,
     visibleStations,
     localCurrencyOnly,
+    brandFilterCodes,
+    selectedBrandCodes,
     selectedStationId,
     selectionSource,
     selectionRevision,
     visibleHeight,
     onVisibleHeightChange,
     onLocalCurrencyOnlyChange,
+    onBrandFilterToggle,
     onStationClick,
     onClose,
 }: ResultBottomSheetProps) {
@@ -45,7 +52,6 @@ export function ResultBottomSheet({
             onVisibleHeightChange,
             onClose,
         });
-
     return (
         <section
             className={cn(
@@ -105,6 +111,35 @@ export function ResultBottomSheet({
                         </button>
                     </div>
                 </div>
+
+                {brandFilterCodes.length > 0 && (
+                    <div className="-mx-4 mb-3 flex flex-none gap-2 overflow-x-auto px-4 pb-1 pt-1">
+                        {brandFilterCodes.map((brandCode) => {
+                            const brand = BRAND_BY_CODE[brandCode] ?? {
+                                label: brandCode,
+                                tone: "bg-gil-gray-700 text-gil-gray-200",
+                            };
+                            const isSelected = selectedBrandCodes.includes(brandCode);
+
+                            return (
+                                <button
+                                    key={brandCode}
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    className={cn(
+                                        "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold transition",
+                                        isSelected
+                                            ? `${brand.tone} ring-1 ring-current`
+                                            : "bg-gil-gray-800 text-gil-gray-500",
+                                    )}
+                                    onClick={() => onBrandFilterToggle(brandCode)}
+                                >
+                                    {brand.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
 
                 <StationList
                     totalStationCount={stations.length}
