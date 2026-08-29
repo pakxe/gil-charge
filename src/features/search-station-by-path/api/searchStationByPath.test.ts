@@ -19,6 +19,18 @@ describe("stationApi", () => {
         await expect(searchStationByPath({ paths: [createPath()], radiusKm: 3 })).resolves.toEqual(stations);
     });
 
+    it("brandCode가 없는 기존 응답은 null로 정규화한다", async () => {
+        const { brandCode: _brandCode, ...stationWithoutBrandCode } = createStation();
+        vi.spyOn(httpClient, "post").mockResolvedValue(createAxiosResponse({ stations: [stationWithoutBrandCode] }));
+
+        await expect(searchStationByPath({ paths: [createPath()], radiusKm: 3 })).resolves.toEqual([
+            {
+                ...stationWithoutBrandCode,
+                brandCode: null,
+            },
+        ]);
+    });
+
     it("응답 body가 기대 형식이 아니면 INVALID_RESPONSE를 던진다", async () => {
         vi.spyOn(httpClient, "post").mockResolvedValue(createAxiosResponse({ items: [] }));
 
