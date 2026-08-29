@@ -277,7 +277,9 @@ describe("useSearchStationByName request lifecycle", () => {
     });
 
     it("입력 수정으로 복구 가능한 실패는 초기화한다", async () => {
-        searchStationByNameMock.mockRejectedValueOnce(createRequestFailure("INVALID_INPUT"));
+        searchStationByNameMock.mockRejectedValueOnce(
+            createRequestFailure("INVALID_INPUT", { message: "입력값을 확인해주세요." }),
+        );
 
         const { result } = renderHook(() => useSearchStationByName());
 
