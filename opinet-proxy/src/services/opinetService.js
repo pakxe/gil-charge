@@ -61,6 +61,7 @@ async function fetchStationsAlongPaths(paths, radiusKm) {
                     lat,
                     lng,
                     brand: station.POLL_DIV_CO,
+                    brandCode: firstString(station.POLL_DIV_CD) || null,
                 });
             }
         });
