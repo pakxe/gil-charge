@@ -4,6 +4,8 @@ export const MAX_WAYPOINT_COUNT = 20;
 
 export type WaypointNodeId = string;
 
+export type WaypointEditorMode = "waypoint" | "lasso";
+
 export type WaypointNode = {
     id: WaypointNodeId;
     latLng: LatLng;
