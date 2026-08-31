@@ -17,58 +17,49 @@ export function StationResultFilters({
     onBrandFilterToggle,
 }: StationResultFiltersProps) {
     return (
-        <div className="flex min-w-0 flex-col items-end gap-2">
-            <div className="flex flex-none items-center justify-end gap-3">
-                <div className="flex shrink-0 items-center gap-3">
-                    <span className="text-sub font-medium text-gil-gray-200">지역화폐 가능</span>
+        <div className="-mx-4 mb-3 flex flex-none items-center gap-3 overflow-x-auto px-4 pb-1 pt-1">
+            <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
+                {brandCodes.map((brandCode) => {
+                    const brand = BRAND_BY_CODE[brandCode] ?? {
+                        label: brandCode,
+                        tone: "bg-gil-gray-700 text-gil-gray-200",
+                    };
+                    const isSelected = selectedBrandCodes.includes(brandCode);
 
-                    <button
-                        type="button"
-                        onClick={() => onLocalCurrencyOnlyChange(!localCurrencyOnly)}
-                        aria-pressed={localCurrencyOnly}
-                        className={cn(
-                            "relative h-7 w-12 shrink-0 rounded-full transition-colors",
-                            localCurrencyOnly ? "bg-gil-yellow-400" : "bg-gil-gray-700",
-                        )}
-                    >
-                        <span
+                    return (
+                        <button
+                            key={brandCode}
+                            type="button"
+                            aria-pressed={isSelected}
                             className={cn(
-                                "absolute left-0 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform",
-                                localCurrencyOnly ? "translate-x-6" : "translate-x-1",
+                                "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold transition",
+                                isSelected
+                                    ? `${brand.tone} ring-1 ring-current`
+                                    : "bg-gil-gray-800 text-gil-gray-500",
                             )}
-                        />
-                    </button>
-                </div>
+                            onClick={() => onBrandFilterToggle(brandCode)}
+                        >
+                            {brand.label}
+                        </button>
+                    );
+                })}
             </div>
 
-            {brandCodes.length > 0 && (
-                <div className="flex max-w-full flex-none gap-2 overflow-x-auto pb-1 pt-1">
-                    {brandCodes.map((brandCode) => {
-                        const brand = BRAND_BY_CODE[brandCode] ?? {
-                            label: brandCode,
-                            tone: "bg-gil-gray-700 text-gil-gray-200",
-                        };
-                        const isSelected = selectedBrandCodes.includes(brandCode);
+            {brandCodes.length > 0 && <span aria-hidden className="h-5 w-px shrink-0 bg-gil-gray-700" />}
 
-                        return (
-                            <button
-                                key={brandCode}
-                                type="button"
-                                aria-pressed={isSelected}
-                                className={cn(
-                                    "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold transition",
-                                    isSelected
-                                        ? `${brand.tone} ring-1 ring-current`
-                                        : "bg-gil-gray-800 text-gil-gray-500",
-                                )}
-                                onClick={() => onBrandFilterToggle(brandCode)}
-                            >
-                                {brand.label}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
+            <button
+                type="button"
+                aria-pressed={localCurrencyOnly}
+                className={cn(
+                    "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold transition",
+                    localCurrencyOnly
+                        ? "bg-gil-yellow-400 text-gil-brown-900 ring-1 ring-current"
+                        : "bg-gil-gray-800 text-gil-gray-500",
+                )}
+                onClick={() => onLocalCurrencyOnlyChange(!localCurrencyOnly)}
+            >
+                지역화폐
+            </button>
         </div>
     );
 }
