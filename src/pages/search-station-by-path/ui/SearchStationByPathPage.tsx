@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ChangeEvent } from "react";
 
 import {
     type SearchStationByPathFailurePolicy,
@@ -8,36 +7,30 @@ import {
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
 import { useMap } from "@/shared/model/useMap";
 import { useCurrentLocation } from "@/features/search-station-by-path/model/useCurrentLocation";
-import { useSearchResultSheetLayout } from "@/features/search-station-by-path/model/useSearchResultSheetLayout";
-import { useStationSelection } from "@/features/search-station-by-path/model/useStationSelection";
-import { useStationBrandFilter } from "@/features/search-station-by-path/model/useStationBrandFilter";
-import { useWaypointEditor } from "@/features/waypoint_editor/model/useWaypointEditor";
 import { Map } from "@/shared/ui/Map/Map";
 import { MapErrorFallback, MapLoadingFallback } from "@/shared/ui/Map/MapFallback";
 import { WaypointNodesLayer } from "@/features/waypoint_editor/ui/WaypointNodesLayer";
 import { WaypointEdgesLayer } from "@/features/waypoint_editor/ui/WaypointEdgesLayer";
 import { WaypointLassoLayer } from "@/features/waypoint_editor/ui/WaypointLassoLayer";
 import { getWaypointIdsInPolygon } from "@/features/waypoint_editor/lib/getWaypointIdsInPolygon";
-import { ResultBottomSheet } from "@/features/search-station-by-path/ui/ResultBottomSheet";
 import { StationMarkersLayer } from "@/features/search-station-by-path/ui/StationMarkersLayer";
 import type { RequestFailure } from "@/shared/lib/requestFailure";
 import { useToast } from "@/shared/ui/Toast/useToast";
-import Box from "@/shared/ui/Box/Box";
-import { InlineFailurePresentation } from "@/shared/ui/InlineFailurePresentation/InlineFailurePresentation";
-import { LoadingSpinner } from "@/shared/ui/LoadingSpinner/LoadingSpinner";
-import { Slider } from "@/shared/ui/Slider/Slider";
-import { cn } from "@/shared/lib/cn";
-import { WaypointHistoryControls } from "@/features/waypoint_editor/ui/WaypointHistoryControls";
-import { getVisibleStations } from "@/features/search-station-by-path/model/stationSelection";
 import { getSearchStationByPathFailureMessage } from "@/features/search-station-by-path/ui/getSearchStationByPathFailureMessage";
 import { CurrentLocationMarker } from "@/features/search-station-by-path/ui/CurrentLocationMarker";
 import { CurrentLocationButton } from "@/features/search-station-by-path/ui/CurrentLocationButton";
-
-type DrawMode = "waypoint" | "lasso";
+import { useWaypointEditor } from "@/features/waypoint_editor/model/useWaypointEditor";
+import { useResultStations } from "@/features/search-station-by-path/model/useResultStations";
+import { useSearchResultSheetLayout } from "@/features/search-station-by-path/model/useSearchResultSheetLayout";
+import { WaypointToolBar } from "@/features/waypoint_editor/ui/WaypointToolBar";
+import { SearchBar } from "@/features/search-station-by-path/ui/SearchBar";
+import { ResultBottomSheet } from "@/features/search-station-by-path/ui/ResultBottomSheet";
+import type { WaypointEditorMode, WaypointEditorStatus } from "@/features/waypoint_editor/model/waypointEditor";
 
 export function SearchStationByPathPage() {
     const map = useMap();
     const { showToast } = useToast();
+
     const { status, data, actions } = useWaypointEditor({
         onAddRejected: (reason) => {
             if (reason === "OVERFLOW") {
@@ -49,22 +42,58 @@ export function SearchStationByPathPage() {
     });
 
     const [zoomLevel, setZoomLevel] = useState(8);
-    const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
-    const [mode, setMode] = useState<DrawMode>(INITIAL_DRAW_MODE);
+    const [mode, setMode] = useState<WaypointEditorMode>(INITIAL_DRAW_MODE);
     const [isSearchResultDismissed, setIsSearchResultDismissed] = useState(false);
-    const [localCurrencyOnly, setLocalCurrencyOnly] = useState(false);
+
+    const {
+        visibleStations,
+        selectedStationId,
+        selectionSource,
+        filter,
+        brandCodes,
+        selectStation,
+        toggleBrandFilter,
+        changeLocalCurrencyFilter,
+        clearSelection,
+        replaceStations,
+    } = useResultStations({ map });
 
     const {
         state: searchStationByPathState,
         retry: retrySearchStationByPath,
         search: searchStations,
     } = useSearchStationByPath();
+
+    useEffect(() => {
+        if (searchStationByPathState.status === "success") {
+            replaceStations(searchStationByPathState.stations);
+        }
+    }, [replaceStations, searchStationByPathState]);
+
     const centerCurrentLocation = useCallback(
         (location: { lat: number; lng: number }) => {
             map?.setCenter(location);
         },
         [map],
     );
+
+    const handleSearch = async (radiusKm: number) => {
+        if (data.waypoints.length === 0) {
+            return;
+        }
+
+        await searchStations(
+            [
+                {
+                    type: "waypoint",
+                    points: data.waypoints.map((w) => w.latLng),
+                    id: "test",
+                },
+            ],
+            radiusKm,
+        );
+    };
+
     const {
         requestCurrentLocation,
         location,
@@ -93,19 +122,11 @@ export function SearchStationByPathPage() {
         },
     });
 
+    const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+
     const stations = isSearchResultDismissed ? null : searchStationByPathState.stations;
-    const {
-        brandFilterCodes,
-        selectedBrandCodes,
-        toggleBrandCode,
-    } = useStationBrandFilter(stations);
-    const isLoading = searchStationByPathState.status === "loading";
     const searchFailure = searchStationByPathState.status === "error" ? searchStationByPathState.failure : null;
     const searchFailurePolicy = searchStationByPathState.status === "error" ? searchStationByPathState.policy : null;
-
-    const handleRadiusChange = (event: ChangeEvent<HTMLInputElement>) => {
-        setRadiusKm(Number(event.target.value));
-    };
 
     useEffect(() => {
         return showToast({
@@ -129,56 +150,30 @@ export function SearchStationByPathPage() {
     }, [retrySearchStationByPath, searchFailure, searchFailurePolicy, showToast]);
 
     const currentStrokeWeight = useMemo(() => calculateStrokeWeight(zoomLevel, radiusKm), [zoomLevel, radiusKm]);
-    const visibleStations = useMemo(
-        () => (stations ? getVisibleStations(stations, localCurrencyOnly, selectedBrandCodes) : []),
-        [localCurrencyOnly, selectedBrandCodes, stations],
-    );
-    const {
-        selectedStationId,
-        selectionSource,
-        selectionRevision,
-        selectStation,
-        clearSelectedStation,
-        handleLocalCurrencyOnlyChange,
-    } = useStationSelection({ map, stations, visibleStations });
+
     const hasWaypoint = data.waypoints.length > 0;
+    const selectedWaypointIds = getSelectedWaypointIds(status);
     const isLassoMode = mode === "lasso";
-    const selectedWaypointIds = status.statusName === "selected" ? status.selectedNodeIds : [];
-    const hasSelectedWaypoint = selectedWaypointIds.length > 0;
     const hasSearchResult = stations !== null;
-    const canSubmitSearch = hasWaypoint && !isLoading;
-    const {
-        searchOverlayRef,
-        searchOverlayVisibleHeight,
-        maxSearchSheetHeight,
-        searchControlsBottom,
-        setSearchOverlayVisibleHeight,
-    } = useSearchResultSheetLayout({ hasSearchResult, stations });
 
-    const handleSubmit = async () => {
-        if (data.waypoints.length === 0) return;
-
-        setIsSearchResultDismissed(false);
-        clearSelectedStation();
-        await searchStations(
-            [
-                {
-                    type: "waypoint",
-                    points: data.waypoints.map((w) => w.latLng),
-                    id: "test",
-                },
-            ],
-            radiusKm,
-        );
-    };
-
-    const handleModeChange = (nextMode: DrawMode) => {
+    const handleModeChange = (nextMode: WaypointEditorMode) => {
         setMode(nextMode);
         showToast({
             message: MODE_GUIDE_MESSAGES[nextMode],
             durationMs: MODE_GUIDE_TOAST_DURATION_MS,
         });
     };
+
+    const {
+        searchOverlayRef,
+        searchOverlayVisibleHeight,
+        maxSearchSheetHeight,
+        searchControlsBottom,
+        setSearchOverlayVisibleHeight,
+    } = useSearchResultSheetLayout({
+        hasSearchResult,
+        stations,
+    });
 
     return (
         <div
@@ -227,176 +222,103 @@ export function SearchStationByPathPage() {
                 <StationMarkersLayer
                     stations={visibleStations}
                     selectedStationId={selectedStationId}
-                    onStationClick={(stationId) => selectStation("map", stationId)}
+                    onStationClick={(stationId) => {
+                        selectStation({
+                            source: "map",
+                            stationId,
+                        });
+                    }}
                 />
                 {location && <CurrentLocationMarker location={location} isStale={currentLocationStatus === "stale"} />}
             </Map>
             <div ref={searchOverlayRef} className="pointer-events-none absolute inset-0 z-70">
-                <div
-                    className="pointer-events-auto absolute left-0 flex w-full flex-row justify-between gap-4 px-4"
-                    style={{ bottom: searchControlsBottom }}
-                >
-                    <Box className="h-fit min-w-0 flex-1 flex flex-col rounded-2xl gap-0">
-                        <Slider
-                            id="radius-range"
-                            min={1}
-                            max={5}
-                            step={0.1}
-                            value={radiusKm}
-                            onChange={handleRadiusChange}
-                            topSlot={
-                                <>
-                                    <label htmlFor="radius-range" className="text-white text-xs">
-                                        반경
-                                    </label>
-                                    <span className="font-bold text-gil-yellow-400 text-xs">
-                                        {formatRadius(radiusKm)} km
-                                    </span>
-                                </>
-                            }
-                            bottomSlot={
-                                <InlineFailurePresentation
-                                    message={
-                                        searchFailure && searchFailurePolicy?.presentation === "inline"
-                                            ? getSearchStationByPathFailureMessage(searchFailure)
-                                            : null
-                                    }
-                                />
-                            }
-                        />
-                    </Box>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (!canSubmitSearch) return;
-
-                            void handleSubmit();
-                        }}
-                        disabled={!canSubmitSearch}
-                        aria-label={isLoading ? "탐색 중" : "찾기"}
-                        className={cn(
-                            "flex min-w-20 items-center justify-center rounded-2xl px-6 text-lg font-bold shadow-lg transition-colors",
-                            hasWaypoint ? "bg-gil-yellow-400 text-gil-brown-900" : "bg-gil-gray-850 text-gil-gray-600",
-                            canSubmitSearch ? "cursor-pointer" : "cursor-not-allowed",
-                        )}
-                    >
-                        {isLoading ? <LoadingSpinner /> : "찾기"}
-                    </button>
-                </div>
+                <SearchBar
+                    onRadiusChange={(radius) => setRadiusKm(radius)}
+                    radiusKm={radiusKm}
+                    onSearch={handleSearch}
+                    bottom={searchControlsBottom}
+                    errorMessage={
+                        searchFailure && searchFailurePolicy?.presentation === "inline"
+                            ? getSearchStationByPathFailureMessage(searchFailure)
+                            : null
+                    }
+                    searchState={
+                        searchStationByPathState.status === "loading" ? "loading" : hasWaypoint ? "ready" : "disabled"
+                    }
+                />
 
                 {hasSearchResult && (
                     <ResultBottomSheet
                         containerRef={searchOverlayRef}
                         maxHeight={maxSearchSheetHeight}
-                        stations={stations}
+                        stations={stations ?? []}
                         visibleStations={visibleStations}
-                        localCurrencyOnly={localCurrencyOnly}
-                        brandFilterCodes={brandFilterCodes}
-                        selectedBrandCodes={selectedBrandCodes}
+                        localCurrencyOnly={filter.localCurrencyOnly}
+                        brandCodes={brandCodes}
+                        selectedBrandCodes={filter.selectedBrandCodes}
                         selectedStationId={selectedStationId}
                         selectionSource={selectionSource}
-                        selectionRevision={selectionRevision}
                         visibleHeight={searchOverlayVisibleHeight}
                         onVisibleHeightChange={setSearchOverlayVisibleHeight}
-                        onLocalCurrencyOnlyChange={(nextLocalCurrencyOnly) => {
-                            setLocalCurrencyOnly(nextLocalCurrencyOnly);
-                            handleLocalCurrencyOnlyChange(nextLocalCurrencyOnly);
-                        }}
-                        onBrandFilterToggle={toggleBrandCode}
-                        onStationClick={(stationId) => selectStation("list", stationId, searchOverlayVisibleHeight)}
+                        onLocalCurrencyOnlyChange={changeLocalCurrencyFilter}
+                        onBrandFilterToggle={toggleBrandFilter}
+                        onStationClick={(stationId, bottomSheetVisibleHeight) =>
+                            selectStation({ source: "list", stationId }, bottomSheetVisibleHeight)
+                        }
                         onClose={() => {
                             setIsSearchResultDismissed(true);
-                            clearSelectedStation();
+                            clearSelection();
                         }}
                     />
                 )}
             </div>
-            <div className="absolute left-4 top-4 z-60 text-sm font-medium transition-colors flex flex-row gap-2 h-9">
-                <WaypointHistoryControls
-                    canUndo={data.canUndo}
-                    canRedo={data.canRedo}
-                    onUndo={actions.undoWaypoint}
-                    onRedo={actions.redoWaypoint}
-                />
-                <Box role="group" aria-label="경로 편집 모드" yPad={4} xPad={4} className="gap-1">
-                    <button
-                        type="button"
-                        aria-pressed={mode === "waypoint"}
-                        className={cn(
-                            "h-8 rounded-full px-3 text-xs font-bold transition-colors shrink-0",
-                            mode === "waypoint"
-                                ? "bg-gil-yellow-400 text-gil-brown-900"
-                                : "bg-transparent text-gil-light-text",
-                        )}
-                        onClick={() => handleModeChange("waypoint")}
-                    >
-                        추가
-                    </button>
-                    <button
-                        type="button"
-                        aria-pressed={mode === "lasso"}
-                        className={cn(
-                            "h-8 rounded-full px-3 text-xs font-bold transition-colors shrink-0",
-                            mode === "lasso"
-                                ? "bg-gil-yellow-400 text-gil-brown-900"
-                                : "bg-transparent text-gil-light-text",
-                        )}
-                        onClick={() => handleModeChange("lasso")}
-                    >
-                        선택
-                    </button>
-                </Box>
-                <button
-                    type="button"
-                    disabled={!hasSelectedWaypoint}
-                    className={cn(
-                        "min-h-10 rounded-full bg-[#1f1f1f]/40 px-3 backdrop-blur-[15px] transition-colors text-xs font-bold",
-                        hasSelectedWaypoint ? "cursor-pointer text-white" : "cursor-not-allowed text-gil-gray-650",
-                    )}
-                    onClick={() => {
-                        if (!hasSelectedWaypoint) return;
 
-                        actions.deleteBatchWaypoint(selectedWaypointIds);
-                    }}
-                >
-                    선택 삭제
-                </button>
-                <Box
-                    role="button"
-                    tabIndex={0}
-                    className={cn(
-                        hasWaypoint ? "text-white cursor-pointer" : "text-gil-gray-650",
-                        "text-xs px-3 font-bold",
-                    )}
-                    onClick={() => {
-                        if (!hasWaypoint) return;
-                        actions.deleteAllWaypoint();
-                    }}
-                >
-                    전체 삭제
-                </Box>
-            </div>
+            <WaypointToolBar
+                mode={mode}
+                hasWaypoints={hasWaypoint}
+                onModeChange={handleModeChange}
+                onDeleteAll={actions.deleteAllWaypoint}
+                history={{
+                    canUndo: data.canUndo,
+                    canRedo: data.canRedo,
+                    onUndo: actions.undoWaypoint,
+                    onRedo: actions.redoWaypoint,
+                }}
+                selection={{
+                    hasSelectedWaypoints: selectedWaypointIds.length > 0,
+                    onDeleteSelected: () => actions.deleteBatchWaypoint(selectedWaypointIds),
+                }}
+            />
             <CurrentLocationButton status={currentLocationStatus} onClick={requestCurrentLocation} />
         </div>
     );
 }
 
-function formatRadius(radiusKm: number) {
-    return Number.isInteger(radiusKm) ? String(radiusKm) : radiusKm.toFixed(1);
-}
+const DEFAULT_RADIUS_KM = 1;
 
 const BASE_LEVEL = 6;
 const BASE_STROKE_WEIGHT = 250;
-const DEFAULT_RADIUS_KM = 1;
-const INITIAL_DRAW_MODE: DrawMode = "waypoint";
+const INITIAL_DRAW_MODE: WaypointEditorMode = "waypoint";
 const MODE_GUIDE_TOAST_DURATION_MS = 2500;
-const MODE_GUIDE_MESSAGES: Record<DrawMode, string> = {
+const MODE_GUIDE_MESSAGES: Record<WaypointEditorMode, string> = {
     waypoint: "화면을 눌러 웨이포인트를 찍을 수 있습니다.",
     lasso: "올가미를 그려 여러 개의 웨이포인트를 선택할 수 있습니다.",
 };
 
 function isMoveActive(statusName: string) {
     return statusName === "moving" || statusName === "batchMoving";
+}
+
+function getSelectedWaypointIds(status: WaypointEditorStatus) {
+    if (status.statusName === "selected") {
+        return status.selectedNodeIds;
+    }
+
+    if (status.statusName === "moving" || status.statusName === "batchMoving") {
+        return status.selectionAfterMove;
+    }
+
+    return [];
 }
 
 function calculateStrokeWeight(currentLevel: number, radiusKm: number) {
