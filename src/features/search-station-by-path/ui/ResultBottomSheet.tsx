@@ -9,6 +9,7 @@ import { cn } from "@/shared/lib/cn";
 
 type ResultBottomSheetProps = {
     containerRef: RefObject<HTMLElement | null>;
+    className?: string;
     maxHeight: number;
     stations: Station[];
     totalStationCount: number;
@@ -30,6 +31,7 @@ type ResultBottomSheetProps = {
 };
 
 export function ResultBottomSheet({
+    className,
     containerRef,
     maxHeight,
     stations,
@@ -56,6 +58,7 @@ export function ResultBottomSheet({
         <section
             className={cn(
                 "pointer-events-auto absolute bottom-0 left-0 w-full overflow-hidden rounded-t-[28px] bg-gil-gray-950 shadow-2xl",
+                className,
                 !isDragging && "transition-[height] duration-150 ease-out",
             )}
             style={{

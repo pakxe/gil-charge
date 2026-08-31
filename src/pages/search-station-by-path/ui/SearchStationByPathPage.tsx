@@ -155,7 +155,6 @@ export function SearchStationByPathPage() {
         searchOverlayRef,
         searchOverlayVisibleHeight,
         maxSearchSheetHeight,
-        searchControlsBottom,
         setSearchOverlayVisibleHeight,
     } = useSearchResultSheetLayout({
         hasSearchResult,
@@ -219,52 +218,79 @@ export function SearchStationByPathPage() {
                 {location && <CurrentLocationMarker location={location} isStale={currentLocationStatus === "stale"} />}
             </Map>
             <div ref={searchOverlayRef} className="pointer-events-none absolute inset-0 z-70">
-                <SearchBar
-                    onRadiusChange={(radius) => setRadiusKm(radius)}
-                    radiusKm={radiusKm}
-                    onSearch={handleSearch}
-                    bottom={searchControlsBottom}
-                    errorMessage={
-                        searchFailure && searchFailurePolicy?.presentation === "inline"
-                            ? getSearchStationByPathFailureMessage(searchFailure)
-                            : null
-                    }
-                    searchState={
-                        searchStationByPathState.status === "loading" ? "loading" : hasWaypoint ? "ready" : "disabled"
-                    }
-                />
+                {hasSearchResult ? (
+                    <div
+                        className="pointer-events-none absolute inset-x-0 bottom-0"
+                        style={{ height: searchOverlayVisibleHeight }}
+                    >
+                        <SearchBar
+                            className="absolute inset-x-0 bottom-full mb-5"
+                            onRadiusChange={(radius) => setRadiusKm(radius)}
+                            radiusKm={radiusKm}
+                            onSearch={handleSearch}
+                            errorMessage={
+                                searchFailure && searchFailurePolicy?.presentation === "inline"
+                                    ? getSearchStationByPathFailureMessage(searchFailure)
+                                    : null
+                            }
+                            searchState={
+                                searchStationByPathState.status === "loading"
+                                    ? "loading"
+                                    : hasWaypoint
+                                      ? "ready"
+                                      : "disabled"
+                            }
+                        />
 
-                {hasSearchResult && (
-                    <ResultBottomSheet
-                        containerRef={searchOverlayRef}
-                        maxHeight={maxSearchSheetHeight}
-                        totalStationCount={result.stations?.length ?? 0}
-                        stations={result.visibleStations}
-                        filter={{
-                            localCurrencyOnly: result.filter.localCurrencyOnly,
-                            brandCodes: result.brandCodes,
-                            selectedBrandCodes: result.filter.selectedBrandCodes,
-                        }}
-                        selection={{
-                            selectedStationId: result.selectedStationId,
-                            source: result.selectionSource,
-                        }}
-                        visibleHeight={searchOverlayVisibleHeight}
-                        onVisibleHeightChange={setSearchOverlayVisibleHeight}
-                        onLocalCurrencyOnlyChange={result.changeLocalCurrencyFilter}
-                        onBrandFilterToggle={result.toggleBrandFilter}
-                        onStationClick={(stationId) => {
-                            result.selectStation(
-                                {
-                                    source: "list",
-                                    stationId,
-                                },
-                                searchOverlayVisibleHeight,
-                            );
-                        }}
-                        onClose={() => {
-                            result.close();
-                        }}
+                        <ResultBottomSheet
+                            className="absolute inset-x-0 bottom-0"
+                            containerRef={searchOverlayRef}
+                            maxHeight={maxSearchSheetHeight}
+                            totalStationCount={result.stations?.length ?? 0}
+                            stations={result.visibleStations}
+                            filter={{
+                                localCurrencyOnly: result.filter.localCurrencyOnly,
+                                brandCodes: result.brandCodes,
+                                selectedBrandCodes: result.filter.selectedBrandCodes,
+                            }}
+                            selection={{
+                                selectedStationId: result.selectedStationId,
+                                source: result.selectionSource,
+                            }}
+                            visibleHeight={searchOverlayVisibleHeight}
+                            onVisibleHeightChange={setSearchOverlayVisibleHeight}
+                            onLocalCurrencyOnlyChange={result.changeLocalCurrencyFilter}
+                            onBrandFilterToggle={result.toggleBrandFilter}
+                            onStationClick={(stationId) => {
+                                result.selectStation(
+                                    {
+                                        source: "list",
+                                        stationId,
+                                    },
+                                    searchOverlayVisibleHeight,
+                                );
+                            }}
+                            onClose={result.close}
+                        />
+                    </div>
+                ) : (
+                    <SearchBar
+                        className="absolute inset-x-0 bottom-10"
+                        onRadiusChange={(radius) => setRadiusKm(radius)}
+                        radiusKm={radiusKm}
+                        onSearch={handleSearch}
+                        errorMessage={
+                            searchFailure && searchFailurePolicy?.presentation === "inline"
+                                ? getSearchStationByPathFailureMessage(searchFailure)
+                                : null
+                        }
+                        searchState={
+                            searchStationByPathState.status === "loading"
+                                ? "loading"
+                                : hasWaypoint
+                                  ? "ready"
+                                  : "disabled"
+                        }
                     />
                 )}
             </div>

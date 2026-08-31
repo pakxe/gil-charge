@@ -1,8 +1,6 @@
 export const DEFAULT_RESULT_SHEET_HEIGHT_RATIO = 0.5;
 export const CLOSE_RESULT_SHEET_HEIGHT_PX = 56;
 export const FULL_RESULT_SHEET_EXTRA_HEIGHT_PX = 150;
-export const SEARCH_CONTROLS_SHEET_GAP_PX = 20;
-export const SEARCH_CONTROLS_IDLE_BOTTOM_PX = 40;
 
 /**
  * 검색 성공 후 처음 열리는 높이입니다.
@@ -38,14 +36,6 @@ export function snapResultSheetHeight(visibleHeight: number, maxHeight: number) 
     }
 
     return clampedVisibleHeight;
-}
-
-/**
- * 반경/찾기 컨트롤은 결과가 없을 때는 화면 하단에, 결과가 있을 때는 시트 상단 20px 위에 붙습니다.
- * 시트가 full open되면 bottom 값이 화면 높이를 넘어서 컨트롤이 자연스럽게 화면 밖으로 밀려납니다.
- */
-export function getSearchControlsBottom(visibleHeight: number, hasSearchResult: boolean) {
-    return hasSearchResult ? visibleHeight + SEARCH_CONTROLS_SHEET_GAP_PX : SEARCH_CONTROLS_IDLE_BOTTOM_PX;
 }
 
 export function clamp(value: number, min: number, max: number) {

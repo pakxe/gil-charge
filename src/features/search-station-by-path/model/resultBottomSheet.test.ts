@@ -5,9 +5,6 @@ import {
     FULL_RESULT_SHEET_EXTRA_HEIGHT_PX,
     getResultSheetDefaultHeight,
     getResultSheetFullThreshold,
-    getSearchControlsBottom,
-    SEARCH_CONTROLS_IDLE_BOTTOM_PX,
-    SEARCH_CONTROLS_SHEET_GAP_PX,
     snapResultSheetHeight,
 } from "@/features/search-station-by-path/model/resultBottomSheet";
 
@@ -41,10 +38,5 @@ describe("resultBottomSheet", () => {
 
     it("중간 영역에서는 현재 높이를 유지한다", () => {
         expect(snapResultSheetHeight(520, 1_000)).toBe(520);
-    });
-
-    it("검색 컨트롤 위치를 결과 유무에 따라 계산한다", () => {
-        expect(getSearchControlsBottom(320, true)).toBe(320 + SEARCH_CONTROLS_SHEET_GAP_PX);
-        expect(getSearchControlsBottom(320, false)).toBe(SEARCH_CONTROLS_IDLE_BOTTOM_PX);
     });
 });

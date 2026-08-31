@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { Station } from "@/shared/types/map";
-import {
-    clamp,
-    getResultSheetDefaultHeight,
-    getSearchControlsBottom,
-} from "@/features/search-station-by-path/model/resultBottomSheet";
+import { clamp, getResultSheetDefaultHeight } from "@/features/search-station-by-path/model/resultBottomSheet";
 
 type Params = {
     hasSearchResult: boolean;
@@ -16,8 +12,6 @@ export function useSearchResultSheetLayout({ hasSearchResult, stations }: Params
     const searchOverlayRef = useRef<HTMLDivElement | null>(null);
     const [searchOverlayVisibleHeight, setSearchOverlayVisibleHeight] = useState(0);
     const [maxSearchSheetHeight, setMaxSearchSheetHeight] = useState(0);
-
-    const searchControlsBottom = getSearchControlsBottom(searchOverlayVisibleHeight, hasSearchResult);
 
     useEffect(() => {
         if (!hasSearchResult) return;
@@ -49,7 +43,6 @@ export function useSearchResultSheetLayout({ hasSearchResult, stations }: Params
         searchOverlayRef,
         searchOverlayVisibleHeight,
         maxSearchSheetHeight,
-        searchControlsBottom,
         setSearchOverlayVisibleHeight,
     };
 }

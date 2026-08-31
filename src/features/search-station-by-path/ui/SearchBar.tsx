@@ -12,18 +12,24 @@ type Props = {
     onSearch: (radius: number) => void;
     searchState: "ready" | "disabled" | "loading";
     errorMessage: string | null;
-    bottom: number;
+    className?: string;
 };
 
-export function SearchBar({ onRadiusChange, radiusKm, onSearch, errorMessage, searchState, bottom }: Props) {
+export function SearchBar({
+    className,
+    onRadiusChange,
+    radiusKm,
+    onSearch,
+    errorMessage,
+    searchState,
+}: Props) {
     const handleRadiusChange = (event: ChangeEvent<HTMLInputElement>) => {
         onRadiusChange(Number(event.target.value));
     };
 
     return (
         <div
-            className="pointer-events-auto absolute left-0 flex w-full flex-row justify-between gap-4 px-4"
-            style={{ bottom }}
+            className={cn("pointer-events-auto flex w-full flex-row justify-between gap-4 px-4", className)}
         >
             <Box className="h-fit min-w-0 flex-1 flex flex-col rounded-2xl gap-0">
                 <Slider
