@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import {
     type AddWaypointResult,
@@ -21,6 +21,7 @@ import type { LatLng } from "@/shared/model/map";
 type UseWaypointEditorOptions = {
     createId?: () => WaypointNodeId;
     maxWaypointCount?: number;
+    onAddRejected?: (reason: "OVERFLOW") => void;
 };
 
 type WaypointEditorCommandResult =
@@ -42,12 +43,31 @@ type WaypointEditorHookState = {
 
 const defaultCreateId = () => uuidv4();
 
-export function useWaypointEditor({ createId = defaultCreateId, maxWaypointCount }: UseWaypointEditorOptions = {}) {
+export function useWaypointEditor({
+    createId = defaultCreateId,
+    maxWaypointCount,
+    onAddRejected,
+}: UseWaypointEditorOptions = {}) {
+    const onAddRejectedRef = useRef(onAddRejected);
     const [hookState, setHookState] = useState<WaypointEditorHookState>(() => ({
         editorState: waypointEditor.createInitialState(),
         historyState: waypointHistory.create(),
         result: null,
     }));
+
+    useEffect(() => {
+        onAddRejectedRef.current = onAddRejected;
+    }, [onAddRejected]);
+
+    useEffect(() => {
+        const result = hookState.result;
+
+        if (result?.code !== 1 || result.reason !== "OVERFLOW") {
+            return;
+        }
+
+        onAddRejectedRef.current?.(result.reason);
+    }, [hookState.result]);
 
     const addWaypoint = useCallback(
         (latLng: LatLng): void => {
