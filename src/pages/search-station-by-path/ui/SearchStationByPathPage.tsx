@@ -253,11 +253,15 @@ export function SearchStationByPathPage() {
                         maxHeight={maxSearchSheetHeight}
                         totalStationCount={stations.length}
                         stations={visibleStations}
-                        localCurrencyOnly={filter.localCurrencyOnly}
-                        brandCodes={brandCodes}
-                        selectedBrandCodes={filter.selectedBrandCodes}
-                        selectedStationId={selectedStationId}
-                        selectionSource={selectionSource}
+                        filter={{
+                            localCurrencyOnly: filter.localCurrencyOnly,
+                            brandCodes,
+                            selectedBrandCodes: filter.selectedBrandCodes,
+                        }}
+                        selection={{
+                            selectedStationId,
+                            source: selectionSource,
+                        }}
                         visibleHeight={searchOverlayVisibleHeight}
                         onVisibleHeightChange={setSearchOverlayVisibleHeight}
                         onLocalCurrencyOnlyChange={changeLocalCurrencyFilter}

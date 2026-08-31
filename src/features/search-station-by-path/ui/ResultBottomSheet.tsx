@@ -7,16 +7,20 @@ import { StationResultFilters } from "@/features/search-station-by-path/ui/Stati
 import { StationList } from "@/features/search-station-by-path/ui/StationList";
 import { cn } from "@/shared/lib/cn";
 
-type SearchResultBlockProps = {
+type ResultBottomSheetProps = {
     containerRef: RefObject<HTMLElement | null>;
     maxHeight: number;
     stations: Station[];
     totalStationCount: number;
-    localCurrencyOnly: boolean;
-    brandCodes: string[];
-    selectedBrandCodes: string[];
-    selectedStationId: string | null;
-    selectionSource: StationSelectionSource | null;
+    filter: {
+        localCurrencyOnly: boolean;
+        brandCodes: string[];
+        selectedBrandCodes: string[];
+    };
+    selection: {
+        selectedStationId: string | null;
+        source: StationSelectionSource | null;
+    };
     visibleHeight: number;
     onVisibleHeightChange: (visibleHeight: number) => void;
     onLocalCurrencyOnlyChange: (enabled: boolean) => void;
@@ -30,18 +34,15 @@ export function ResultBottomSheet({
     maxHeight,
     stations,
     totalStationCount,
-    localCurrencyOnly,
-    brandCodes,
-    selectedBrandCodes,
-    selectedStationId,
-    selectionSource,
+    filter,
+    selection,
     visibleHeight,
     onVisibleHeightChange,
     onLocalCurrencyOnlyChange,
     onBrandFilterToggle,
     onStationClick,
     onClose,
-}: SearchResultBlockProps) {
+}: ResultBottomSheetProps) {
     const { isDragging, clampedVisibleHeight, handlePointerDown, handlePointerMove, handlePointerEnd } =
         useResultBottomSheetDrag({
             containerRef,
@@ -90,9 +91,9 @@ export function ResultBottomSheet({
                     </div>
 
                     <StationResultFilters
-                        localCurrencyOnly={localCurrencyOnly}
-                        brandCodes={brandCodes}
-                        selectedBrandCodes={selectedBrandCodes}
+                        localCurrencyOnly={filter.localCurrencyOnly}
+                        brandCodes={filter.brandCodes}
+                        selectedBrandCodes={filter.selectedBrandCodes}
                         onLocalCurrencyOnlyChange={onLocalCurrencyOnlyChange}
                         onBrandFilterToggle={onBrandFilterToggle}
                     />
@@ -101,8 +102,8 @@ export function ResultBottomSheet({
                 <StationList
                     totalStationCount={totalStationCount}
                     stations={stations}
-                    selectedStationId={selectedStationId}
-                    selectionSource={selectionSource}
+                    selectedStationId={selection.selectedStationId}
+                    selectionSource={selection.source}
                     onStationClick={(stationId) => onStationClick(stationId)}
                 />
             </div>
