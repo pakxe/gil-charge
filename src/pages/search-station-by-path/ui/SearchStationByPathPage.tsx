@@ -262,9 +262,15 @@ export function SearchStationByPathPage() {
                         onVisibleHeightChange={setSearchOverlayVisibleHeight}
                         onLocalCurrencyOnlyChange={changeLocalCurrencyFilter}
                         onBrandFilterToggle={toggleBrandFilter}
-                        onStationClick={(stationId, bottomSheetVisibleHeight) =>
-                            selectStation({ source: "list", stationId }, bottomSheetVisibleHeight)
-                        }
+                        onStationClick={(stationId) => {
+                            selectStation(
+                                {
+                                    source: "list",
+                                    stationId,
+                                },
+                                searchOverlayVisibleHeight,
+                            );
+                        }}
                         onClose={() => {
                             setIsSearchResultDismissed(true);
                             clearSelection();

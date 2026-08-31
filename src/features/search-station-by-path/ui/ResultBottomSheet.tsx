@@ -21,7 +21,7 @@ type SearchResultBlockProps = {
     onVisibleHeightChange: (visibleHeight: number) => void;
     onLocalCurrencyOnlyChange: (enabled: boolean) => void;
     onBrandFilterToggle: (brandCode: string) => void;
-    onStationClick: (stationId: string, bottomSheetVisibleHeight: number) => void;
+    onStationClick: (stationId: string) => void;
     onClose: () => void;
 };
 
