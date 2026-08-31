@@ -5,7 +5,11 @@
 ## 미리보기
 
 
-https://github.com/user-attachments/assets/f6df4149-4bbe-402d-bb18-5b173fae5dcd
+
+
+https://github.com/user-attachments/assets/0ff760fa-da68-4fc9-8bee-ad883202a1cb
+
+
 
 
 ## 주요 기능
