@@ -1,42 +1,43 @@
 import type { RefObject } from "react";
 
-import type { StationSelectionSource } from "@/features/search-station-by-path/model/stationSelection";
-import { useResultBottomSheetDrag } from "@/features/search-station-by-path/model/useResultBottomSheetDrag";
-import { StationList } from "@/features/search-station-by-path/ui/StationList";
 import type { Station } from "@/shared/types/map";
+import type { StationSelectionSource } from "@/features/search-station-by-path/model/resultStations";
+import { useResultBottomSheetDrag } from "@/features/search-station-by-path/model/useResultBottomSheetDrag";
+import { StationResultFilters } from "@/features/search-station-by-path/ui/StationResultFilters";
+import { StationList } from "@/features/search-station-by-path/ui/StationList";
 import { cn } from "@/shared/lib/cn";
-import { BRAND_BY_CODE } from "@/features/search-station-by-path/ui/stationBrand";
 
-interface ResultBottomSheetProps {
+type ResultBottomSheetProps = {
     containerRef: RefObject<HTMLElement | null>;
+    className?: string;
     maxHeight: number;
     stations: Station[];
-    visibleStations: Station[];
-    localCurrencyOnly: boolean;
-    brandFilterCodes: string[];
-    selectedBrandCodes: string[];
-    selectedStationId: string | null;
-    selectionSource: StationSelectionSource | null;
-    selectionRevision: number;
+    totalStationCount: number;
+    filter: {
+        localCurrencyOnly: boolean;
+        brandCodes: string[];
+        selectedBrandCodes: string[];
+    };
+    selection: {
+        selectedStationId: string | null;
+        source: StationSelectionSource | null;
+    };
     visibleHeight: number;
     onVisibleHeightChange: (visibleHeight: number) => void;
-    onLocalCurrencyOnlyChange: (localCurrencyOnly: boolean) => void;
+    onLocalCurrencyOnlyChange: (enabled: boolean) => void;
     onBrandFilterToggle: (brandCode: string) => void;
     onStationClick: (stationId: string) => void;
     onClose: () => void;
-}
+};
 
 export function ResultBottomSheet({
+    className,
     containerRef,
     maxHeight,
     stations,
-    visibleStations,
-    localCurrencyOnly,
-    brandFilterCodes,
-    selectedBrandCodes,
-    selectedStationId,
-    selectionSource,
-    selectionRevision,
+    totalStationCount,
+    filter,
+    selection,
     visibleHeight,
     onVisibleHeightChange,
     onLocalCurrencyOnlyChange,
@@ -52,10 +53,12 @@ export function ResultBottomSheet({
             onVisibleHeightChange,
             onClose,
         });
+
     return (
         <section
             className={cn(
                 "pointer-events-auto absolute bottom-0 left-0 w-full overflow-hidden rounded-t-[28px] bg-gil-gray-950 shadow-2xl",
+                className,
                 !isDragging && "transition-[height] duration-150 ease-out",
             )}
             style={{
@@ -83,71 +86,28 @@ export function ResultBottomSheet({
                 <div className="mb-4 flex flex-none items-center justify-between gap-4">
                     <div className="min-w-0">
                         <p className="text-md font-bold text-white">
-                            총 {visibleStations.length}
+                            총 {stations.length}
                             개의 주유소
                         </p>
 
                         <p className="mt-1 text-sub font-medium text-gil-gray-600">가격 낮은 순</p>
                     </div>
-
-                    <div className="flex shrink-0 items-center gap-3">
-                        <span className="text-sub font-medium text-gil-gray-200">지역화폐 가능</span>
-
-                        <button
-                            type="button"
-                            onClick={() => onLocalCurrencyOnlyChange(!localCurrencyOnly)}
-                            aria-pressed={localCurrencyOnly}
-                            className={cn(
-                                "relative h-7 w-12 shrink-0 rounded-full transition-colors",
-                                localCurrencyOnly ? "bg-gil-yellow-400" : "bg-gil-gray-700",
-                            )}
-                        >
-                            <span
-                                className={cn(
-                                    "absolute left-0 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform",
-                                    localCurrencyOnly ? "translate-x-6" : "translate-x-1",
-                                )}
-                            />
-                        </button>
-                    </div>
                 </div>
 
-                {brandFilterCodes.length > 0 && (
-                    <div className="-mx-4 mb-3 flex flex-none gap-2 overflow-x-auto px-4 pb-1 pt-1">
-                        {brandFilterCodes.map((brandCode) => {
-                            const brand = BRAND_BY_CODE[brandCode] ?? {
-                                label: brandCode,
-                                tone: "bg-gil-gray-700 text-gil-gray-200",
-                            };
-                            const isSelected = selectedBrandCodes.includes(brandCode);
-
-                            return (
-                                <button
-                                    key={brandCode}
-                                    type="button"
-                                    aria-pressed={isSelected}
-                                    className={cn(
-                                        "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold transition",
-                                        isSelected
-                                            ? `${brand.tone} ring-1 ring-current`
-                                            : "bg-gil-gray-800 text-gil-gray-500",
-                                    )}
-                                    onClick={() => onBrandFilterToggle(brandCode)}
-                                >
-                                    {brand.label}
-                                </button>
-                            );
-                        })}
-                    </div>
-                )}
+                <StationResultFilters
+                    localCurrencyOnly={filter.localCurrencyOnly}
+                    brandCodes={filter.brandCodes}
+                    selectedBrandCodes={filter.selectedBrandCodes}
+                    onLocalCurrencyOnlyChange={onLocalCurrencyOnlyChange}
+                    onBrandFilterToggle={onBrandFilterToggle}
+                />
 
                 <StationList
-                    totalStationCount={stations.length}
-                    stations={visibleStations}
-                    selectedStationId={selectedStationId}
-                    selectionSource={selectionSource}
-                    selectionRevision={selectionRevision}
-                    onStationClick={onStationClick}
+                    totalStationCount={totalStationCount}
+                    stations={stations}
+                    selectedStationId={selection.selectedStationId}
+                    selectionSource={selection.source}
+                    onStationClick={(stationId) => onStationClick(stationId)}
                 />
             </div>
         </section>

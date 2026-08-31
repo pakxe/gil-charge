@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import type { StationSelectionSource } from "@/features/search-station-by-path/model/stationSelection";
+import type { StationSelectionSource } from "@/features/search-station-by-path/model/resultStations";
 import type { Station } from "@/shared/types/map";
 
 import { StationItem } from "@/features/search-station-by-path/ui/StationItem";
@@ -10,7 +10,6 @@ type StationListProps = {
     stations: Station[];
     selectedStationId: string | null;
     selectionSource: StationSelectionSource | null;
-    selectionRevision: number;
     onStationClick: (stationId: string) => void;
 };
 
@@ -19,7 +18,6 @@ export function StationList({
     stations,
     selectedStationId,
     selectionSource,
-    selectionRevision,
     onStationClick,
 }: StationListProps) {
     const stationItemRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -33,7 +31,7 @@ export function StationList({
             behavior: "smooth",
             block: "nearest",
         });
-    }, [selectedStationId, selectionRevision, selectionSource]);
+    }, [selectedStationId, selectionSource]);
 
     const emptyMessage =
         totalStationCount === 0

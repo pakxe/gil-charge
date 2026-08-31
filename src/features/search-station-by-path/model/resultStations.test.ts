@@ -9,9 +9,9 @@ import {
     isLatLngInsideBounds,
     shouldCenterStation,
     shouldClearSelectedStation,
-} from "@/features/search-station-by-path/model/stationSelection";
+} from "@/features/search-station-by-path/model/resultStations";
 
-describe("stationSelection", () => {
+describe("resultStations", () => {
     it("지역화폐 필터를 적용하고 가격 낮은 순으로 정렬한다", () => {
         expect(
             getVisibleStations(
@@ -20,7 +20,7 @@ describe("stationSelection", () => {
                     createStation({ id: "hidden", price: 1_600, accepted: false }),
                     createStation({ id: "cheap", price: 1_700, accepted: true }),
                 ],
-                true,
+                { localCurrencyOnly: true, selectedBrandCodes: [] },
             ).map((station) => station.id),
         ).toEqual(["cheap", "expensive"]);
     });
@@ -32,7 +32,7 @@ describe("stationSelection", () => {
                     createStation({ id: "expensive", price: 1_800, accepted: true }),
                     createStation({ id: "cheap", price: 1_600, accepted: false }),
                 ],
-                false,
+                { localCurrencyOnly: false, selectedBrandCodes: [] },
             ).map((station) => station.id),
         ).toEqual(["cheap", "expensive"]);
     });
@@ -46,8 +46,7 @@ describe("stationSelection", () => {
                     createStation({ id: "soil", brandCode: "SOL", price: 1_600 }),
                     createStation({ id: "other", brandCode: "HDO", price: 1_500 }),
                 ],
-                false,
-                ["GSC", "SOL"],
+                { localCurrencyOnly: false, selectedBrandCodes: ["GSC", "SOL"] },
             ).map((station) => station.id),
         ).toEqual(["soil", "gs"]);
     });
