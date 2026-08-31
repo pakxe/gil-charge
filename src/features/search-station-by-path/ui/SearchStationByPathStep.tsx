@@ -36,8 +36,17 @@ import { CurrentLocationButton } from "@/features/search-station-by-path/ui/Curr
 type DrawMode = "waypoint" | "lasso";
 
 export function SearchStationByPathStep() {
-    const { status, data, actions } = useWaypointEditor();
     const map = useMap();
+    const { showToast } = useToast();
+    const { status, data, actions } = useWaypointEditor({
+        onAddRejected: (reason) => {
+            if (reason === "OVERFLOW") {
+                showToast({
+                    message: "웨이포인트는 최대 20개까지 추가할 수 있습니다.",
+                });
+            }
+        },
+    });
 
     const [zoomLevel, setZoomLevel] = useState(8);
     const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
@@ -50,7 +59,6 @@ export function SearchStationByPathStep() {
         retry: retrySearchStationByPath,
         search: searchStations,
     } = useSearchStationByPath();
-    const { showToast } = useToast();
     const centerCurrentLocation = useCallback(
         (location: { lat: number; lng: number }) => {
             map?.setCenter(location);

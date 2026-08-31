@@ -31,16 +31,16 @@ export type WaypointEditorState = {
     status: WaypointEditorStatus;
 };
 
-export type AddWaypointResult = { code: 0; node: WaypointNode } | { code: 1; reason: "OVERFLOW" };
-export type SelectWaypointResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
-export type SelectWaypointsResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
-export type DeleteWaypointResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
-export type DeleteBatchWaypointResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
+export type AddWaypointResult = { node: WaypointNode } | { reason: "OVERFLOW" };
+export type SelectWaypointResult = void | { reason: "INVALID_INPUT" };
+export type SelectWaypointsResult = void | { reason: "INVALID_INPUT" };
+export type DeleteWaypointResult = void | { reason: "INVALID_INPUT" };
+export type DeleteBatchWaypointResult = void | { reason: "INVALID_INPUT" };
 export type DeleteAllWaypointResult = void;
-export type BeginWaypointMoveResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
-export type CommitWaypointMoveResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
-export type BeginBatchMoveResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
-export type CommitBatchMoveResult = { code: 0 } | { code: 2; reason: "INVALID_INPUT" };
+export type BeginWaypointMoveResult = void | { reason: "INVALID_INPUT" };
+export type CommitWaypointMoveResult = void | { reason: "INVALID_INPUT" };
+export type BeginBatchMoveResult = void | { reason: "INVALID_INPUT" };
+export type CommitBatchMoveResult = void | { reason: "INVALID_INPUT" };
 
 type AddWaypointOptions = {
     createId: () => WaypointNodeId;
@@ -67,7 +67,6 @@ function addWaypoint(
         return {
             state,
             result: {
-                code: 1,
                 reason: "OVERFLOW",
             },
         };
@@ -85,7 +84,6 @@ function addWaypoint(
             status: { statusName: "idle" },
         },
         result: {
-            code: 0,
             node,
         },
     };
@@ -99,7 +97,6 @@ function selectWaypoint(
         return {
             state,
             result: {
-                code: 2,
                 reason: "INVALID_INPUT",
             },
         };
@@ -111,9 +108,7 @@ function selectWaypoint(
                 ...state,
                 status: { statusName: "idle" },
             },
-            result: {
-                code: 0,
-            },
+            result: undefined,
         };
     }
 
@@ -125,9 +120,7 @@ function selectWaypoint(
                 selectedNodeIds: [id],
             },
         },
-        result: {
-            code: 0,
-        },
+        result: undefined,
     };
 }
 
@@ -139,7 +132,6 @@ function selectWaypoints(
         return {
             state,
             result: {
-                code: 2,
                 reason: "INVALID_INPUT",
             },
         };
@@ -150,9 +142,7 @@ function selectWaypoints(
             ...state,
             status: getStatusFromSelection(ids),
         },
-        result: {
-            code: 0,
-        },
+        result: undefined,
     };
 }
 
@@ -164,7 +154,6 @@ function deleteWaypoint(
         return {
             state,
             result: {
-                code: 2,
                 reason: "INVALID_INPUT",
             },
         };
@@ -176,9 +165,7 @@ function deleteWaypoint(
             nodes: state.nodes.filter((node) => node.id !== id),
             status: getStatusAfterDelete(state.status, id),
         },
-        result: {
-            code: 0,
-        },
+        result: undefined,
     };
 }
 
@@ -190,7 +177,6 @@ function deleteBatchWaypoint(
         return {
             state,
             result: {
-                code: 2,
                 reason: "INVALID_INPUT",
             },
         };
@@ -204,9 +190,7 @@ function deleteBatchWaypoint(
             nodes: state.nodes.filter((node) => !deletedNodeIds.has(node.id)),
             status: getStatusAfterBatchDelete(state.status, deletedNodeIds),
         },
-        result: {
-            code: 0,
-        },
+        result: undefined,
     };
 }
 
@@ -240,7 +224,6 @@ function beginWaypointMove(
         return {
             state,
             result: {
-                code: 2,
                 reason: "INVALID_INPUT",
             },
         };
@@ -259,9 +242,7 @@ function beginWaypointMove(
                         : [],
             },
         },
-        result: {
-            code: 0,
-        },
+        result: undefined,
     };
 }
 
@@ -274,7 +255,6 @@ function beginBatchMove(
         return {
             state,
             result: {
-                code: 2,
                 reason: "INVALID_INPUT",
             },
         };
@@ -291,9 +271,7 @@ function beginBatchMove(
                 selectionAfterMove: copyWaypointNodeIds(ids),
             },
         },
-        result: {
-            code: 0,
-        },
+        result: undefined,
     };
 }
 
@@ -333,7 +311,6 @@ function commitWaypointMove(
         return {
             state,
             result: {
-                code: 2,
                 reason: "INVALID_INPUT",
             },
         };
@@ -349,7 +326,6 @@ function commitWaypointMove(
                 status: nextStatus,
             },
             result: {
-                code: 2,
                 reason: "INVALID_INPUT",
             },
         };
@@ -368,9 +344,7 @@ function commitWaypointMove(
             ),
             status: nextStatus,
         },
-        result: {
-            code: 0,
-        },
+        result: undefined,
     };
 }
 
@@ -382,7 +356,6 @@ function commitBatchMove(
         return {
             state,
             result: {
-                code: 2,
                 reason: "INVALID_INPUT",
             },
         };
@@ -408,7 +381,6 @@ function commitBatchMove(
                 status: nextStatus,
             },
             result: {
-                code: 2,
                 reason: "INVALID_INPUT",
             },
         };
@@ -420,9 +392,7 @@ function commitBatchMove(
             nodes: nextNodes,
             status: nextStatus,
         },
-        result: {
-            code: 0,
-        },
+        result: undefined,
     };
 }
 
