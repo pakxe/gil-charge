@@ -82,6 +82,8 @@ export function SearchStationByPathPage() {
             return;
         }
 
+        setIsSearchResultDismissed(false);
+
         await searchStations(
             [
                 {
