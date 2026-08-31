@@ -11,7 +11,7 @@ type SearchResultBlockProps = {
     containerRef: RefObject<HTMLElement | null>;
     maxHeight: number;
     stations: Station[];
-    visibleStations: Station[];
+    totalStationCount: number;
     localCurrencyOnly: boolean;
     brandCodes: string[];
     selectedBrandCodes: string[];
@@ -29,7 +29,7 @@ export function ResultBottomSheet({
     containerRef,
     maxHeight,
     stations,
-    visibleStations,
+    totalStationCount,
     localCurrencyOnly,
     brandCodes,
     selectedBrandCodes,
@@ -82,7 +82,7 @@ export function ResultBottomSheet({
                 <div className="mb-4 flex flex-none items-center justify-between gap-4">
                     <div className="min-w-0">
                         <p className="text-md font-bold text-white">
-                            총 {visibleStations.length}
+                            총 {stations.length}
                             개의 주유소
                         </p>
 
@@ -141,11 +141,11 @@ export function ResultBottomSheet({
                 )}
 
                 <StationList
-                    totalStationCount={stations.length}
-                    stations={visibleStations}
+                    totalStationCount={totalStationCount}
+                    stations={stations}
                     selectedStationId={selectedStationId}
                     selectionSource={selectionSource}
-                    onStationClick={(stationId) => onStationClick(stationId, visibleHeight)}
+                    onStationClick={(stationId) => onStationClick(stationId)}
                 />
             </div>
         </section>

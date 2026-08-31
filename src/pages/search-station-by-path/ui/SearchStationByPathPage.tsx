@@ -251,8 +251,8 @@ export function SearchStationByPathPage() {
                     <ResultBottomSheet
                         containerRef={searchOverlayRef}
                         maxHeight={maxSearchSheetHeight}
-                        stations={stations ?? []}
-                        visibleStations={visibleStations}
+                        totalStationCount={stations.length}
+                        stations={visibleStations}
                         localCurrencyOnly={filter.localCurrencyOnly}
                         brandCodes={brandCodes}
                         selectedBrandCodes={filter.selectedBrandCodes}
