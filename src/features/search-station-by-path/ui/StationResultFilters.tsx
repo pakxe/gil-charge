@@ -18,7 +18,7 @@ export function StationResultFilters({
 }: StationResultFiltersProps) {
     return (
         <div className="-mx-4 mb-3 flex flex-none items-center gap-3 overflow-x-auto px-4 pb-1 pt-1">
-            <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
+            <div className="-mx-1 -my-1 flex min-w-0 flex-1 gap-2 overflow-x-auto px-1 py-1">
                 {brandCodes.map((brandCode) => {
                     const brand = BRAND_BY_CODE[brandCode] ?? {
                         label: brandCode,
