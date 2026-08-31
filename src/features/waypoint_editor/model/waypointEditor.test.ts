@@ -45,7 +45,6 @@ describe("waypointEditor", () => {
         const next = editor.addWaypoint(state, latLngA);
 
         expect(next.result).toEqual({
-            code: 0,
             node: {
                 id: "waypoint-1",
                 latLng: latLngA,
@@ -104,7 +103,6 @@ describe("waypointEditor", () => {
         const next = editor.addWaypoint(state, latLngB);
 
         expect(next.result).toEqual({
-            code: 0,
             node: {
                 id: "waypoint-20",
                 latLng: latLngB,
@@ -126,7 +124,6 @@ describe("waypointEditor", () => {
         const next = editor.addWaypoint(state, latLngB);
 
         expect(next.result).toEqual({
-            code: 1,
             reason: "OVERFLOW",
         });
         expect(next.state).toBe(state);
@@ -139,7 +136,6 @@ describe("waypointEditor", () => {
         const next = editor.addWaypoint(state, latLngA);
 
         expect(next.result).toEqual({
-            code: 0,
             node: {
                 id: "fixed-id",
                 latLng: latLngA,
@@ -177,7 +173,7 @@ describe("waypointEditor", () => {
 
         const next = editor.selectWaypoint(state, "waypoint-1");
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.status).toEqual({
             statusName: "selected",
             selectedNodeIds: ["waypoint-1"],
@@ -193,7 +189,7 @@ describe("waypointEditor", () => {
 
         const next = editor.selectWaypoint(state, "waypoint-1");
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
@@ -212,7 +208,7 @@ describe("waypointEditor", () => {
 
         const next = editor.selectWaypoint(state, "waypoint-2");
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.status).toEqual({
             statusName: "selected",
             selectedNodeIds: ["waypoint-2"],
@@ -235,7 +231,7 @@ describe("waypointEditor", () => {
 
         const next = editor.selectWaypoint(state, "waypoint-3");
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.status).toEqual({
             statusName: "selected",
             selectedNodeIds: ["waypoint-3"],
@@ -249,7 +245,6 @@ describe("waypointEditor", () => {
         const next = editor.selectWaypoint(state, "missing-waypoint");
 
         expect(next.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(next.state).toBe(state);
@@ -271,7 +266,7 @@ describe("waypointEditor", () => {
 
         const next = editor.selectWaypoints(state, ["waypoint-3", "waypoint-1"]);
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.status).toEqual({
             statusName: "selected",
             selectedNodeIds: ["waypoint-3", "waypoint-1"],
@@ -293,7 +288,7 @@ describe("waypointEditor", () => {
 
         const next = editor.selectWaypoints(state, []);
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.status).toEqual({ statusName: "idle" });
     });
 
@@ -307,7 +302,6 @@ describe("waypointEditor", () => {
         const next = editor.selectWaypoints(state, ["waypoint-1", "missing-waypoint"]);
 
         expect(next.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(next.state).toBe(state);
@@ -319,7 +313,7 @@ describe("waypointEditor", () => {
 
         const next = editor.beginWaypointMove(state, "waypoint-1", latLngB);
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.status).toEqual({
             statusName: "moving",
             movingNodeId: "waypoint-1",
@@ -336,7 +330,6 @@ describe("waypointEditor", () => {
         const next = editor.beginWaypointMove(state, "missing-waypoint", latLngB);
 
         expect(next.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(next.state).toBe(state);
@@ -354,7 +347,6 @@ describe("waypointEditor", () => {
         const next = editor.beginWaypointMove(state, "waypoint-1", latLngC);
 
         expect(next.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(next.state).toBe(state);
@@ -422,7 +414,7 @@ describe("waypointEditor", () => {
 
         const next = editor.commitWaypointMove(state);
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.nodes).toEqual([
             {
                 id: "waypoint-1",
@@ -446,7 +438,7 @@ describe("waypointEditor", () => {
         const movingState = editor.beginWaypointMove(selectedState, "waypoint-1", latLngB).state;
         const next = editor.commitWaypointMove(movingState);
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.nodes).toEqual([
             {
                 id: "waypoint-1",
@@ -475,7 +467,7 @@ describe("waypointEditor", () => {
         const movingState = editor.beginWaypointMove(selectedState, "waypoint-2", latLngC).state;
         const next = editor.commitWaypointMove(movingState);
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.nodes).toEqual([
             {
                 id: "waypoint-1",
@@ -496,7 +488,6 @@ describe("waypointEditor", () => {
         const next = editor.commitWaypointMove(state);
 
         expect(next.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(next.state).toBe(state);
@@ -517,7 +508,6 @@ describe("waypointEditor", () => {
         const next = editor.commitWaypointMove(state);
 
         expect(next.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(next.state.nodes).toEqual([
@@ -542,7 +532,7 @@ describe("waypointEditor", () => {
 
         const next = editor.beginBatchMove(state, ["waypoint-1", "waypoint-3"], latLngD);
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.status).toEqual({
             statusName: "batchMoving",
             movingNodeIds: ["waypoint-1", "waypoint-3"],
@@ -561,12 +551,10 @@ describe("waypointEditor", () => {
         const missingResult = editor.beginBatchMove(state, ["waypoint-1", "missing-waypoint"], latLngB);
 
         expect(emptyResult.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(emptyResult.state).toBe(state);
         expect(missingResult.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(missingResult.state).toBe(state);
@@ -598,12 +586,10 @@ describe("waypointEditor", () => {
         const batchMovingResult = editor.beginBatchMove(batchMovingState, ["waypoint-1"], latLngC);
 
         expect(movingResult.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(movingResult.state).toBe(movingState);
         expect(batchMovingResult.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(batchMovingResult.state).toBe(batchMovingState);
@@ -663,7 +649,7 @@ describe("waypointEditor", () => {
 
         const next = editor.commitBatchMove(state);
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.nodes).toEqual([
             {
                 id: "waypoint-1",
@@ -691,7 +677,6 @@ describe("waypointEditor", () => {
         const next = editor.commitBatchMove(state);
 
         expect(next.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(next.state).toBe(state);
@@ -719,7 +704,6 @@ describe("waypointEditor", () => {
         const next = editor.commitBatchMove(state);
 
         expect(next.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(next.state.nodes).toEqual(state.nodes);
@@ -739,7 +723,7 @@ describe("waypointEditor", () => {
 
         const next = editor.deleteWaypoint(state, "waypoint-2");
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-3"]);
     });
 
@@ -758,7 +742,7 @@ describe("waypointEditor", () => {
 
         const next = editor.deleteWaypoint(state, "waypoint-2");
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1"]);
         expect(next.state.status).toEqual({ statusName: "idle" });
     });
@@ -779,7 +763,7 @@ describe("waypointEditor", () => {
 
         const next = editor.deleteWaypoint(state, "waypoint-2");
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-3"]);
         expect(next.state.status).toEqual({
             statusName: "selected",
@@ -803,7 +787,7 @@ describe("waypointEditor", () => {
 
         const next = editor.deleteWaypoint(state, "waypoint-3");
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-2"]);
         expect(next.state.status).toEqual({
             statusName: "selected",
@@ -818,7 +802,6 @@ describe("waypointEditor", () => {
         const next = editor.deleteWaypoint(state, "missing-waypoint");
 
         expect(next.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(next.state).toBe(state);
@@ -835,7 +818,7 @@ describe("waypointEditor", () => {
 
         const next = editor.deleteBatchWaypoint(state, ["waypoint-2", "waypoint-3"]);
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1", "waypoint-4"]);
         expect(next.state.status).toEqual({ statusName: "idle" });
     });
@@ -856,7 +839,7 @@ describe("waypointEditor", () => {
 
         const next = editor.deleteBatchWaypoint(state, ["waypoint-2", "waypoint-3"]);
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-1"]);
         expect(next.state.status).toEqual({
             statusName: "selected",
@@ -880,7 +863,7 @@ describe("waypointEditor", () => {
 
         const next = editor.deleteBatchWaypoint(state, ["waypoint-1", "waypoint-3"]);
 
-        expect(next.result).toEqual({ code: 0 });
+        expect(next.result).toBeUndefined();
         expect(next.state.nodes.map((node) => node.id)).toEqual(["waypoint-2"]);
         expect(next.state.status).toEqual({ statusName: "idle" });
     });
@@ -896,12 +879,10 @@ describe("waypointEditor", () => {
         const missingResult = editor.deleteBatchWaypoint(state, ["waypoint-1", "missing-waypoint"]);
 
         expect(emptyResult.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(emptyResult.state).toBe(state);
         expect(missingResult.result).toEqual({
-            code: 2,
             reason: "INVALID_INPUT",
         });
         expect(missingResult.state).toBe(state);

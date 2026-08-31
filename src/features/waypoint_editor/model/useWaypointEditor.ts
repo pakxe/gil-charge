@@ -62,7 +62,7 @@ export function useWaypointEditor({
     useEffect(() => {
         const result = hookState.result;
 
-        if (result?.code !== 1 || result.reason !== "OVERFLOW") {
+        if (!result || !("reason" in result) || result.reason !== "OVERFLOW") {
             return;
         }
 
@@ -77,7 +77,7 @@ export function useWaypointEditor({
                     maxWaypointCount,
                 });
 
-                if (next.result.code !== 0) {
+                if ("reason" in next.result) {
                     return {
                         ...prev,
                         editorState: next.state,
@@ -128,7 +128,7 @@ export function useWaypointEditor({
         setHookState((prev) => {
             const next = waypointEditor.deleteWaypoint(prev.editorState, id);
 
-            if (next.result.code !== 0) {
+            if (next.result !== undefined) {
                 return {
                     ...prev,
                     editorState: next.state,
@@ -153,7 +153,7 @@ export function useWaypointEditor({
         setHookState((prev) => {
             const next = waypointEditor.deleteBatchWaypoint(prev.editorState, ids);
 
-            if (next.result.code !== 0) {
+            if (next.result !== undefined) {
                 return {
                     ...prev,
                     editorState: next.state,
@@ -185,7 +185,7 @@ export function useWaypointEditor({
                     nodes: waypointHistory.getCurrent(nextHistoryState),
                 },
                 historyState: nextHistoryState,
-                result: { code: 0 },
+                result: undefined,
             };
         });
     }, []);
@@ -232,7 +232,7 @@ export function useWaypointEditor({
         setHookState((prev) => {
             const next = waypointEditor.commitWaypointMove(prev.editorState);
 
-            if (next.result.code !== 0) {
+            if (next.result !== undefined) {
                 return {
                     ...prev,
                     editorState: next.state,
@@ -257,7 +257,7 @@ export function useWaypointEditor({
         setHookState((prev) => {
             const next = waypointEditor.commitBatchMove(prev.editorState);
 
-            if (next.result.code !== 0) {
+            if (next.result !== undefined) {
                 return {
                     ...prev,
                     editorState: next.state,
