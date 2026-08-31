@@ -23,7 +23,7 @@ describe("resultStationsReducer", () => {
             stations: [createStation("station-2")],
         });
 
-        expect(nextState.stations.map((station) => station.id)).toEqual(["station-2"]);
+        expect(nextState.stations?.map((station) => station.id)).toEqual(["station-2"]);
         expect(nextState.selection).toBeNull();
     });
 

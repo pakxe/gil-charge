@@ -43,20 +43,8 @@ export function SearchStationByPathPage() {
 
     const [zoomLevel, setZoomLevel] = useState(8);
     const [mode, setMode] = useState<WaypointEditorMode>(INITIAL_DRAW_MODE);
-    const [isSearchResultDismissed, setIsSearchResultDismissed] = useState(false);
-
-    const {
-        visibleStations,
-        selectedStationId,
-        selectionSource,
-        filter,
-        brandCodes,
-        selectStation,
-        toggleBrandFilter,
-        changeLocalCurrencyFilter,
-        clearSelection,
-        replaceStations,
-    } = useResultStations({ map });
+    const result = useResultStations({ map });
+    const { replaceStations } = result;
 
     const {
         state: searchStationByPathState,
@@ -66,7 +54,7 @@ export function SearchStationByPathPage() {
 
     useEffect(() => {
         if (searchStationByPathState.status === "success") {
-            replaceStations(searchStationByPathState.stations);
+            result.replaceStations(searchStationByPathState.stations);
         }
     }, [replaceStations, searchStationByPathState]);
 
@@ -81,8 +69,6 @@ export function SearchStationByPathPage() {
         if (data.waypoints.length === 0) {
             return;
         }
-
-        setIsSearchResultDismissed(false);
 
         await searchStations(
             [
@@ -126,7 +112,6 @@ export function SearchStationByPathPage() {
 
     const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
 
-    const stations = isSearchResultDismissed ? null : searchStationByPathState.stations;
     const searchFailure = searchStationByPathState.status === "error" ? searchStationByPathState.failure : null;
     const searchFailurePolicy = searchStationByPathState.status === "error" ? searchStationByPathState.policy : null;
 
@@ -156,7 +141,7 @@ export function SearchStationByPathPage() {
     const hasWaypoint = data.waypoints.length > 0;
     const selectedWaypointIds = getSelectedWaypointIds(status);
     const isLassoMode = mode === "lasso";
-    const hasSearchResult = stations !== null;
+    const hasSearchResult = result.isOpen && result.stations !== null;
 
     const handleModeChange = (nextMode: WaypointEditorMode) => {
         setMode(nextMode);
@@ -174,7 +159,7 @@ export function SearchStationByPathPage() {
         setSearchOverlayVisibleHeight,
     } = useSearchResultSheetLayout({
         hasSearchResult,
-        stations,
+        stations: result.stations,
     });
 
     return (
@@ -222,10 +207,10 @@ export function SearchStationByPathPage() {
                     }}
                 />
                 <StationMarkersLayer
-                    stations={visibleStations}
-                    selectedStationId={selectedStationId}
+                    stations={result.visibleStations}
+                    selectedStationId={result.selectedStationId}
                     onStationClick={(stationId) => {
-                        selectStation({
+                        result.selectStation({
                             source: "map",
                             stationId,
                         });
@@ -253,23 +238,23 @@ export function SearchStationByPathPage() {
                     <ResultBottomSheet
                         containerRef={searchOverlayRef}
                         maxHeight={maxSearchSheetHeight}
-                        totalStationCount={stations.length}
-                        stations={visibleStations}
+                        totalStationCount={result.stations?.length ?? 0}
+                        stations={result.visibleStations}
                         filter={{
-                            localCurrencyOnly: filter.localCurrencyOnly,
-                            brandCodes,
-                            selectedBrandCodes: filter.selectedBrandCodes,
+                            localCurrencyOnly: result.filter.localCurrencyOnly,
+                            brandCodes: result.brandCodes,
+                            selectedBrandCodes: result.filter.selectedBrandCodes,
                         }}
                         selection={{
-                            selectedStationId,
-                            source: selectionSource,
+                            selectedStationId: result.selectedStationId,
+                            source: result.selectionSource,
                         }}
                         visibleHeight={searchOverlayVisibleHeight}
                         onVisibleHeightChange={setSearchOverlayVisibleHeight}
-                        onLocalCurrencyOnlyChange={changeLocalCurrencyFilter}
-                        onBrandFilterToggle={toggleBrandFilter}
+                        onLocalCurrencyOnlyChange={result.changeLocalCurrencyFilter}
+                        onBrandFilterToggle={result.toggleBrandFilter}
                         onStationClick={(stationId) => {
-                            selectStation(
+                            result.selectStation(
                                 {
                                     source: "list",
                                     stationId,
@@ -278,8 +263,7 @@ export function SearchStationByPathPage() {
                             );
                         }}
                         onClose={() => {
-                            setIsSearchResultDismissed(true);
-                            clearSelection();
+                            result.close();
                         }}
                     />
                 )}

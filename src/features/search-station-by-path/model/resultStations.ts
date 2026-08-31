@@ -14,18 +14,20 @@ export type StationSelection = {
 };
 
 export type ResultStationsState = {
-    stations: Station[];
+    stations: Station[] | null;
     filter: StationFilter;
     selection: StationSelection | null;
+    isOpen: boolean;
 };
 
 export const INITIAL_RESULT_STATIONS_STATE: ResultStationsState = {
-    stations: [],
+    stations: null,
     filter: {
         localCurrencyOnly: false,
         selectedBrandCodes: [],
     },
     selection: null,
+    isOpen: false,
 };
 
 export type ResultStationsAction =
@@ -33,7 +35,8 @@ export type ResultStationsAction =
     | { type: "LOCAL_CURRENCY_FILTER_CHANGED"; enabled: boolean }
     | { type: "BRAND_FILTER_TOGGLED"; brandCode: string }
     | { type: "STATION_SELECTED"; selection: StationSelection }
-    | { type: "SELECTION_CLEARED" };
+    | { type: "SELECTION_CLEARED" }
+    | { type: "RESULT_CLOSED" };
 
 // 가격 정렬도 사이드이펙트로 되고있음. 지금은 문제가 없지만 나중에는 어떻게 될지 모르므로 염두
 export function getVisibleStations(stations: Station[], filter: StationFilter) {
@@ -82,11 +85,14 @@ export function resultStationsReducer(state: ResultStationsState, action: Result
 
         case "SELECTION_CLEARED":
             return { ...state, selection: null };
+
+        case "RESULT_CLOSED":
+            return { ...state, isOpen: false, selection: null };
     }
 }
 
 function selectStation(state: ResultStationsState, selection: StationSelection): ResultStationsState {
-    const visibleStations = getVisibleStations(state.stations, state.filter);
+    const visibleStations = getVisibleStations(state.stations ?? [], state.filter);
 
     return {
         ...state,
@@ -107,7 +113,7 @@ function toggleBrandFilter(state: ResultStationsState, brandCode: string): Resul
     return {
         ...state,
         filter,
-        selection: keepSelectionIfVisible(state.selection, getVisibleStations(state.stations, filter)),
+        selection: keepSelectionIfVisible(state.selection, getVisibleStations(state.stations ?? [], filter)),
     };
 }
 
@@ -120,7 +126,7 @@ function changeLocalCurrencyFilter(state: ResultStationsState, enabled: boolean)
     return {
         ...state,
         filter,
-        selection: keepSelectionIfVisible(state.selection, getVisibleStations(state.stations, filter)),
+        selection: keepSelectionIfVisible(state.selection, getVisibleStations(state.stations ?? [], filter)),
     };
 }
 
@@ -138,6 +144,7 @@ function replaceStations(state: ResultStationsState, stations: Station[]): Resul
             selectedBrandCodes,
         },
         selection: null,
+        isOpen: true,
     };
 }
 

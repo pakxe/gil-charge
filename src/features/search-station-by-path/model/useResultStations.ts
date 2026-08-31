@@ -20,7 +20,7 @@ export function useResultStations({ map }: Params) {
     const [state, dispatch] = useReducer(resultStationsReducer, INITIAL_RESULT_STATIONS_STATE);
 
     const visibleStations = useMemo(
-        () => getVisibleStations(state.stations, state.filter),
+        () => getVisibleStations(state.stations ?? [], state.filter),
         [state.filter, state.stations],
     );
 
@@ -28,8 +28,8 @@ export function useResultStations({ map }: Params) {
         dispatch({ type: "STATIONS_REPLACED", stations });
     }, []);
 
-    const clearSelection = useCallback(() => {
-        dispatch({ type: "SELECTION_CLEARED" });
+    const close = useCallback(() => {
+        dispatch({ type: "RESULT_CLOSED" });
     }, []);
 
     const selectStation = useCallback(
@@ -75,12 +75,13 @@ export function useResultStations({ map }: Params) {
         stations: state.stations,
         visibleStations,
         filter: state.filter,
-        brandCodes: getBrandCodes(state.stations),
+        brandCodes: getBrandCodes(state.stations ?? []),
+        isOpen: state.isOpen,
         selectedStationId: state.selection?.stationId ?? null,
         selectionSource: state.selection?.source ?? null,
         replaceStations,
         selectStation,
-        clearSelection,
+        close,
         toggleBrandFilter,
         changeLocalCurrencyFilter,
     };
