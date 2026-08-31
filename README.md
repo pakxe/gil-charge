@@ -2,11 +2,53 @@
 
 지도 위에 이동 경로를 직접 그리고, 경로 주변의 주유소를 찾아 가격을 확인하는 모바일 우선 웹 애플리케이션입니다.
 
+
 ## 미리보기
 
+<table>
+  <thead>
+    <tr>
+      <th align="center" width="60%">데스크탑 (Desktop)</th>
+      <th align="center" width="40%">모바일 (Mobile)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center">
+        <video src="https://github.com/user-attachments/assets/c55c0099-4dcf-4bce-aaca-08cac0a4d373" controls width="100%"></video>
+      </td>
+      <td align="center">
+        <video src="https://github.com/user-attachments/assets/0ff760fa-da68-4fc9-8bee-ad883202a1cb" controls width="100%"></video>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
-https://github.com/user-attachments/assets/f6df4149-4bbe-402d-bb18-5b173fae5dcd
+## 주요 기능
 
+### 검색 방식 선택
+
+- 경로 기반 주유소 검색과 주유소명 검색 중 원하는 방식을 선택합니다.
+
+### 경로 기반 주유소 검색
+
+- 카카오 지도 위를 터치하거나 클릭해 웨이포인트를 추가합니다.
+- 웨이포인트를 선으로 연결해 이동 경로를 만들고, 반경 슬라이더로 검색 범위를 조절합니다.
+- 경로 주변 주유소를 검색하고 가격 낮은 순으로 결과를 표시합니다.
+- 검색 결과는 지도 마커와 하단 바텀 시트에 함께 표시됩니다.
+- 검색 결과에서 주유소 가격, 도로명 주소, 브랜드와 지역화폐 사용 가능 여부를 확인할 수 있습니다.
+- 브랜드를 복수 선택하거나 지역화폐 필터를 적용해 검색 결과를 좁힐 수 있습니다.
+- 지도 마커 또는 결과 목록에서 주유소를 선택하면 양쪽 UI가 동기화됩니다.
+- 결과```markdown
+# 길충전 (gil-charge)
+
+지도 위에 이동 경로를 직접 그리고, 경로 주변의 주유소를 찾아 가격을 확인하는 모바일 우선 웹 애플리케이션입니다.
+
+## 미리보기
+
+| 데스크탑 (Desktop) | 모바일 (Mobile) |
+| :---: | :---: |
+| [https://github.com/user-attachments/assets/0ff760fa-da68-4fc9-8bee-ad883202a1cb](https://github.com/user-attachments/assets/0ff760fa-da68-4fc9-8bee-ad883202a1cb) | <!-- 모바일 영상/GIF 링크를 여기에 넣어주세요 --> |
 
 ## 주요 기능
 
