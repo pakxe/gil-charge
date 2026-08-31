@@ -89,15 +89,15 @@ export function ResultBottomSheet({
 
                         <p className="mt-1 text-sub font-medium text-gil-gray-600">가격 낮은 순</p>
                     </div>
-
-                    <StationResultFilters
-                        localCurrencyOnly={filter.localCurrencyOnly}
-                        brandCodes={filter.brandCodes}
-                        selectedBrandCodes={filter.selectedBrandCodes}
-                        onLocalCurrencyOnlyChange={onLocalCurrencyOnlyChange}
-                        onBrandFilterToggle={onBrandFilterToggle}
-                    />
                 </div>
+
+                <StationResultFilters
+                    localCurrencyOnly={filter.localCurrencyOnly}
+                    brandCodes={filter.brandCodes}
+                    selectedBrandCodes={filter.selectedBrandCodes}
+                    onLocalCurrencyOnlyChange={onLocalCurrencyOnlyChange}
+                    onBrandFilterToggle={onBrandFilterToggle}
+                />
 
                 <StationList
                     totalStationCount={totalStationCount}
