@@ -1,29 +1,5 @@
 const db = require("../db/mysql");
 
-function parseJsonColumn(value) {
-    if (!value) {
-        return null;
-    }
-
-    if (typeof value !== "string") {
-        return value;
-    }
-
-    try {
-        return JSON.parse(value);
-    } catch (error) {
-        return value;
-    }
-}
-
-function stringifyJsonColumn(value) {
-    if (value === undefined || value === null) {
-        return null;
-    }
-
-    return JSON.stringify(value);
-}
-
 function toCacheRow(row) {
     return {
         stationUid: row.station_uid,
@@ -38,8 +14,8 @@ function toCacheRow(row) {
         localCurrencyCheckedAt: row.local_currency_checked_at,
         localCurrencyExpiresAt: row.local_currency_expires_at,
         localCurrencyStoreName: row.local_currency_store_name,
-        localCurrencyRaw: parseJsonColumn(row.local_currency_raw),
-        opinetDetailRaw: parseJsonColumn(row.opinet_detail_raw),
+        localCurrencyName: row.local_currency_name,
+        localCurrencyIndustryCode: row.local_currency_industry_code,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
     };
@@ -67,8 +43,8 @@ async function findByStationUids(stationUids) {
                 local_currency_checked_at,
                 local_currency_expires_at,
                 local_currency_store_name,
-                local_currency_raw,
-                opinet_detail_raw,
+                local_currency_name,
+                local_currency_industry_code,
                 created_at,
                 updated_at
             FROM gas_station_local_currency_cache
@@ -95,8 +71,8 @@ async function upsertCache(cache) {
                 local_currency_checked_at,
                 local_currency_expires_at,
                 local_currency_store_name,
-                local_currency_raw,
-                opinet_detail_raw
+                local_currency_name,
+                local_currency_industry_code
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 station_name = VALUES(station_name),
@@ -109,8 +85,8 @@ async function upsertCache(cache) {
                 local_currency_checked_at = VALUES(local_currency_checked_at),
                 local_currency_expires_at = VALUES(local_currency_expires_at),
                 local_currency_store_name = VALUES(local_currency_store_name),
-                local_currency_raw = VALUES(local_currency_raw),
-                opinet_detail_raw = VALUES(opinet_detail_raw)
+                local_currency_name = VALUES(local_currency_name),
+                local_currency_industry_code = VALUES(local_currency_industry_code)
         `,
         [
             cache.stationUid,
@@ -126,8 +102,8 @@ async function upsertCache(cache) {
             cache.localCurrencyCheckedAt ?? null,
             cache.localCurrencyExpiresAt ?? null,
             cache.localCurrencyStoreName ?? null,
-            stringifyJsonColumn(cache.localCurrencyRaw),
-            stringifyJsonColumn(cache.opinetDetailRaw),
+            cache.localCurrencyName ?? null,
+            cache.localCurrencyIndustryCode ?? null,
         ]
     );
 

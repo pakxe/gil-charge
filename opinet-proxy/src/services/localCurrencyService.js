@@ -2,6 +2,7 @@ const axios = require("axios");
 const config = require("../config");
 const localCurrencyCacheRepository = require("../repositories/localCurrencyCacheRepository");
 const jusoAddressService = require("./jusoAddressService");
+const opinetService = require("./opinetService");
 
 const CACHE_REFRESH_MONTHS = 1;
 const REFRESH_CONCURRENCY = 5;
@@ -67,10 +68,6 @@ function isGasStationIndustry(row) {
     return GAS_STATION_INDUSTRY_CODES.has(getIndustryCode(row));
 }
 
-function getMatchedLocalCurrencyStore(cache) {
-    return extractGyeonggiRows(cache?.localCurrencyRaw).find(isGasStationIndustry) || null;
-}
-
 async function mapWithConcurrency(items, concurrency, callback) {
     const results = [];
     let nextIndex = 0;
@@ -99,10 +96,8 @@ async function lookupLocalCurrencyByRoadAddress(roadAddress) {
             localCurrencyCheckedAt: null,
             localCurrencyExpiresAt: null,
             localCurrencyStoreName: null,
-            localCurrencyRaw: {
-                skipped: true,
-                reason: "GYEONGGI_LOCAL_CURRENCY_API_KEY is not configured.",
-            },
+            localCurrencyName: null,
+            localCurrencyIndustryCode: null,
         };
     }
 
@@ -126,143 +121,88 @@ async function lookupLocalCurrencyByRoadAddress(roadAddress) {
         localCurrencyCheckedAt: checkedAt,
         localCurrencyExpiresAt: expiresAt,
         localCurrencyStoreName: matchedStore?.CMPNM_NM || null,
-        localCurrencyRaw: response.data,
+        localCurrencyName: matchedStore?.REGION_MNY_NM || null,
+        localCurrencyIndustryCode: matchedStore ? getIndustryCode(matchedStore) : null,
     };
 }
 
-async function refreshStationCache(station, fetchStationDetailById) {
-    const detailCheckedAt = new Date();
-    const detailResponse = await fetchStationDetailById(station.id);
-    const oil = getOpinetDetailOil(detailResponse);
+function createLookupResult(status, overrides = {}) {
+    const checkedAt = new Date();
 
-    const originalRoadAddress = oil?.NEW_ADR || null;
-    const lotAddress = oil?.VAN_ADR || null;
+    return {
+        isLocalCurrencyAccepted: null,
+        lookupStatus: status,
+        localCurrencyCheckedAt: checkedAt,
+        localCurrencyExpiresAt: addMonths(checkedAt, CACHE_REFRESH_MONTHS),
+        localCurrencyStoreName: null,
+        localCurrencyName: null,
+        localCurrencyIndustryCode: null,
+        ...overrides,
+    };
+}
+
+async function resolveStationAddress(originalRoadAddress, stationId) {
     let roadAddress = originalRoadAddress;
-    let sigunName = oil?.SIGUN_NM || extractSigunName(originalRoadAddress || lotAddress);
-
-    if (!originalRoadAddress && !lotAddress) {
-        const checkedAt = new Date();
-        const cache = {
-            stationUid: station.id,
-            stationName: oil?.OS_NM || station.name,
-            roadAddress,
-            lotAddress,
-            sigunName,
-            isLocalCurrencyAccepted: null,
-            lookupStatus: "UNKNOWN",
-            opinetDetailCheckedAt: detailCheckedAt,
-            localCurrencyCheckedAt: checkedAt,
-            localCurrencyExpiresAt: addMonths(checkedAt, CACHE_REFRESH_MONTHS),
-            localCurrencyStoreName: null,
-            localCurrencyRaw: {
-                skipped: true,
-                reason: "Opinet detail response does not include address fields.",
-            },
-            opinetDetailRaw: detailResponse,
-        };
-
-        return localCurrencyCacheRepository.upsertCache(cache);
-    }
 
     if (!originalRoadAddress) {
-        const checkedAt = new Date();
-        const cache = {
-            stationUid: station.id,
-            stationName: oil?.OS_NM || station.name,
-            roadAddress,
-            lotAddress,
-            sigunName,
-            isLocalCurrencyAccepted: null,
-            lookupStatus: "UNKNOWN",
-            opinetDetailCheckedAt: detailCheckedAt,
-            localCurrencyCheckedAt: checkedAt,
-            localCurrencyExpiresAt: addMonths(checkedAt, CACHE_REFRESH_MONTHS),
-            localCurrencyStoreName: null,
-            localCurrencyRaw: {
-                skipped: true,
-                reason: "Gyeonggi local currency API requires REFINE_ROADNM_ADDR, but road address is missing.",
-            },
-            opinetDetailRaw: detailResponse,
-        };
-
-        return localCurrencyCacheRepository.upsertCache(cache);
+        return roadAddress;
     }
 
     try {
         const standardizedAddress = await jusoAddressService.standardizeRoadAddress(originalRoadAddress);
         roadAddress = standardizedAddress.roadAddress || originalRoadAddress;
 
-        if (!sigunName) {
-            sigunName = extractSigunName(roadAddress || lotAddress);
-        }
-
         if (standardizedAddress.source === "juso" && roadAddress !== originalRoadAddress) {
             console.log(`도로명주소 정제: ${originalRoadAddress} -> ${roadAddress}`);
         }
     } catch (error) {
-        console.error(`도로명주소 API 조회 실패 (${station.id}):`, error.message);
+        console.error(`도로명주소 API 조회 실패 (${stationId}):`, error.message);
+    }
+
+    return roadAddress;
+}
+
+async function checkLocalCurrency({ originalRoadAddress, roadAddress, stationId }) {
+    if (!originalRoadAddress) {
+        return createLookupResult("UNKNOWN");
     }
 
     if (!isGyeonggiAddress(roadAddress)) {
-        const checkedAt = new Date();
-        const cache = {
-            stationUid: station.id,
-            stationName: oil?.OS_NM || station.name,
-            roadAddress,
-            lotAddress,
-            sigunName,
-            isLocalCurrencyAccepted: null,
-            lookupStatus: "OUT_OF_SCOPE",
-            opinetDetailCheckedAt: detailCheckedAt,
-            localCurrencyCheckedAt: checkedAt,
-            localCurrencyExpiresAt: addMonths(checkedAt, CACHE_REFRESH_MONTHS),
-            localCurrencyStoreName: null,
-            localCurrencyRaw: null,
-            opinetDetailRaw: detailResponse,
-        };
-
-        return localCurrencyCacheRepository.upsertCache(cache);
+        return createLookupResult("OUT_OF_SCOPE");
     }
 
     try {
-        const localCurrencyResult = await lookupLocalCurrencyByRoadAddress(roadAddress);
-
-        const cache = {
-            stationUid: station.id,
-            stationName: oil?.OS_NM || station.name,
-            roadAddress,
-            lotAddress,
-            sigunName,
-            ...localCurrencyResult,
-            opinetDetailCheckedAt: detailCheckedAt,
-            opinetDetailRaw: detailResponse,
-        };
-
-        return localCurrencyCacheRepository.upsertCache(cache);
+        return await lookupLocalCurrencyByRoadAddress(roadAddress);
     } catch (error) {
-        console.error(`지역화폐 API 조회 실패 (${station.id}):`, error.message);
-
-        const checkedAt = new Date();
-        const cache = {
-            stationUid: station.id,
-            stationName: oil?.OS_NM || station.name,
-            roadAddress,
-            lotAddress,
-            sigunName,
-            isLocalCurrencyAccepted: null,
-            lookupStatus: "ERROR",
-            opinetDetailCheckedAt: detailCheckedAt,
-            localCurrencyCheckedAt: checkedAt,
-            localCurrencyExpiresAt: addMonths(checkedAt, CACHE_REFRESH_MONTHS),
-            localCurrencyStoreName: null,
-            localCurrencyRaw: {
-                error: error.message,
-            },
-            opinetDetailRaw: detailResponse,
-        };
-
-        return localCurrencyCacheRepository.upsertCache(cache);
+        console.error(`지역화폐 API 조회 실패 (${stationId}):`, error.message);
+        return createLookupResult("ERROR");
     }
+}
+
+async function refreshStationCache(station) {
+    const detailCheckedAt = new Date();
+    const detailResponse = await opinetService.fetchStationDetailById(station.id);
+    const oil = getOpinetDetailOil(detailResponse);
+
+    const originalRoadAddress = oil?.NEW_ADR || null;
+    const lotAddress = oil?.VAN_ADR || null;
+    const roadAddress = await resolveStationAddress(originalRoadAddress, station.id);
+    const sigunName = oil?.SIGUN_NM || extractSigunName(roadAddress || lotAddress);
+    const localCurrencyResult = await checkLocalCurrency({
+        originalRoadAddress,
+        roadAddress,
+        stationId: station.id,
+    });
+
+    return localCurrencyCacheRepository.upsertCache({
+        stationUid: station.id,
+        stationName: oil?.OS_NM || station.name,
+        roadAddress,
+        lotAddress,
+        sigunName,
+        opinetDetailCheckedAt: detailCheckedAt,
+        ...localCurrencyResult,
+    });
 }
 
 function toLocalCurrencyResponse(cache) {
@@ -275,25 +215,19 @@ function toLocalCurrencyResponse(cache) {
         };
     }
 
-    const matchedStore = getMatchedLocalCurrencyStore(cache);
-    const rows = extractGyeonggiRows(cache.localCurrencyRaw);
-    const hasLocalCurrencyRows = rows.length > 0;
-    const accepted = hasLocalCurrencyRows ? Boolean(matchedStore) : cache.isLocalCurrencyAccepted;
-    const status = hasLocalCurrencyRows ? (matchedStore ? "ACCEPTED" : "NOT_ACCEPTED") : cache.lookupStatus;
-
     return {
-        accepted,
-        status,
+        accepted: cache.isLocalCurrencyAccepted,
+        status: cache.lookupStatus,
         checkedAt: cache.localCurrencyCheckedAt,
         expiresAt: cache.localCurrencyExpiresAt,
-        storeName: hasLocalCurrencyRows ? matchedStore?.CMPNM_NM || null : cache.localCurrencyStoreName,
-        currencyName: matchedStore?.REGION_MNY_NM || null,
-        industryCode: matchedStore ? getIndustryCode(matchedStore) : null,
+        storeName: cache.localCurrencyStoreName,
+        currencyName: cache.localCurrencyName,
+        industryCode: cache.localCurrencyIndustryCode,
         roadAddress: cache.roadAddress,
     };
 }
 
-async function attachLocalCurrencyInfo(stations, { fetchStationDetailById }) {
+async function attachLocalCurrencyInfo(stations) {
     if (!stations || stations.length === 0) {
         return stations;
     }
@@ -307,9 +241,7 @@ async function attachLocalCurrencyInfo(stations, { fetchStationDetailById }) {
     if (stationsToRefresh.length > 0) {
         console.log(`지역화폐 캐시 갱신 대상: ${stationsToRefresh.length}개`);
 
-        const refreshedRows = await mapWithConcurrency(stationsToRefresh, REFRESH_CONCURRENCY, (station) =>
-            refreshStationCache(station, fetchStationDetailById)
-        );
+        const refreshedRows = await mapWithConcurrency(stationsToRefresh, REFRESH_CONCURRENCY, refreshStationCache);
 
         refreshedRows.filter(Boolean).forEach((cache) => {
             cacheByStationUid.set(cache.stationUid, cache);
