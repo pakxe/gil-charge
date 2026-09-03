@@ -1,5 +1,5 @@
 import type { ContainerPoint, MapBounds, LatLng } from "@/shared/model/map";
-import type { Station } from "@/shared/types/map";
+import type { Station } from "@/shared/model/map";
 
 export type StationSelectionSource = "map" | "list";
 
@@ -32,6 +32,8 @@ export const INITIAL_RESULT_STATIONS_STATE: ResultStationsState = {
 
 export type ResultStationsAction =
     | { type: "STATIONS_REPLACED"; stations: Station[] }
+    | { type: "RESULT_RESET"; filter: StationFilter }
+    | { type: "FILTER_REPLACED"; filter: StationFilter }
     | { type: "LOCAL_CURRENCY_FILTER_CHANGED"; enabled: boolean }
     | { type: "BRAND_FILTER_TOGGLED"; brandCode: string }
     | { type: "STATION_SELECTED"; selection: StationSelection }
@@ -73,6 +75,16 @@ export function resultStationsReducer(state: ResultStationsState, action: Result
     switch (action.type) {
         case "STATIONS_REPLACED":
             return replaceStations(state, action.stations);
+
+        case "RESULT_RESET":
+            return { ...INITIAL_RESULT_STATIONS_STATE, filter: action.filter };
+
+        case "FILTER_REPLACED":
+            return {
+                ...state,
+                filter: action.filter,
+                selection: keepSelectionIfVisible(state.selection, getVisibleStations(state.stations ?? [], action.filter)),
+            };
 
         case "LOCAL_CURRENCY_FILTER_CHANGED":
             return changeLocalCurrencyFilter(state, action.enabled);
@@ -131,18 +143,9 @@ function changeLocalCurrencyFilter(state: ResultStationsState, enabled: boolean)
 }
 
 function replaceStations(state: ResultStationsState, stations: Station[]): ResultStationsState {
-    const availableBrandCodes = new Set(getBrandCodes(stations));
-    const selectedBrandCodes = state.filter.selectedBrandCodes.filter((brandCode) =>
-        availableBrandCodes.has(brandCode),
-    );
-
     return {
         ...state,
         stations,
-        filter: {
-            ...state.filter,
-            selectedBrandCodes,
-        },
         selection: null,
         isOpen: true,
     };
