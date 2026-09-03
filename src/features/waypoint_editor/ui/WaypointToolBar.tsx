@@ -4,6 +4,7 @@ import { cn } from "@/shared/lib/cn";
 import Box from "@/shared/ui/Box/Box";
 
 type WaypointToolBarProps = {
+    disabled?: boolean;
     mode: WaypointEditorMode;
     hasWaypoints: boolean;
     onModeChange: (mode: WaypointEditorMode) => void;
@@ -23,6 +24,7 @@ type WaypointToolBarProps = {
 };
 
 export function WaypointToolBar({
+    disabled = false,
     mode,
     hasWaypoints,
     onModeChange,
@@ -33,6 +35,7 @@ export function WaypointToolBar({
     return (
         <div className="absolute left-4 top-4 z-60 text-sm font-medium transition-colors flex flex-row gap-2 h-9">
             <WaypointHistoryControls
+                disabled={disabled}
                 canUndo={history.canUndo}
                 canRedo={history.canRedo}
                 onUndo={history.onUndo}
@@ -42,6 +45,7 @@ export function WaypointToolBar({
             <Box role="group" aria-label="경로 편집 모드" yPad={4} xPad={4} className="gap-1">
                 <button
                     type="button"
+                    disabled={disabled}
                     aria-pressed={mode === "waypoint"}
                     className={cn(
                         "h-8 rounded-full px-3 text-xs font-bold transition-colors shrink-0",
@@ -55,6 +59,7 @@ export function WaypointToolBar({
                 </button>
                 <button
                     type="button"
+                    disabled={disabled}
                     aria-pressed={mode === "lasso"}
                     className={cn(
                         "h-8 rounded-full px-3 text-xs font-bold transition-colors shrink-0",
@@ -69,10 +74,10 @@ export function WaypointToolBar({
             </Box>
             <button
                 type="button"
-                disabled={!selection.hasSelectedWaypoints}
+                disabled={disabled || !selection.hasSelectedWaypoints}
                 className={cn(
                     "min-h-10 rounded-full bg-[#1f1f1f]/40 px-3 backdrop-blur-[15px] transition-colors text-xs font-bold",
-                    selection.hasSelectedWaypoints
+                    selection.hasSelectedWaypoints && !disabled
                         ? "cursor-pointer text-white"
                         : "cursor-not-allowed text-gil-gray-650",
                 )}
@@ -82,12 +87,15 @@ export function WaypointToolBar({
             </button>
             <Box
                 role="button"
-                tabIndex={0}
+                aria-disabled={disabled || !hasWaypoints}
+                tabIndex={disabled ? -1 : 0}
                 className={cn(
-                    hasWaypoints ? "text-white cursor-pointer" : "text-gil-gray-650",
+                    hasWaypoints && !disabled ? "text-white cursor-pointer" : "text-gil-gray-650",
                     "text-xs px-3 font-bold",
                 )}
-                onClick={onDeleteAll}
+                onClick={() => {
+                    if (!disabled) onDeleteAll();
+                }}
             >
                 전체 삭제
             </Box>
