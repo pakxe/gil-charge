@@ -20,6 +20,7 @@ import type { LatLng } from "@/shared/model/map";
 
 type UseWaypointEditorOptions = {
     createId?: () => WaypointNodeId;
+    initialWaypoints?: LatLng[];
     maxWaypointCount?: number;
     onAddRejected?: (reason: "OVERFLOW") => void;
 };
@@ -45,15 +46,19 @@ const defaultCreateId = () => uuidv4();
 
 export function useWaypointEditor({
     createId = defaultCreateId,
+    initialWaypoints = [],
     maxWaypointCount,
     onAddRejected,
 }: UseWaypointEditorOptions = {}) {
     const onAddRejectedRef = useRef(onAddRejected);
-    const [hookState, setHookState] = useState<WaypointEditorHookState>(() => ({
-        editorState: waypointEditor.createInitialState(),
-        historyState: waypointHistory.create(),
-        result: null,
-    }));
+    const [hookState, setHookState] = useState<WaypointEditorHookState>(() => {
+        const nodes = initialWaypoints.map((latLng) => ({ id: createId(), latLng: { ...latLng } }));
+        return {
+            editorState: waypointEditor.restoreNodes(waypointEditor.createInitialState(), nodes),
+            historyState: waypointHistory.create(nodes),
+            result: null,
+        };
+    });
 
     useEffect(() => {
         onAddRejectedRef.current = onAddRejected;
@@ -316,6 +321,18 @@ export function useWaypointEditor({
         });
     }, []);
 
+    const restoreWaypoints = useCallback(
+        (waypoints: LatLng[]): void => {
+            const nodes = waypoints.map((latLng) => ({ id: createId(), latLng: { ...latLng } }));
+            setHookState({
+                editorState: waypointEditor.restoreNodes(waypointEditor.createInitialState(), nodes),
+                historyState: waypointHistory.create(nodes),
+                result: null,
+            });
+        },
+        [createId],
+    );
+
     const editorState = hookState.editorState;
     const visibleWaypoints = useMemo(() => getVisibleWaypoints(editorState), [editorState]);
     const canUseHistory = !isMoveActive(editorState.status);
@@ -344,6 +361,7 @@ export function useWaypointEditor({
             commitBatchMove,
             undoWaypoint,
             redoWaypoint,
+            restoreWaypoints,
         },
     };
 }
