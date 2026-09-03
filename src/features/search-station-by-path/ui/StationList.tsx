@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import type { StationSelectionSource } from "@/features/search-station-by-path/model/resultStations";
-import type { Station } from "@/shared/types/map";
+import type { Station } from "@/shared/model/map";
 
 import { StationItem } from "@/features/search-station-by-path/ui/StationItem";
 

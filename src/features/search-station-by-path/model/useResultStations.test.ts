@@ -4,7 +4,7 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { MapInstance } from "@/shared/model/map";
-import type { Station } from "@/shared/types/map";
+import type { Station } from "@/shared/model/map";
 import { useResultStations } from "@/features/search-station-by-path/model/useResultStations";
 
 describe("useResultStations", () => {

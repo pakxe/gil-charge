@@ -5,7 +5,7 @@ import { createHttpFailure } from "@/shared/api/httpFailure";
 import { httpClient } from "@/shared/api/httpClient";
 import { searchStationByPath } from "./searchStationByPath";
 
-import { PathSet, Station } from "@/shared/types/map";
+import { PathSet, Station } from "@/shared/model/map";
 
 describe("stationApi", () => {
     afterEach(() => {

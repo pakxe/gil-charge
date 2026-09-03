@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 
-import type { Station } from "@/shared/types/map";
+import type { Station } from "@/shared/model/map";
 import type { StationSelectionSource } from "@/features/search-station-by-path/model/resultStations";
 import { useResultBottomSheetDrag } from "@/features/search-station-by-path/model/useResultBottomSheetDrag";
 import { StationResultFilters } from "@/features/search-station-by-path/ui/StationResultFilters";

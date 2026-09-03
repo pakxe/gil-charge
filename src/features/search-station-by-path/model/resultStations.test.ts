@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Station } from "@/shared/types/map";
+import type { Station } from "@/shared/model/map";
 import {
     getStationCenteringDecision,
     getVisibleStations,

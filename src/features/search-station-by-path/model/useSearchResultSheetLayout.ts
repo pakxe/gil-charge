@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { Station } from "@/shared/types/map";
+import type { Station } from "@/shared/model/map";
 import { clamp, getResultSheetDefaultHeight } from "@/features/search-station-by-path/model/resultBottomSheet";
 
 type Params = {

@@ -9,7 +9,7 @@ import {
 } from "@/features/search-station-by-path/api/searchStationByPath";
 import { useSearchStationByPath } from "@/features/search-station-by-path/model/useSearchStationByPath";
 import { createRequestFailure } from "@/shared/lib/requestFailure";
-import type { PathSet, Station } from "@/shared/types/map";
+import type { PathSet, Station } from "@/shared/model/map";
 
 vi.mock("@/features/search-station-by-path/api/searchStationByPath", async (importOriginal) => {
     const actual = await importOriginal<typeof import("@/features/search-station-by-path/api/searchStationByPath")>();

@@ -1,4 +1,4 @@
-import type { Station } from "@/shared/types/map";
+import type { Station } from "@/shared/model/map";
 import { Map } from "@/shared/ui/Map/Map";
 import { cn } from "@/shared/lib/cn";
 import { MAP_Z_INDEX } from "@/shared/constants/map";

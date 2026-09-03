@@ -1,5 +1,5 @@
 import type { MapInstance } from "@/shared/model/map";
-import type { Station } from "@/shared/types/map";
+import type { Station } from "@/shared/model/map";
 import { getStationCenteringDecision, stationToLatLng } from "@/features/search-station-by-path/model/resultStations";
 
 export function centerStationOnMap({
