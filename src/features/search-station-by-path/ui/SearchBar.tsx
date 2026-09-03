@@ -4,13 +4,19 @@ import { InlineFailurePresentation } from "@/shared/ui/InlineFailurePresentation
 import { LoadingSpinner } from "@/shared/ui/LoadingSpinner/LoadingSpinner";
 import { Slider } from "@/shared/ui/Slider/Slider";
 import { ChangeEvent } from "react";
+import {
+    MAX_PATH_SEARCH_RADIUS_KM,
+    MIN_PATH_SEARCH_RADIUS_KM,
+    PATH_SEARCH_RADIUS_STEP_KM,
+} from "@/features/search-station-by-path/model/pathSearchState";
 
 type Props = {
     radiusKm: number;
     onRadiusChange: (radius: number) => void;
 
     onSearch: (radius: number) => void;
-    searchState: "ready" | "disabled" | "loading";
+    onRetry?: () => void;
+    searchState: "ready" | "disabled" | "loading" | "retryable" | "error";
     errorMessage: string | null;
     className?: string;
 };
@@ -20,6 +26,7 @@ export function SearchBar({
     onRadiusChange,
     radiusKm,
     onSearch,
+    onRetry,
     errorMessage,
     searchState,
 }: Props) {
@@ -34,10 +41,11 @@ export function SearchBar({
             <Box className="h-fit min-w-0 flex-1 flex flex-col rounded-2xl gap-0">
                 <Slider
                     id="radius-range"
-                    min={1}
-                    max={5}
-                    step={0.1}
+                    min={MIN_PATH_SEARCH_RADIUS_KM}
+                    max={MAX_PATH_SEARCH_RADIUS_KM}
+                    step={PATH_SEARCH_RADIUS_STEP_KM}
                     value={radiusKm}
+                    disabled={searchState === "loading"}
                     onChange={handleRadiusChange}
                     topSlot={
                         <>
@@ -53,22 +61,26 @@ export function SearchBar({
             <button
                 type="button"
                 onClick={() => {
+                    if (searchState === "retryable") {
+                        onRetry?.();
+                        return;
+                    }
                     if (searchState !== "ready") {
                         return;
                     }
 
                     onSearch(radiusKm);
                 }}
-                disabled={searchState === "loading" || searchState === "disabled"}
-                aria-label={searchState === "loading" ? "탐색 중" : "찾기"}
+                disabled={searchState === "loading" || searchState === "disabled" || searchState === "error"}
+                aria-label={searchState === "loading" ? "탐색 중" : searchState === "retryable" ? "다시 시도" : "찾기"}
                 className={cn(
                     "flex min-w-20 items-center justify-center rounded-2xl px-6 text-lg font-bold shadow-lg transition-colors",
-                    searchState === "ready"
+                    searchState === "ready" || searchState === "retryable"
                         ? "bg-gil-yellow-400 text-gil-brown-900"
                         : "bg-gil-gray-850 text-gil-gray-600",
                 )}
             >
-                {searchState === "loading" ? <LoadingSpinner /> : "찾기"}
+                {searchState === "loading" ? <LoadingSpinner /> : searchState === "retryable" ? "다시 시도" : "찾기"}
             </button>
         </div>
     );
