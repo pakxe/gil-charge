@@ -19,11 +19,6 @@ export const PATH_SEARCH_BRAND_CODES = ["SKE", "GSC", "HDO", "SOL", "RTE", "RTX"
 
 export type PathSearchMode = "draft" | "result";
 
-export type PathSearchDraft = {
-    waypoints: LatLng[];
-    radiusKm: number;
-};
-
 export type PathSearchFilter = {
     selectedBrandCodes: string[];
     localCurrencyOnly: boolean;
@@ -67,10 +62,12 @@ const latLngSchema = z.object({
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
 });
-const pathSearchDraftSchema = z.object({
+export const pathSearchDraftSchema = z.object({
     waypoints: z.array(latLngSchema),
     radiusKm: z.number(),
 });
+
+export type PathSearchDraft = z.infer<typeof pathSearchDraftSchema>;
 
 export function parsePathSearchLocation(search: string): ParsedPathSearchLocation {
     const params = new URLSearchParams(search);
