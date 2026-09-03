@@ -5,6 +5,24 @@ import { describe, expect, it, vi } from "vitest";
 import { useWaypointEditor } from "@/features/waypoint_editor/model/useWaypointEditor";
 
 describe("useWaypointEditor", () => {
+    it("복원된 웨이포인트를 undo 기준점으로 사용한다", () => {
+        const { result } = renderHook(() =>
+            useWaypointEditor({
+                createId: () => "restored-waypoint",
+                initialWaypoints: [{ lat: 37.5665, lng: 126.978 }],
+            }),
+        );
+
+        expect(result.current.data.waypoints).toHaveLength(1);
+        expect(result.current.data.canUndo).toBe(false);
+
+        act(() => result.current.actions.deleteAllWaypoint());
+        expect(result.current.data.canUndo).toBe(true);
+
+        act(() => result.current.actions.undoWaypoint());
+        expect(result.current.data.waypoints).toHaveLength(1);
+    });
+
     it("웨이포인트 추가가 거부되면 onAddRejected를 호출한다", () => {
         const onAddRejected = vi.fn();
         const { result } = renderHook(() =>
