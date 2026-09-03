@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 
 import type { PointerEvent, RefObject } from "react";
 
-import { clamp, snapResultSheetHeight } from "@/features/search-station-by-path/model/resultBottomSheet";
+import { snapResultSheetHeight } from "@/features/search-station-by-path/model/resultBottomSheet";
+import { clamp } from "@/shared/lib/number";
 
 type UseResultBottomSheetDragParams = {
     containerRef: RefObject<HTMLElement | null>;
