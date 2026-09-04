@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useSearchStationByPath } from "@/features/search-station-by-path/model/useSearchStationByPath";
 import {
@@ -18,6 +18,7 @@ import { usePathSearchLocation } from "@/features/search-station-by-path/model/u
 import { usePathSearchSynchronization } from "@/features/search-station-by-path/model/usePathSearchSynchronization";
 import { useResultStations } from "@/features/search-station-by-path/model/useResultStations";
 import { useSearchResultSheetLayout } from "@/features/search-station-by-path/model/useSearchResultSheetLayout";
+import { getResultSheetDefaultHeight } from "@/features/search-station-by-path/model/resultBottomSheet";
 import { getSearchStationByPathFailureMessage } from "@/features/search-station-by-path/ui/getSearchStationByPathFailureMessage";
 import { getPathSearchAdjustmentMessage } from "@/features/search-station-by-path/ui/getPathSearchAdjustmentMessage";
 import { CurrentLocationButton } from "@/features/search-station-by-path/ui/CurrentLocationButton";
@@ -33,6 +34,7 @@ import { WaypointLassoLayer } from "@/features/waypoint_editor/ui/WaypointLassoL
 import { WaypointNodesLayer } from "@/features/waypoint_editor/ui/WaypointNodesLayer";
 import { WaypointToolBar } from "@/features/waypoint_editor/ui/WaypointToolBar";
 import { DEFAULT_MAP_CENTER } from "@/shared/constants/map";
+import type { LatLng, MapInstance } from "@/shared/model/map";
 import { useMap } from "@/shared/model/useMap";
 import { Map } from "@/shared/ui/Map/Map";
 import { MapErrorFallback, MapLoadingFallback } from "@/shared/ui/Map/MapFallback";
@@ -70,7 +72,6 @@ export function SearchStationByPathPage() {
     const [radiusKm, setRadiusKm] = useState(initialCriteria.radiusKm);
     const [zoomLevel, setZoomLevel] = useState(INITIAL_MAP_ZOOM_LEVEL);
     const [editorMode, setEditorMode] = useState<WaypointEditorMode>("waypoint");
-    const didFitInitialWaypointsRef = useRef(false);
     const result = useResultStations({ map });
     const { replaceStations, replaceFilter, reset: resetResult } = result;
     const { state: request, retry, reset: resetRequest, search } = useSearchStationByPath();
@@ -81,16 +82,9 @@ export function SearchStationByPathPage() {
     );
 
     useEffect(() => {
-        if (!map || didFitInitialWaypointsRef.current || initialCriteria.waypoints.length === 0) return;
+        if (!map || initialCriteria.waypoints.length === 0) return;
 
-        map.fitPoints(initialCriteria.waypoints, {
-            top: 80,
-            right: 48,
-            bottom: 180,
-            left: 48,
-        });
-        if (map.getLevel() < INITIAL_MAP_ZOOM_LEVEL) map.setZoom(INITIAL_MAP_ZOOM_LEVEL);
-        didFitInitialWaypointsRef.current = true;
+        fitInitialWaypoints(map, initialCriteria.waypoints, INITIAL_MAP_BOTTOM_PADDING);
     }, [initialCriteria, map]);
 
     const { effectiveRadiusKm, requestKey } = usePathSearchSynchronization({
@@ -203,6 +197,23 @@ export function SearchStationByPathPage() {
         failure && failurePolicy?.presentation === "inline" ? getSearchStationByPathFailureMessage(failure) : null;
     const { searchOverlayRef, searchOverlayVisibleHeight, maxSearchSheetHeight, setSearchOverlayVisibleHeight } =
         useSearchResultSheetLayout({ hasSearchResult: hasResult, stations: result.stations });
+    useEffect(() => {
+        if (
+            !map ||
+            mode !== "result" ||
+            !hasResult ||
+            maxSearchSheetHeight === 0 ||
+            initialCriteria.waypoints.length === 0
+        ) {
+            return;
+        }
+
+        fitInitialWaypoints(
+            map,
+            initialCriteria.waypoints,
+            getResultSheetDefaultHeight(maxSearchSheetHeight) + INITIAL_MAP_BOTTOM_PADDING,
+        );
+    }, [hasResult, initialCriteria, map, maxSearchSheetHeight, mode]);
     const searchBar = (className: string) => (
         <SearchBar
             className={className}
@@ -337,6 +348,17 @@ export function SearchStationByPathPage() {
 
 const EMPTY_FILTER: PathSearchFilter = { localCurrencyOnly: false, selectedBrandCodes: [] };
 const INITIAL_MAP_ZOOM_LEVEL = 8;
+const INITIAL_MAP_BOTTOM_PADDING = 180;
+
+function fitInitialWaypoints(map: MapInstance, waypoints: LatLng[], bottomPadding: number) {
+    map.fitPoints(waypoints, {
+        top: 80,
+        right: 48,
+        bottom: bottomPadding,
+        left: 48,
+    });
+    if (map.getLevel() < INITIAL_MAP_ZOOM_LEVEL) map.setZoom(INITIAL_MAP_ZOOM_LEVEL);
+}
 
 function getInitialCriteria(parsed: ParsedPathSearchLocation): PathSearchCriteria {
     return parsed.mode === "result"
