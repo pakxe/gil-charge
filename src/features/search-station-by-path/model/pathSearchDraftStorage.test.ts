@@ -19,11 +19,12 @@ describe("path search draft storage", () => {
         });
     });
 
-    it("좌표·개수·반경을 정규화해 다시 저장한다", () => {
-        sessionStorage.setItem(PATH_SEARCH_DRAFT_STORAGE_KEY, JSON.stringify({
+    it("저장값을 변경하지 않고 좌표·개수·반경을 정규화해 반환한다", () => {
+        const raw = JSON.stringify({
             waypoints: Array.from({ length: 21 }, (_, index) => ({ lat: 37.12345678, lng: 127 + index / 100 })),
             radiusKm: 9,
-        }));
+        });
+        sessionStorage.setItem(PATH_SEARCH_DRAFT_STORAGE_KEY, raw);
 
         const result = readPathSearchDraft(sessionStorage);
 
@@ -32,18 +33,15 @@ describe("path search draft storage", () => {
         expect(result.draft.waypoints[0]).toEqual({ lat: 37.123457, lng: 127 });
         expect(result.draft.radiusKm).toBe(5);
         expect(result.adjustment).toEqual({ waypointCount: true, radius: true });
-        expect(JSON.parse(sessionStorage.getItem(PATH_SEARCH_DRAFT_STORAGE_KEY)!)).toEqual({
-            waypoints: result.draft.waypoints,
-            radiusKm: 5,
-        });
+        expect(sessionStorage.getItem(PATH_SEARCH_DRAFT_STORAGE_KEY)).toBe(raw);
     });
 
     it.each(["not-json", JSON.stringify({ waypoints: [{ lat: 100, lng: 127 }], radiusKm: 1 })])(
-        "잘못된 저장값을 제거한다",
+        "잘못된 저장값을 변경하지 않고 초기 draft를 반환한다",
         (value) => {
             sessionStorage.setItem(PATH_SEARCH_DRAFT_STORAGE_KEY, value);
             expect(readPathSearchDraft(sessionStorage).source).toBe("initial");
-            expect(sessionStorage.getItem(PATH_SEARCH_DRAFT_STORAGE_KEY)).toBeNull();
+            expect(sessionStorage.getItem(PATH_SEARCH_DRAFT_STORAGE_KEY)).toBe(value);
         },
     );
 
