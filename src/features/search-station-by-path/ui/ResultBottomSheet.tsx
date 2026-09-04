@@ -94,13 +94,15 @@ export function ResultBottomSheet({
                     </div>
                 </div>
 
-                <StationResultFilters
-                    localCurrencyOnly={filter.localCurrencyOnly}
-                    brandCodes={filter.brandCodes}
-                    selectedBrandCodes={filter.selectedBrandCodes}
-                    onLocalCurrencyOnlyChange={onLocalCurrencyOnlyChange}
-                    onBrandFilterToggle={onBrandFilterToggle}
-                />
+                {totalStationCount > 0 && (
+                    <StationResultFilters
+                        localCurrencyOnly={filter.localCurrencyOnly}
+                        brandCodes={filter.brandCodes}
+                        selectedBrandCodes={filter.selectedBrandCodes}
+                        onLocalCurrencyOnlyChange={onLocalCurrencyOnlyChange}
+                        onBrandFilterToggle={onBrandFilterToggle}
+                    />
+                )}
 
                 <StationList
                     totalStationCount={totalStationCount}
