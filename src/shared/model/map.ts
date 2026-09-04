@@ -15,6 +15,13 @@ export type ContainerPoint = {
     y: number;
 };
 
+export type MapPadding = {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+};
+
 export type MapInterface = {
     center: LatLng;
     zoomLevel?: number;
@@ -40,6 +47,7 @@ export type MapInterface = {
 export type MapInstance = {
     setCenter(latLng: LatLng): void;
     setZoom(level: number): void;
+    fitPoints(points: LatLng[], padding?: Partial<MapPadding>): void;
     getLevel(): number;
     getBounds(): MapBounds;
     panBy(deltaX: number, deltaY: number): void;

@@ -106,6 +106,7 @@ function createMapMock() {
     return {
         setCenter: vi.fn(),
         setZoom: vi.fn(),
+        fitPoints: vi.fn(),
         getLevel: vi.fn(() => 8),
         getBounds: vi.fn(),
         panBy: vi.fn(),
