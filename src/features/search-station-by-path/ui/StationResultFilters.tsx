@@ -2,18 +2,14 @@ import { BRAND_BY_CODE } from "@/features/search-station-by-path/ui/stationBrand
 import { cn } from "@/shared/lib/cn";
 
 type StationResultFiltersProps = {
-    localCurrencyOnly: boolean;
     brandCodes: string[];
     selectedBrandCodes: string[];
-    onLocalCurrencyOnlyChange: (enabled: boolean) => void;
     onBrandFilterToggle: (brandCode: string) => void;
 };
 
 export function StationResultFilters({
-    localCurrencyOnly,
     brandCodes,
     selectedBrandCodes,
-    onLocalCurrencyOnlyChange,
     onBrandFilterToggle,
 }: StationResultFiltersProps) {
     return (
@@ -44,22 +40,6 @@ export function StationResultFilters({
                     );
                 })}
             </div>
-
-            {brandCodes.length > 0 && <span aria-hidden className="h-5 w-px shrink-0 bg-gil-gray-700" />}
-
-            <button
-                type="button"
-                aria-pressed={localCurrencyOnly}
-                className={cn(
-                    "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold transition",
-                    localCurrencyOnly
-                        ? "bg-gil-yellow-400 text-gil-brown-900 ring-1 ring-current"
-                        : "bg-gil-gray-800 text-gil-gray-500",
-                )}
-                onClick={() => onLocalCurrencyOnlyChange(!localCurrencyOnly)}
-            >
-                지역화폐
-            </button>
         </div>
     );
 }

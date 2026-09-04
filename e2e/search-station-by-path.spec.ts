@@ -240,7 +240,7 @@ test.describe("웨이포인트 편집", () => {
         );
 
         await page.goto(
-            `${SEARCH_STATION_BY_PATH_PAGE}?mode=result&wp=37.5665%2C126.978&radius=1.5&localCurrency=0`,
+            `${SEARCH_STATION_BY_PATH_PAGE}?mode=result&wp=37.5665%2C126.978&radius=1.5`,
         );
         await waitForMap(page);
 

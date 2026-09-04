@@ -4,7 +4,6 @@ import type { Station } from "@/shared/model/map";
 export type StationSelectionSource = "map" | "list";
 
 export type StationFilter = {
-    localCurrencyOnly: boolean;
     selectedBrandCodes: string[];
 };
 
@@ -23,7 +22,6 @@ export type ResultStationsState = {
 export const INITIAL_RESULT_STATIONS_STATE: ResultStationsState = {
     stations: null,
     filter: {
-        localCurrencyOnly: false,
         selectedBrandCodes: [],
     },
     selection: null,
@@ -34,7 +32,6 @@ export type ResultStationsAction =
     | { type: "STATIONS_REPLACED"; stations: Station[] }
     | { type: "RESULT_RESET"; filter: StationFilter }
     | { type: "FILTER_REPLACED"; filter: StationFilter }
-    | { type: "LOCAL_CURRENCY_FILTER_CHANGED"; enabled: boolean }
     | { type: "BRAND_FILTER_TOGGLED"; brandCode: string }
     | { type: "STATION_SELECTED"; selection: StationSelection }
     | { type: "SELECTION_CLEARED" }
@@ -45,13 +42,7 @@ export function getVisibleStations(stations: Station[], filter: StationFilter) {
     const selectedBrandCodeSet = new Set(filter.selectedBrandCodes);
 
     return stations
-        .filter((station) => {
-            if (filter.localCurrencyOnly && station.localCurrency.accepted !== true) {
-                return false;
-            }
-
-            return selectedBrandCodeSet.size === 0 || selectedBrandCodeSet.has(station.brandCode ?? "");
-        })
+        .filter((station) => selectedBrandCodeSet.size === 0 || selectedBrandCodeSet.has(station.brandCode ?? ""))
         .sort((a, b) => a.price - b.price);
 }
 
@@ -86,9 +77,6 @@ export function resultStationsReducer(state: ResultStationsState, action: Result
                 selection: keepSelectionIfVisible(state.selection, getVisibleStations(state.stations ?? [], action.filter)),
             };
 
-        case "LOCAL_CURRENCY_FILTER_CHANGED":
-            return changeLocalCurrencyFilter(state, action.enabled);
-
         case "BRAND_FILTER_TOGGLED":
             return toggleBrandFilter(state, action.brandCode);
 
@@ -120,19 +108,6 @@ function toggleBrandFilter(state: ResultStationsState, brandCode: string): Resul
     const filter = {
         ...state.filter,
         selectedBrandCodes,
-    };
-
-    return {
-        ...state,
-        filter,
-        selection: keepSelectionIfVisible(state.selection, getVisibleStations(state.stations ?? [], filter)),
-    };
-}
-
-function changeLocalCurrencyFilter(state: ResultStationsState, enabled: boolean): ResultStationsState {
-    const filter = {
-        ...state.filter,
-        localCurrencyOnly: enabled,
     };
 
     return {

@@ -12,31 +12,6 @@ import {
 } from "@/features/search-station-by-path/model/resultStations";
 
 describe("resultStations", () => {
-    it("지역화폐 필터를 적용하고 가격 낮은 순으로 정렬한다", () => {
-        expect(
-            getVisibleStations(
-                [
-                    createStation({ id: "expensive", price: 1_800, accepted: true }),
-                    createStation({ id: "hidden", price: 1_600, accepted: false }),
-                    createStation({ id: "cheap", price: 1_700, accepted: true }),
-                ],
-                { localCurrencyOnly: true, selectedBrandCodes: [] },
-            ).map((station) => station.id),
-        ).toEqual(["cheap", "expensive"]);
-    });
-
-    it("지역화폐 필터가 꺼져 있으면 전체 주유소를 가격 낮은 순으로 정렬한다", () => {
-        expect(
-            getVisibleStations(
-                [
-                    createStation({ id: "expensive", price: 1_800, accepted: true }),
-                    createStation({ id: "cheap", price: 1_600, accepted: false }),
-                ],
-                { localCurrencyOnly: false, selectedBrandCodes: [] },
-            ).map((station) => station.id),
-        ).toEqual(["cheap", "expensive"]);
-    });
-
     it("선택한 브랜드 코드에 해당하는 주유소만 표시한다", () => {
         expect(
             getVisibleStations(
@@ -46,7 +21,7 @@ describe("resultStations", () => {
                     createStation({ id: "soil", brandCode: "SOL", price: 1_600 }),
                     createStation({ id: "other", brandCode: "HDO", price: 1_500 }),
                 ],
-                { localCurrencyOnly: false, selectedBrandCodes: ["GSC", "SOL"] },
+                { selectedBrandCodes: ["GSC", "SOL"] },
             ).map((station) => station.id),
         ).toEqual(["soil", "gs"]);
     });
@@ -124,12 +99,10 @@ describe("resultStations", () => {
 function createStation({
     id,
     price = 1_700,
-    accepted = true,
     brandCode = "SKE",
 }: {
     id: string;
     price?: number;
-    accepted?: boolean | null;
     brandCode?: string | null;
 }): Station {
     return {
@@ -139,9 +112,5 @@ function createStation({
         brandCode,
         lat: 37.5,
         lng: 126.5,
-        localCurrency: {
-            accepted,
-            status: accepted === true ? "ACCEPTED" : "NOT_ACCEPTED",
-        },
     };
 }

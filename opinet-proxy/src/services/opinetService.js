@@ -70,25 +70,6 @@ async function fetchStationsAlongPaths(paths, radiusKm) {
     return Array.from(uniqueStationsMap.values());
 }
 
-async function fetchStationDetailById(id) {
-    assertOpinetConfigured();
-    console.log("오피넷 상세정보 조회:", { id });
-
-    const responseData = await requestOpinet(config.OPINET_DETAIL_BY_ID_URL, {
-        code: config.OPINET_API_KEY,
-        id,
-        out: "json",
-    });
-
-    if (!responseData?.RESULT || typeof responseData.RESULT !== "object") {
-        throw createOpinetUnavailableError(new Error("Invalid detail response shape"), {
-            reason: "invalid_detail_response",
-        });
-    }
-
-    return responseData;
-}
-
 async function fetchStationsByName({ osnm, area }) {
     assertOpinetConfigured();
     console.log("오피넷 상호 조회:", { osnm, area: area || "ALL" });
@@ -303,4 +284,4 @@ function createOpinetUnavailableError(cause, context = {}) {
     });
 }
 
-module.exports = { fetchStationsAlongPaths, fetchStationDetailById, fetchStationsByName };
+module.exports = { fetchStationsAlongPaths, fetchStationsByName };

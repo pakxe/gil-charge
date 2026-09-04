@@ -19,10 +19,6 @@ const ERROR_DEFINITIONS = Object.freeze({
         status: 502,
         message: "유가 정보를 가져올 수 없습니다.",
     },
-    DATABASE_UNAVAILABLE: {
-        status: 503,
-        message: "일시적으로 데이터를 처리할 수 없습니다.",
-    },
     CONFIGURATION_ERROR: {
         status: 500,
         message: "서버 설정 오류가 발생했습니다.",

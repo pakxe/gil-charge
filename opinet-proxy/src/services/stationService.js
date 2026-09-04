@@ -1,9 +1,7 @@
 const opinetService = require("./opinetService");
-const localCurrencyService = require("./localCurrencyService");
 
 async function findStationsAlongPaths({ paths, radiusKm }) {
-    const stations = await opinetService.fetchStationsAlongPaths(paths, radiusKm);
-    return localCurrencyService.attachLocalCurrencyInfo(stations);
+    return opinetService.fetchStationsAlongPaths(paths, radiusKm);
 }
 
 async function findStationsByName(searchCriteria) {

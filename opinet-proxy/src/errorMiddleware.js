@@ -1,14 +1,5 @@
 const { createAppError, isAppError } = require("./errors");
 
-const MYSQL_NETWORK_ERROR_CODES = new Set([
-    "ECONNREFUSED",
-    "ECONNRESET",
-    "ETIMEDOUT",
-    "ENOTFOUND",
-    "EAI_AGAIN",
-    "PROTOCOL_CONNECTION_LOST",
-]);
-
 function methodNotAllowed(req, res, next) {
     next(createAppError("METHOD_NOT_ALLOWED"));
 }
@@ -55,10 +46,6 @@ function normalizeError(error) {
         return createAppError("INVALID_INPUT", { cause: error });
     }
 
-    if (isDatabaseError(error)) {
-        return createAppError("DATABASE_UNAVAILABLE", { cause: error });
-    }
-
     return createAppError("INTERNAL_SERVER_ERROR", { cause: error });
 }
 
@@ -68,18 +55,6 @@ function isPayloadTooLargeError(error) {
 
 function isMalformedJsonError(error) {
     return error?.type === "entity.parse.failed" || (error instanceof SyntaxError && error?.status === 400);
-}
-
-function isDatabaseError(error) {
-    if (!error || typeof error !== "object") {
-        return false;
-    }
-
-    if (typeof error.code === "string" && (error.code.startsWith("ER_") || MYSQL_NETWORK_ERROR_CODES.has(error.code))) {
-        return true;
-    }
-
-    return Boolean(error.sql || error.sqlMessage || error.errno);
 }
 
 function summarizeCause(cause) {

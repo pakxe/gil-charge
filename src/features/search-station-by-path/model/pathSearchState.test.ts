@@ -19,7 +19,7 @@ describe("path search URL contract", () => {
 
     it("result 조건을 순서대로 읽고 canonical URL로 정규화한다", () => {
         const parsed = parsePathSearchLocation(
-            "?mode=result&mode=draft&wp=37.12345678,127.12345678&wp=36,126&radius=6.23&brand=SKE&brand=SKE&brand=BAD&localCurrency=yes&utm=x",
+            "?mode=result&mode=draft&wp=37.12345678,127.12345678&wp=36,126&radius=6.23&brand=SKE&brand=SKE&brand=BAD&utm=x",
         );
 
         expect(parsed).toMatchObject({
@@ -33,15 +33,14 @@ describe("path search URL contract", () => {
                 ],
                 radiusKm: 5,
                 selectedBrandCodes: ["SKE"],
-                localCurrencyOnly: false,
             },
         });
         if (parsed.mode !== "result") throw new Error("result expected");
-        expect(parsed.normalizedSearch).toBe("?utm=x&mode=result&wp=37.123457%2C127.123457&wp=36%2C126&radius=5&brand=SKE&localCurrency=0");
+        expect(parsed.normalizedSearch).toBe("?utm=x&mode=result&wp=37.123457%2C127.123457&wp=36%2C126&radius=5&brand=SKE");
     });
 
     it("웨이포인트가 20개를 넘으면 앞의 20개만 유지한다", () => {
-        const params = new URLSearchParams({ mode: "result", radius: "1", localCurrency: "0" });
+        const params = new URLSearchParams({ mode: "result", radius: "1" });
         for (let index = 0; index < 22; index += 1) params.append("wp", `${index},127`);
 
         const parsed = parsePathSearchLocation(`?${params}`);
@@ -67,13 +66,11 @@ describe("path search URL contract", () => {
             waypoints: [{ lat: 37, lng: 127 }, { lat: 36, lng: 126 }],
             radiusKm: 1.24,
             selectedBrandCodes: ["GSC", "GSC", "BAD"],
-            localCurrencyOnly: false,
         });
 
         expect(params.getAll("wp")).toEqual(["37,127", "36,126"]);
         expect(params.get("radius")).toBe("1.2");
         expect(params.getAll("brand")).toEqual(["GSC"]);
-        expect(params.get("localCurrency")).toBe("0");
         expect(createDraftSearch(params).toString()).toBe("keep=1&mode=draft");
     });
 });

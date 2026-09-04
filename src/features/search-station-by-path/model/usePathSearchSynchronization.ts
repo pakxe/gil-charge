@@ -9,7 +9,7 @@ import {
 } from "@/features/search-station-by-path/model/pathSearchState";
 import type { LatLng } from "@/shared/model/map";
 
-const EMPTY_FILTER: PathSearchFilter = { localCurrencyOnly: false, selectedBrandCodes: [] };
+const EMPTY_FILTER: PathSearchFilter = { selectedBrandCodes: [] };
 
 type Params = {
     parsed: ParsedPathSearchLocation;
@@ -93,7 +93,6 @@ export function usePathSearchSynchronization({
         if (parsed.mode !== "result" || parsed.needsUrlReplacement) return;
         replaceFilter({
             selectedBrandCodes: parsed.criteria.selectedBrandCodes,
-            localCurrencyOnly: parsed.criteria.localCurrencyOnly,
         });
     }, [parsed, replaceFilter]);
 

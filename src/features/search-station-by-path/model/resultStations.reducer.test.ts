@@ -30,7 +30,7 @@ describe("resultStationsReducer", () => {
     it("URL에서 복원한 브랜드 필터를 응답에 해당 브랜드가 없어도 유지한다", () => {
         const filteredState = resultStationsReducer(INITIAL_RESULT_STATIONS_STATE, {
             type: "FILTER_REPLACED",
-            filter: { localCurrencyOnly: false, selectedBrandCodes: ["GSC"] },
+            filter: { selectedBrandCodes: ["GSC"] },
         });
 
         const nextState = resultStationsReducer(filteredState, {
@@ -40,21 +40,6 @@ describe("resultStationsReducer", () => {
 
         expect(nextState.filter.selectedBrandCodes).toEqual(["GSC"]);
         expect(getVisibleStations(nextState.stations ?? [], nextState.filter)).toEqual([]);
-    });
-
-    it("지역화폐 필터로 선택된 주유소가 보이지 않게 되면 선택을 해제한다", () => {
-        const state = selectStationState([
-            createStation("accepted", { accepted: true }),
-            createStation("not-accepted", { accepted: false }),
-        ], "not-accepted");
-
-        const nextState = resultStationsReducer(state, {
-            type: "LOCAL_CURRENCY_FILTER_CHANGED",
-            enabled: true,
-        });
-
-        expect(nextState.filter.localCurrencyOnly).toBe(true);
-        expect(nextState.selection).toBeNull();
     });
 
     it("브랜드 필터를 적용해도 선택된 주유소가 보이면 선택을 유지한다", () => {
@@ -75,23 +60,6 @@ describe("resultStationsReducer", () => {
         expect(nextState.selection).toEqual({ stationId: "ske", source: "map" });
     });
 
-    it("현재 필터에 보이지 않는 주유소는 선택하지 않는다", () => {
-        const state = resultStationsReducer(
-            resultStationsReducer(INITIAL_RESULT_STATIONS_STATE, {
-                type: "STATIONS_REPLACED",
-                stations: [createStation("not-accepted", { accepted: false })],
-            }),
-            { type: "LOCAL_CURRENCY_FILTER_CHANGED", enabled: true },
-        );
-
-        const nextState = resultStationsReducer(state, {
-            type: "STATION_SELECTED",
-            selection: { stationId: "not-accepted", source: "map" },
-        });
-
-        expect(nextState.selection).toBeNull();
-    });
-
     it("브랜드 코드는 중복과 null을 제거한다", () => {
         expect(
             getBrandCodes([
@@ -109,7 +77,7 @@ describe("resultStationsReducer", () => {
             createStation("cheap", { price: 1_600 }),
         ];
 
-        expect(getVisibleStations(stations, { localCurrencyOnly: false, selectedBrandCodes: [] })).toMatchObject([
+        expect(getVisibleStations(stations, { selectedBrandCodes: [] })).toMatchObject([
             { id: "cheap" },
             { id: "expensive" },
         ]);
@@ -131,10 +99,8 @@ function selectStationState(stations: Station[], stationId: string) {
 
 function createStation(
     id: string,
-    overrides: Partial<Pick<Station, "price" | "brandCode">> & { accepted?: boolean } = {},
+    overrides: Partial<Pick<Station, "price" | "brandCode">> = {},
 ): Station {
-    const accepted = overrides.accepted ?? true;
-
     return {
         id,
         name: id,
@@ -142,9 +108,5 @@ function createStation(
         brandCode: overrides.brandCode ?? "SKE",
         lat: 37.5,
         lng: 126.5,
-        localCurrency: {
-            accepted,
-            status: accepted ? "ACCEPTED" : "NOT_ACCEPTED",
-        },
     };
 }

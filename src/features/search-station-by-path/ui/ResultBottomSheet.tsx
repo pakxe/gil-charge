@@ -14,7 +14,6 @@ type ResultBottomSheetProps = {
     stations: Station[];
     totalStationCount: number;
     filter: {
-        localCurrencyOnly: boolean;
         brandCodes: string[];
         selectedBrandCodes: string[];
     };
@@ -24,7 +23,6 @@ type ResultBottomSheetProps = {
     };
     visibleHeight: number;
     onVisibleHeightChange: (visibleHeight: number) => void;
-    onLocalCurrencyOnlyChange: (enabled: boolean) => void;
     onBrandFilterToggle: (brandCode: string) => void;
     onStationClick: (stationId: string) => void;
     onClose: () => void;
@@ -40,7 +38,6 @@ export function ResultBottomSheet({
     selection,
     visibleHeight,
     onVisibleHeightChange,
-    onLocalCurrencyOnlyChange,
     onBrandFilterToggle,
     onStationClick,
     onClose,
@@ -96,10 +93,8 @@ export function ResultBottomSheet({
 
                 {totalStationCount > 0 && (
                     <StationResultFilters
-                        localCurrencyOnly={filter.localCurrencyOnly}
                         brandCodes={filter.brandCodes}
                         selectedBrandCodes={filter.selectedBrandCodes}
-                        onLocalCurrencyOnlyChange={onLocalCurrencyOnlyChange}
                         onBrandFilterToggle={onBrandFilterToggle}
                     />
                 )}

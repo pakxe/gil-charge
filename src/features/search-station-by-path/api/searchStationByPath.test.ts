@@ -26,10 +26,6 @@ describe("stationApi", () => {
             price: 1_700,
             lat: 37.5665,
             lng: 126.978,
-            localCurrency: {
-                accepted: null,
-                status: "UNKNOWN",
-            },
         };
         vi.spyOn(httpClient, "post").mockResolvedValue(createAxiosResponse({ stations: [stationWithoutBrandCode] }));
 
@@ -118,10 +114,6 @@ function createStation(): Station {
         brandCode: "SKE",
         lat: 37.5665,
         lng: 126.978,
-        localCurrency: {
-            accepted: null,
-            status: "UNKNOWN",
-        },
     };
 }
 

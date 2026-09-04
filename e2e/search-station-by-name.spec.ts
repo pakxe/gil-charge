@@ -35,10 +35,10 @@ test.describe("주유소명 검색 에러 처리", () => {
             if (requestedStationNames.length === 1) {
                 await waitForFirstResponse;
                 await route.fulfill({
-                    status: 503,
+                    status: 502,
                     json: {
-                        code: "DATABASE_UNAVAILABLE",
-                        message: "일시적으로 데이터를 처리할 수 없습니다.",
+                        code: "OPINET_UNAVAILABLE",
+                        message: "유가 정보를 가져올 수 없습니다.",
                     },
                 });
                 return;
