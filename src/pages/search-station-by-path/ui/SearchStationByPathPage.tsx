@@ -112,10 +112,19 @@ export function SearchStationByPathPage() {
     useEffect(() => {
         if (!failure || !failurePolicy) return;
         if (failurePolicy.report === "always") console.error("주유소 검색 실패:", failure);
-        if (failurePolicy.presentation === "toast" && failurePolicy.recovery !== "manual-retry") {
-            showToast({ message: getSearchStationByPathFailureMessage(failure) });
+        if (failurePolicy.presentation === "toast") {
+            showToast({
+                message: getSearchStationByPathFailureMessage(failure),
+                action:
+                    failurePolicy.recovery === "manual-retry"
+                        ? {
+                              label: "다시 시도",
+                              onClick: retry,
+                          }
+                        : undefined,
+            });
         }
-    }, [failure, failurePolicy, showToast]);
+    }, [failure, failurePolicy, retry, showToast]);
 
     useEffect(
         () => showToast({ message: "화면을 눌러 웨이포인트를 찍을 수 있습니다.", durationMs: 2500 }),
@@ -180,9 +189,7 @@ export function SearchStationByPathPage() {
     const hasResult = mode === "result" && result.isOpen && result.stations !== null;
     const barState = getBarState(request.status, failurePolicy, hasWaypoint);
     const failureMessage =
-        failure && (failurePolicy?.presentation === "inline" || failurePolicy?.recovery === "manual-retry")
-            ? getSearchStationByPathFailureMessage(failure)
-            : null;
+        failure && failurePolicy?.presentation === "inline" ? getSearchStationByPathFailureMessage(failure) : null;
     const { searchOverlayRef, searchOverlayVisibleHeight, maxSearchSheetHeight, setSearchOverlayVisibleHeight } =
         useSearchResultSheetLayout({ hasSearchResult: hasResult, stations: result.stations });
     const searchBar = (className: string) => (
