@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useSearchStationByPath } from "@/features/search-station-by-path/model/useSearchStationByPath";
 import {
@@ -68,8 +68,9 @@ export function SearchStationByPathPage() {
     });
     const { restoreWaypoints } = actions;
     const [radiusKm, setRadiusKm] = useState(initialCriteria.radiusKm);
-    const [zoomLevel, setZoomLevel] = useState(8);
+    const [zoomLevel, setZoomLevel] = useState(INITIAL_MAP_ZOOM_LEVEL);
     const [editorMode, setEditorMode] = useState<WaypointEditorMode>("waypoint");
+    const didFitInitialWaypointsRef = useRef(false);
     const result = useResultStations({ map });
     const { replaceStations, replaceFilter, reset: resetResult } = result;
     const { state: request, retry, reset: resetRequest, search } = useSearchStationByPath();
@@ -78,6 +79,19 @@ export function SearchStationByPathPage() {
         () => data.waypoints.map((waypoint) => normalizeLatLng(waypoint.latLng)),
         [data.waypoints],
     );
+
+    useEffect(() => {
+        if (!map || didFitInitialWaypointsRef.current || initialCriteria.waypoints.length === 0) return;
+
+        map.fitPoints(initialCriteria.waypoints, {
+            top: 80,
+            right: 48,
+            bottom: 180,
+            left: 48,
+        });
+        if (map.getLevel() < INITIAL_MAP_ZOOM_LEVEL) map.setZoom(INITIAL_MAP_ZOOM_LEVEL);
+        didFitInitialWaypointsRef.current = true;
+    }, [initialCriteria, map]);
 
     const { effectiveRadiusKm, requestKey } = usePathSearchSynchronization({
         parsed,
@@ -322,6 +336,7 @@ export function SearchStationByPathPage() {
 }
 
 const EMPTY_FILTER: PathSearchFilter = { localCurrencyOnly: false, selectedBrandCodes: [] };
+const INITIAL_MAP_ZOOM_LEVEL = 8;
 
 function getInitialCriteria(parsed: ParsedPathSearchLocation): PathSearchCriteria {
     return parsed.mode === "result"
