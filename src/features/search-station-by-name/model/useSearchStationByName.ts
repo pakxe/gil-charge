@@ -274,7 +274,6 @@ function decideFailurePolicy(failure: SearchStationByNameFailure): SearchStation
         case "NETWORK_ERROR":
         case "TIMEOUT":
         case "OPINET_UNAVAILABLE":
-        case "DATABASE_UNAVAILABLE":
         case "INTERNAL_SERVER_ERROR":
             return {
                 presentation: "toast",

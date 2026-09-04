@@ -64,14 +64,6 @@ export interface Station {
     brandCode: string | null;
     lat: number;
     lng: number;
-    localCurrency: {
-        accepted: boolean | null;
-        status: "UNKNOWN" | "ACCEPTED" | "NOT_ACCEPTED" | "OUT_OF_SCOPE" | "MISSING_ROAD_ADDRESS" | "ERROR";
-        roadAddress?: string | null;
-        storeName?: string | null;
-        currencyName?: string | null;
-        industryCode?: string | null;
-    };
 }
 
 export type DrawingType = "pen" | "waypoint";

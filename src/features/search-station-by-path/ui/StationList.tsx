@@ -33,10 +33,7 @@ export function StationList({
         });
     }, [selectedStationId, selectionSource]);
 
-    const emptyMessage =
-        totalStationCount === 0
-            ? "검색 결과가 없습니다."
-            : "지역화폐 사용 가능한 주유소가 없습니다. 필터를 해제해보세요.";
+    const emptyMessage = totalStationCount === 0 ? "검색 결과가 없습니다." : "필터 조건에 맞는 주유소가 없습니다.";
 
     return (
         <div className="flex min-h-0 flex-1 touch-pan-y flex-col gap-2.5 overflow-y-auto pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">

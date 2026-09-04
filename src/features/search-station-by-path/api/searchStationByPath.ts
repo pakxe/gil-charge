@@ -14,7 +14,6 @@ export const SEARCH_STATION_BY_PATH_ERROR_CODES = [
     "ROUTE_NOT_FOUND",
     "METHOD_NOT_ALLOWED",
     "OPINET_UNAVAILABLE",
-    "DATABASE_UNAVAILABLE",
     "CONFIGURATION_ERROR",
     "INTERNAL_SERVER_ERROR",
 ] as const;
@@ -29,14 +28,6 @@ const pathStationSchema = baseStationSchema.extend({
         .string()
         .nullish()
         .transform((brandCode) => brandCode ?? null),
-    localCurrency: z.object({
-        accepted: z.boolean().nullable(),
-        status: z.enum(["UNKNOWN", "ACCEPTED", "NOT_ACCEPTED", "OUT_OF_SCOPE", "MISSING_ROAD_ADDRESS", "ERROR"]),
-        roadAddress: z.string().nullish(),
-        storeName: z.string().nullish(),
-        currencyName: z.string().nullish(),
-        industryCode: z.string().nullish(),
-    }),
 });
 
 export type PathStation = z.infer<typeof pathStationSchema>;

@@ -28,7 +28,7 @@
 `mode`가 없거나 첫 번째 `mode` 값이 `draft | result`가 아니면 `draft`로 정규화한다.
 정규화와 상태 전환에는 모두 browser history를 추가하지 않는 `replace`를 사용한다.
 
-draft URL에서는 result 전용 파라미터인 `wp`, `radius`, `brand`, `localCurrency`를 제거한다.
+draft URL에서는 result 전용 파라미터인 `wp`, `radius`, `brand`를 제거한다.
 검색과 무관한 쿼리 파라미터는 유지한다.
 
 ```text
@@ -47,21 +47,18 @@ result URL 계약은 다음과 같다.
   &radius=1.5
   &brand=SKE
   &brand=GSC
-  &localCurrency=1
 ```
 
 - `wp`: `위도,경도` 형식의 반복 파라미터다. 파라미터 순서가 웨이포인트 순서다.
 - `radius`: km 단위 반경이다.
 - `brand`: 선택한 브랜드 코드의 반복 파라미터다. 선택한 브랜드가 없으면 생략한다.
-- `localCurrency`: 필터 적용 여부를 항상 `0 | 1`로 기록한다.
 - 웨이포인트 ID는 URL에 기록하지 않는다. URL 복원 시 새 런타임 ID를 만든다.
 
 브랜드는 `SKE`, `GSC`, `HDO`, `SOL`, `RTE`, `RTX`, `NHO`, `ETC`, `E1G`, `SKG`만 허용한다.
 알 수 없는 브랜드는 제거하고, 중복 브랜드는 첫 번째 값만 유지한다.
 선택된 유효 브랜드가 API 응답에 없어도 사용자가 필터를 해제할 수 있도록 필터 목록에는 응답 브랜드와 선택 브랜드의 합집합을 표시한다.
 
-단일 값인 `mode`, `radius`, `localCurrency`가 반복되면 첫 번째 값을 해석하고 canonical URL에서는 하나만 기록한다.
-잘못된 `localCurrency` 값은 `0`으로 정규화한다.
+단일 값인 `mode`, `radius`가 반복되면 첫 번째 값을 해석하고 canonical URL에서는 하나만 기록한다.
 
 ## 결정 3. 검색 조건은 사용 전에 검증하고 canonical 형태로 정규화한다
 
@@ -89,7 +86,7 @@ URL과 sessionStorage에 같은 좌표·개수·반경 정책을 적용한다.
 
 웨이포인트 절단 또는 반경 조정이 필요하면 정규화된 URL을 먼저 확정한다. sessionStorage를 읽을 때는 정규화된 값을 반환하되 읽기 과정에서 저장소를 변경하지 않는다.
 두 조정이 동시에 발생하면 하나의 안내 toast에 두 내용을 함께 표시한다.
-좌표 정밀도, 브랜드, 지역화폐 값만 정규화된 경우에는 toast를 표시하지 않는다.
+좌표 정밀도나 브랜드 값만 정규화된 경우에는 toast를 표시하지 않는다.
 
 result에서 웨이포인트 또는 반경이 누락되거나 좌표·숫자가 유효하지 않으면 API를 호출하지 않는다.
 오류 toast를 표시하고 result 전용 파라미터를 제거한 draft URL로 replace한다.
@@ -168,13 +165,13 @@ result에서 수행한 편집은 draft 전환 뒤 첫 undo 대상으로 유지�
 
 ### result 필터 변경
 
-브랜드 또는 지역화폐 필터 변경은 결과 목록에 즉시 적용하고 canonical result URL만 replace한다.
+브랜드 필터 변경은 결과 목록에 즉시 적용하고 canonical result URL만 replace한다.
 sessionStorage를 변경하지 않고 API를 다시 호출하지 않는다.
 
 ## 결정 6. API 요청 입력과 필터 상태를 분리한다
 
 API 요청을 발생시키는 key는 정규화된 `waypoints + radiusKm`만으로 만든다.
-브랜드와 지역화폐는 API 요청 조건이 아니라 클라이언트 결과 필터이므로 request key에 포함하지 않는다.
+브랜드는 API 요청 조건이 아니라 클라이언트 결과 필터이므로 request key에 포함하지 않는다.
 
 URL 동기화 effect와 API 요청 effect를 분리한다.
 따라서 필터 변경으로 URL 전체가 바뀌어도 request key는 바뀌지 않고 API effect는 다시 실행되지 않는다.

@@ -6,7 +6,6 @@ export const PATH_SEARCH_MODE_PARAM = "mode";
 export const PATH_SEARCH_WAYPOINT_PARAM = "wp";
 export const PATH_SEARCH_RADIUS_PARAM = "radius";
 export const PATH_SEARCH_BRAND_PARAM = "brand";
-export const PATH_SEARCH_LOCAL_CURRENCY_PARAM = "localCurrency";
 
 export const DEFAULT_PATH_SEARCH_RADIUS_KM = 1;
 export const MIN_PATH_SEARCH_RADIUS_KM = 1;
@@ -21,7 +20,6 @@ export type PathSearchMode = "draft" | "result";
 
 export type PathSearchFilter = {
     selectedBrandCodes: string[];
-    localCurrencyOnly: boolean;
 };
 
 export type PathSearchResultCriteria = PathSearchCriteria & PathSearchFilter;
@@ -54,7 +52,6 @@ const MANAGED_PARAMS = [
     PATH_SEARCH_WAYPOINT_PARAM,
     PATH_SEARCH_RADIUS_PARAM,
     PATH_SEARCH_BRAND_PARAM,
-    PATH_SEARCH_LOCAL_CURRENCY_PARAM,
 ];
 
 const BRAND_CODE_SET = new Set<string>(PATH_SEARCH_BRAND_CODES);
@@ -96,12 +93,10 @@ export function parsePathSearchLocation(search: string): ParsedPathSearchLocatio
     const normalizedWaypoints = (waypoints as LatLng[]).slice(0, MAX_PATH_SEARCH_WAYPOINT_COUNT);
     const normalizedRadiusKm = normalizeRadiusKm(radiusKm);
     const selectedBrandCodes = normalizeBrandCodes(params.getAll(PATH_SEARCH_BRAND_PARAM));
-    const localCurrencyOnly = params.getAll(PATH_SEARCH_LOCAL_CURRENCY_PARAM)[0] === "1";
     const criteria: PathSearchResultCriteria = {
         waypoints: normalizedWaypoints,
         radiusKm: normalizedRadiusKm,
         selectedBrandCodes,
-        localCurrencyOnly,
     };
     const normalized = createResultSearch(params, criteria);
 
@@ -138,7 +133,6 @@ export function createResultSearch(
     normalizeBrandCodes(criteria.selectedBrandCodes).forEach((brandCode) => {
         params.append(PATH_SEARCH_BRAND_PARAM, brandCode);
     });
-    params.append(PATH_SEARCH_LOCAL_CURRENCY_PARAM, criteria.localCurrencyOnly ? "1" : "0");
     return params;
 }
 

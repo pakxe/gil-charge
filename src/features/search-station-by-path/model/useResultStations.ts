@@ -72,14 +72,6 @@ export function useResultStations({ map }: Params) {
         dispatch(action);
     }, []);
 
-    const changeLocalCurrencyFilter = useCallback((enabled: boolean) => {
-        const action: ResultStationsAction = {
-            type: "LOCAL_CURRENCY_FILTER_CHANGED",
-            enabled,
-        };
-        dispatch(action);
-    }, []);
-
     return {
         stations: state.stations,
         visibleStations,
@@ -94,6 +86,5 @@ export function useResultStations({ map }: Params) {
         selectStation,
         close,
         toggleBrandFilter,
-        changeLocalCurrencyFilter,
     };
 }

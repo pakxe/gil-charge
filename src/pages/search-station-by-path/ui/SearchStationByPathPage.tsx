@@ -182,12 +182,6 @@ export function SearchStationByPathPage() {
         replaceWithResult({ ...parsed.criteria, selectedBrandCodes });
     }
 
-    function changeLocalCurrency(localCurrencyOnly: boolean) {
-        if (parsed.mode !== "result") return;
-        result.changeLocalCurrencyFilter(localCurrencyOnly);
-        replaceWithResult({ ...parsed.criteria, localCurrencyOnly });
-    }
-
     const hasWaypoint = data.waypoints.length > 0;
     const selectedIds = getSelectedWaypointIds(status);
     const lassoEnabled = editorMode === "lasso" && !loading;
@@ -294,14 +288,12 @@ export function SearchStationByPathPage() {
                             totalStationCount={result.stations?.length ?? 0}
                             stations={result.visibleStations}
                             filter={{
-                                localCurrencyOnly: result.filter.localCurrencyOnly,
                                 brandCodes: result.brandCodes,
                                 selectedBrandCodes: result.filter.selectedBrandCodes,
                             }}
                             selection={{ selectedStationId: result.selectedStationId, source: result.selectionSource }}
                             visibleHeight={searchOverlayVisibleHeight}
                             onVisibleHeightChange={setSearchOverlayVisibleHeight}
-                            onLocalCurrencyOnlyChange={changeLocalCurrency}
                             onBrandFilterToggle={toggleBrand}
                             onStationClick={(stationId) =>
                                 result.selectStation({ source: "list", stationId }, searchOverlayVisibleHeight)
@@ -346,7 +338,7 @@ export function SearchStationByPathPage() {
     );
 }
 
-const EMPTY_FILTER: PathSearchFilter = { localCurrencyOnly: false, selectedBrandCodes: [] };
+const EMPTY_FILTER: PathSearchFilter = { selectedBrandCodes: [] };
 const INITIAL_MAP_ZOOM_LEVEL = 8;
 const INITIAL_MAP_BOTTOM_PADDING = 180;
 
