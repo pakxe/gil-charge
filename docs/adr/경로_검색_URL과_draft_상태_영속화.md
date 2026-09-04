@@ -1,7 +1,7 @@
 # 경로 검색 URL과 draft 상태 영속화
 
 - 상태: 채택
-- 작성일: 2026-09-03
+- 작성일: 2026-09-04
 
 ## 배경
 
@@ -87,7 +87,7 @@ URL과 sessionStorage에 같은 좌표·개수·반경 정책을 적용한다.
 - 범위를 벗어나면 clamp하고 가장 가까운 `0.1km` 단위로 반올림한다.
 - 누락됐거나 유한한 숫자로 파싱할 수 없으면 유효하지 않은 값이다.
 
-웨이포인트 절단 또는 반경 조정이 필요하면 정규화된 URL이나 저장 데이터를 먼저 기록한다.
+웨이포인트 절단 또는 반경 조정이 필요하면 정규화된 URL을 먼저 확정한다. sessionStorage를 읽을 때는 정규화된 값을 반환하되 읽기 과정에서 저장소를 변경하지 않는다.
 두 조정이 동시에 발생하면 하나의 안내 toast에 두 내용을 함께 표시한다.
 좌표 정밀도, 브랜드, 지역화폐 값만 정규화된 경우에는 toast를 표시하지 않는다.
 
@@ -96,15 +96,14 @@ result에서 웨이포인트 또는 반경이 누락되거나 좌표·숫자가 
 
 ## 결정 4. sessionStorage는 마지막 draft 편집 상태만 소유한다
 
-저장 키와 JSON 형식은 다음과 같다.
+저장 키와 JSON 형식은 현재 다음과 같다.
 
 ```text
-key: gil-charge:search-station-by-path:draft:v1
+key: gil-charge:search-station-by-path:draft
 ```
 
 ```json
 {
-  "version": 1,
   "waypoints": [
     { "lat": 37.5665, "lng": 126.978 }
   ],
@@ -122,8 +121,8 @@ draft에서는 다음 확정 편집마다 웨이포인트 전체와 반경을 �
 - undo와 redo
 - 반경 변경
 
-JSON 파싱 실패, 잘못된 버전·형식·좌표는 저장 데이터 전체를 무효로 처리하고 저장값을 제거한다.
-개수 또는 반경만 정규화가 필요하면 정규화된 값으로 다시 저장한다.
+JSON 파싱 실패, 잘못된 형식·좌표는 저장 데이터 전체를 무효로 처리하고 기본 draft를 반환한다. `readPathSearchDraft`는 읽기 전용이므로 잘못된 저장값을 자동 삭제하지 않는다.
+개수 또는 반경만 정규화가 필요해도 읽기 과정에서 저장값을 다시 쓰지 않는다. 사용자가 다음 편집을 확정할 때 `writePathSearchDraft`로 정규화된 값이 저장된다.
 브라우저가 sessionStorage 읽기·쓰기·삭제를 거부하더라도 화면 동작은 계속한다.
 
 저장값이 없거나 무효이면 빈 웨이포인트와 기본 반경 `1km`로 시작한다.
@@ -163,7 +162,7 @@ result URL에 진입하거나 result 검색이 성공했다는 이유만으로 �
 
 ### result에서 검색 조건 편집
 
-검색 요청이 끝난 뒤 웨이포인트 또는 반경을 편집하면 수정된 전체 웨이포인트와 반경을 sessionStorage에 저장한다.
+검색 요청이 끝난 뒤 웨이포인트 또는 반경을 편집하면 수정된 전체 웨이포인트와 반경을 sessionStorage에 저장한다. 웨이포인트는 `useWaypointEditor`가 사용자 편집 확정 시 `onWaypointsCommit` callback으로 알리고, 외부 복원인 `restoreWaypoints`에서는 callback을 호출하지 않는다.
 그 다음 result 전용 파라미터를 제거하고 draft URL로 replace한다.
 result에서 수행한 편집은 draft 전환 뒤 첫 undo 대상으로 유지한다.
 
@@ -216,6 +215,36 @@ API effect를 재실행 가능한 구조로 두어 첫 요청이 취소되더라
 재시도할 수 없는 실패는 기존 오류 코드별 inline, toast, silent 및 로깅 정책을 유지한다.
 실패 후에는 검색 조건 편집이 다시 가능하며, result 조건을 편집하면 draft로 전환한다.
 
+## 결정 8. URL, 동기화, UI 표현의 책임을 분리한다
+
+URL 상태와 React 편집 상태를 한 훅에서 모두 소유하지 않는다.
+
+- `usePathSearchLocation`: URL 파싱, canonical URL 생성, `replaceWithDraft`, `replaceWithResult`, `replaceNormalizedSearch`를 제공한다. sessionStorage와 waypoint editor를 알지 않는다.
+- `usePathSearchSynchronization`: `parsed`를 기준으로 invalid-result 복구, 정규화 안내 이벤트, editor·radius·result filter 적용 순서를 결정한다. URL 문구나 toast 구현은 알지 않는다.
+- `SearchStationByPathPage`: `parsed.mode`에서 화면 모드를 한 번 파생하고, semantic callback을 toast UI로 연결한다.
+- `useWaypointEditor`: waypoint 편집과 undo/redo를 관리한다. 사용자 편집 확정은 `onWaypointsCommit`으로 알리고 외부 복원은 알리지 않는다.
+- `pathSearchDraftStorage`: sessionStorage 입출력과 draft 검증·정규화를 담당한다.
+
+정규화나 invalid-result 처리의 순서는 다음과 같다.
+
+```mermaid
+flowchart TD
+    A["location.search"] --> B["usePathSearchLocation: parse"]
+    B --> C{"parsed.mode / needsUrlReplacement"}
+    C -->|"invalid-result"| D["sessionStorage draft 복원"]
+    D --> E["onInvalidResult: UI toast"]
+    E --> F["replaceNormalizedSearch(draft URL)"]
+    C -->|"정규화 필요"| G["onAdjustment: UI toast"]
+    G --> H["replaceNormalizedSearch(canonical URL)"]
+    C -->|"정상 draft"| I["sessionStorage에서 criteria 복원"]
+    C -->|"정상 result"| J["URL criteria를 editor에 적용"]
+    J --> K["waypoints + radius requestKey"]
+    K --> L["API 검색"]
+    L --> M["URL filter를 결과에 적용"]
+```
+
+`usePathSearchLocation`은 navigation을 실행할 수 있는 함수를 제공하지만, 어떤 상황에서 호출할지는 `usePathSearchSynchronization`이 결정한다. 따라서 invalid-result에서는 draft 복원과 오류 toast 이후에 URL을 교체한다.
+
 ## 고려한 대안
 
 ### draft와 result를 React state로만 구분한다
@@ -236,6 +265,12 @@ API effect를 재실행 가능한 구조로 두어 첫 요청이 취소되더라
 - 단점: 클라이언트 필터 변경마다 동일한 경로 검색을 다시 요청한다.
 - 판단: API 조건과 결과 필터를 분리한다.
 
+### 동기화 훅에서 waypoint 상태를 감시해 사용자 편집을 추론한다
+
+- 장점: editor hook의 변경 없이 저장을 연결할 수 있다.
+- 단점: URL/storage 복원과 사용자 편집을 구분하기 위해 signature ref와 억제 플래그가 필요하고, 상태 변경의 출처를 추측하게 된다.
+- 판단: `useWaypointEditor`가 사용자 commit을 명시적으로 알리는 `onWaypointsCommit` callback을 제공한다.
+
 ### 마지막 요청 key를 ref에 기록해 동일 요청을 차단한다
 
 - 장점: 동일 effect의 중복 요청을 쉽게 막을 수 있다.
@@ -254,8 +289,8 @@ API effect를 재실행 가능한 구조로 두어 첫 요청이 취소되더라
 ## 검증
 
 - URL codec 단위 테스트에서 직렬화 왕복, 파라미터 순서, 좌표 반올림, 개수 제한, 반경 clamp, 필터 정규화, 무관한 쿼리 보존을 검증한다.
-- sessionStorage 단위 테스트에서 복원, 재저장, 손상 데이터 제거, 빈 draft를 검증한다.
-- 웨이포인트 hook 테스트에서 복원 상태가 undo 기준점인지 검증한다.
+- sessionStorage 단위 테스트에서 복원, 정규화된 반환, 읽기 중 저장소 불변, 빈 draft를 검증한다.
+- 웨이포인트 hook 테스트에서 복원 상태가 undo 기준점인지, 사용자 commit callback과 외부 복원이 구분되는지 검증한다.
 - Playwright 테스트에서 result URL 직접 진입, StrictMode 취소 후 결과 표시, API 요청 body, 필터 변경 시 무재요청을 검증한다.
 - 기존 웨이포인트 편집, 요청 취소와 race condition, 결과 필터 테스트를 함께 유지한다.
 
