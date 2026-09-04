@@ -47,4 +47,27 @@ describe("useWaypointEditor", () => {
         expect(onAddRejected).toHaveBeenCalledWith("OVERFLOW");
         expect(result.current.data.waypoints).toHaveLength(1);
     });
+
+    it("사용자 편집이 확정되면 onWaypointsCommit을 호출한다", () => {
+        const onWaypointsCommit = vi.fn();
+        const { result } = renderHook(() =>
+            useWaypointEditor({
+                createId: () => "waypoint-1",
+                onWaypointsCommit,
+            }),
+        );
+
+        act(() => result.current.actions.addWaypoint({ lat: 37.5665, lng: 126.978 }));
+
+        expect(onWaypointsCommit).toHaveBeenCalledWith([{ lat: 37.5665, lng: 126.978 }]);
+    });
+
+    it("외부 웨이포인트 복원은 onWaypointsCommit을 호출하지 않는다", () => {
+        const onWaypointsCommit = vi.fn();
+        const { result } = renderHook(() => useWaypointEditor({ onWaypointsCommit }));
+
+        act(() => result.current.actions.restoreWaypoints([{ lat: 37.5665, lng: 126.978 }]));
+
+        expect(onWaypointsCommit).not.toHaveBeenCalled();
+    });
 });

@@ -23,6 +23,7 @@ type UseWaypointEditorOptions = {
     initialWaypoints?: LatLng[];
     maxWaypointCount?: number;
     onAddRejected?: (reason: "OVERFLOW") => void;
+    onWaypointsCommit?: (waypoints: LatLng[]) => void;
 };
 
 type WaypointEditorCommandResult =
@@ -40,6 +41,7 @@ type WaypointEditorHookState = {
     editorState: WaypointEditorState;
     historyState: WaypointHistoryState;
     result: WaypointEditorCommandResult | null;
+    committedWaypoints: LatLng[] | null;
 };
 
 const defaultCreateId = () => uuidv4();
@@ -49,20 +51,24 @@ export function useWaypointEditor({
     initialWaypoints = [],
     maxWaypointCount,
     onAddRejected,
+    onWaypointsCommit,
 }: UseWaypointEditorOptions = {}) {
     const onAddRejectedRef = useRef(onAddRejected);
+    const onWaypointsCommitRef = useRef(onWaypointsCommit);
     const [hookState, setHookState] = useState<WaypointEditorHookState>(() => {
         const nodes = initialWaypoints.map((latLng) => ({ id: createId(), latLng: { ...latLng } }));
         return {
             editorState: waypointEditor.restoreNodes(waypointEditor.createInitialState(), nodes),
             historyState: waypointHistory.create(nodes),
             result: null,
+            committedWaypoints: null,
         };
     });
 
     useEffect(() => {
         onAddRejectedRef.current = onAddRejected;
-    }, [onAddRejected]);
+        onWaypointsCommitRef.current = onWaypointsCommit;
+    }, [onAddRejected, onWaypointsCommit]);
 
     useEffect(() => {
         const result = hookState.result;
@@ -73,6 +79,11 @@ export function useWaypointEditor({
 
         onAddRejectedRef.current?.(result.reason);
     }, [hookState.result]);
+
+    useEffect(() => {
+        if (hookState.committedWaypoints === null) return;
+        onWaypointsCommitRef.current?.(hookState.committedWaypoints);
+    }, [hookState.committedWaypoints]);
 
     const addWaypoint = useCallback(
         (latLng: LatLng): void => {
@@ -99,6 +110,7 @@ export function useWaypointEditor({
                     },
                     historyState: nextHistoryState,
                     result: next.result,
+                    committedWaypoints: toLatLngs(next.state.nodes),
                 };
             });
         },
@@ -150,6 +162,7 @@ export function useWaypointEditor({
                 },
                 historyState: nextHistoryState,
                 result: next.result,
+                committedWaypoints: toLatLngs(next.state.nodes),
             };
         });
     }, []);
@@ -175,6 +188,7 @@ export function useWaypointEditor({
                 },
                 historyState: nextHistoryState,
                 result: next.result,
+                committedWaypoints: toLatLngs(next.state.nodes),
             };
         });
     }, []);
@@ -191,6 +205,7 @@ export function useWaypointEditor({
                 },
                 historyState: nextHistoryState,
                 result: undefined,
+                committedWaypoints: toLatLngs(next.state.nodes),
             };
         });
     }, []);
@@ -254,6 +269,7 @@ export function useWaypointEditor({
                 },
                 historyState: nextHistoryState,
                 result: next.result,
+                committedWaypoints: toLatLngs(next.state.nodes),
             };
         });
     }, []);
@@ -279,6 +295,7 @@ export function useWaypointEditor({
                 },
                 historyState: nextHistoryState,
                 result: next.result,
+                committedWaypoints: toLatLngs(next.state.nodes),
             };
         });
     }, []);
@@ -298,6 +315,7 @@ export function useWaypointEditor({
                 ),
                 historyState: nextHistoryState,
                 result: null,
+                committedWaypoints: toLatLngs(waypointHistory.getCurrent(nextHistoryState)),
             };
         });
     }, []);
@@ -317,17 +335,23 @@ export function useWaypointEditor({
                 ),
                 historyState: nextHistoryState,
                 result: null,
+                committedWaypoints: toLatLngs(waypointHistory.getCurrent(nextHistoryState)),
             };
         });
     }, []);
 
     const restoreWaypoints = useCallback(
         (waypoints: LatLng[]): void => {
-            const nodes = waypoints.map((latLng) => ({ id: createId(), latLng: { ...latLng } }));
-            setHookState({
-                editorState: waypointEditor.restoreNodes(waypointEditor.createInitialState(), nodes),
-                historyState: waypointHistory.create(nodes),
-                result: null,
+            setHookState((prev) => {
+                if (hasSameWaypoints(prev.editorState.nodes, waypoints)) return prev;
+
+                const nodes = waypoints.map((latLng) => ({ id: createId(), latLng: { ...latLng } }));
+                return {
+                    editorState: waypointEditor.restoreNodes(waypointEditor.createInitialState(), nodes),
+                    historyState: waypointHistory.create(nodes),
+                    result: null,
+                    committedWaypoints: null,
+                };
             });
         },
         [createId],
@@ -416,4 +440,18 @@ function addLatLngDelta(latLng: LatLng, delta: LatLng): LatLng {
         lat: latLng.lat + delta.lat,
         lng: latLng.lng + delta.lng,
     };
+}
+
+function toLatLngs(nodes: WaypointNode[]): LatLng[] {
+    return nodes.map(({ latLng }) => ({ ...latLng }));
+}
+
+function hasSameWaypoints(nodes: WaypointNode[], waypoints: LatLng[]): boolean {
+    return (
+        nodes.length === waypoints.length &&
+        nodes.every((node, index) => {
+            const waypoint = waypoints[index];
+            return waypoint !== undefined && node.latLng.lat === waypoint.lat && node.latLng.lng === waypoint.lng;
+        })
+    );
 }
