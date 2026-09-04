@@ -1,5 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { PATH_SEARCH_DRAFT_STORAGE_KEY } from "../src/features/search-station-by-path/model/pathSearchDraftStorage";
+
 const SEARCH_STATION_BY_PATH_PAGE = "/search-station-by-path";
 const MAP_SURFACE_SELECTOR = '[data-map-surface="search-station-by-path"]';
 const MAP_READY_TIMEOUT = 30_000;
@@ -201,7 +203,76 @@ test.describe("웨이포인트 편집", () => {
         await expectWaypointNearPoint(waypoint, pointerUpPoint);
         await expect(page.getByRole("button", { name: "1번째 웨이포인트" })).toHaveCount(1);
     });
+
+    test("웨이포인트 편집을 sessionStorage에 저장하고 새로고침 후 복원한다", async ({ page }) => {
+        const clickPoint = await getCenterPoint(getMapSurface(page));
+
+        await page.mouse.click(clickPoint.x, clickPoint.y);
+
+        await expect.poll(async () => (await readStoredDraft(page))?.waypoints.length).toBe(1);
+
+        await page.reload();
+        await waitForMap(page);
+        await expect(getWaypointMarkers(page)).toHaveCount(1);
+    });
+
+    test("반경 변경을 sessionStorage에 저장하고 새로고침 후 복원한다", async ({ page }) => {
+        const radiusSlider = page.locator("#radius-range");
+
+        await radiusSlider.fill("2.5");
+
+        await expect.poll(async () => (await readStoredDraft(page))?.radiusKm).toBe(2.5);
+
+        await page.reload();
+        await waitForMap(page);
+        await expect(page.locator("#radius-range")).toHaveValue("2.5");
+    });
+
+    test("result URL 복원은 기존 sessionStorage draft를 덮어쓰지 않는다", async ({ page }) => {
+        const storedDraft = {
+            waypoints: [{ lat: 35.1796, lng: 129.0756 }],
+            radiusKm: 2,
+        };
+        const raw = JSON.stringify(storedDraft);
+        await page.evaluate(
+            ({ key, value }) => sessionStorage.setItem(key, value),
+            { key: PATH_SEARCH_DRAFT_STORAGE_KEY, value: raw },
+        );
+
+        await page.goto(
+            `${SEARCH_STATION_BY_PATH_PAGE}?mode=result&wp=37.5665%2C126.978&radius=1.5&localCurrency=0`,
+        );
+        await waitForMap(page);
+
+        await expect.poll(() => readStoredDraftRaw(page)).toBe(raw);
+    });
+
+    test("result에서 웨이포인트를 편집하면 draft를 저장하고 draft URL로 전환한다", async ({ page }) => {
+        await page.route("**/api/stations/path", async (route) => {
+            await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ stations: [] }) });
+        });
+
+        const mapSurface = getMapSurface(page);
+        const firstPoint = await getCenterPoint(mapSurface);
+        await page.mouse.click(firstPoint.x, firstPoint.y);
+        await expect.poll(async () => (await readStoredDraft(page))?.waypoints.length).toBe(1);
+
+        await page.getByRole("button", { name: "찾기" }).click();
+        await expect(page).toHaveURL(/mode=result/);
+        await expect(page.getByRole("button", { name: "찾기" })).toBeEnabled();
+
+        const secondPoint = { x: firstPoint.x + 100, y: firstPoint.y };
+        await page.mouse.click(secondPoint.x, secondPoint.y);
+
+        await expect(page).toHaveURL(/mode=draft/);
+        await expect.poll(async () => (await readStoredDraft(page))?.waypoints.length).toBe(2);
+    });
 });
+
+type StoredDraft = {
+    waypoints: Array<{ lat: number; lng: number }>;
+    radiusKm: number;
+};
 
 function getMapSurface(page: Page): Locator {
     return page.locator(MAP_SURFACE_SELECTOR);
@@ -236,4 +307,19 @@ async function expectWaypointNearPoint(waypoint: Locator, point: { x: number; y:
             { timeout: 3_000 },
         )
         .toBeLessThan(MARKER_POSITION_TOLERANCE_PX);
+}
+
+async function waitForMap(page: Page) {
+    await expect(getMapSurface(page)).toBeVisible();
+    await expect(page.locator('[data-map-state="loading"]')).toBeHidden({ timeout: MAP_READY_TIMEOUT });
+    await expect(page.locator('[data-map-state="error"]')).toHaveCount(0);
+}
+
+async function readStoredDraft(page: Page): Promise<StoredDraft | null> {
+    const raw = await readStoredDraftRaw(page);
+    return raw === null ? null : (JSON.parse(raw) as StoredDraft);
+}
+
+function readStoredDraftRaw(page: Page): Promise<string | null> {
+    return page.evaluate((key) => sessionStorage.getItem(key), PATH_SEARCH_DRAFT_STORAGE_KEY);
 }
