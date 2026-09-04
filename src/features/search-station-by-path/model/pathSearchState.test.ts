@@ -12,8 +12,8 @@ describe("path search URL contract", () => {
 
         expect(parsed).toEqual({
             mode: "draft",
-            changed: true,
-            search: "?utm_source=test&mode=draft",
+            needsUrlReplacement: true,
+            normalizedSearch: "?utm_source=test&mode=draft",
         });
     });
 
@@ -24,7 +24,7 @@ describe("path search URL contract", () => {
 
         expect(parsed).toMatchObject({
             mode: "result",
-            changed: true,
+            needsUrlReplacement: true,
             adjustment: { waypointCount: false, radius: true },
             criteria: {
                 waypoints: [
@@ -37,7 +37,7 @@ describe("path search URL contract", () => {
             },
         });
         if (parsed.mode !== "result") throw new Error("result expected");
-        expect(parsed.search).toBe("?utm=x&mode=result&wp=37.123457%2C127.123457&wp=36%2C126&radius=5&brand=SKE&localCurrency=0");
+        expect(parsed.normalizedSearch).toBe("?utm=x&mode=result&wp=37.123457%2C127.123457&wp=36%2C126&radius=5&brand=SKE&localCurrency=0");
     });
 
     it("웨이포인트가 20개를 넘으면 앞의 20개만 유지한다", () => {
@@ -59,7 +59,7 @@ describe("path search URL contract", () => {
         "?mode=result&wp=91,127&radius=1",
         "?mode=result&wp=37,127&radius=NaN",
     ])("필수 검색 조건이 잘못되면 draft URL을 반환한다: %s", (search) => {
-        expect(parsePathSearchLocation(search)).toMatchObject({ mode: "invalid-result", search: "?mode=draft" });
+        expect(parsePathSearchLocation(search)).toMatchObject({ mode: "invalid-result", normalizedSearch: "?mode=draft" });
     });
 
     it("생성 함수가 반복 파라미터와 명시적인 false를 사용한다", () => {

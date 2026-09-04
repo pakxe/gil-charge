@@ -24,7 +24,7 @@ export type PathSearchFilter = {
     localCurrencyOnly: boolean;
 };
 
-export type PathSearchResultCriteria = PathSearchDraft & PathSearchFilter;
+export type PathSearchResultCriteria = PathSearchCriteria & PathSearchFilter;
 
 export type PathSearchAdjustment = {
     waypointCount: boolean;
@@ -34,19 +34,19 @@ export type PathSearchAdjustment = {
 export type ParsedPathSearchLocation =
     | {
           mode: "draft";
-          search: string;
-          changed: boolean;
+          normalizedSearch: string;
+          needsUrlReplacement: boolean;
       }
     | {
           mode: "result";
           criteria: PathSearchResultCriteria;
           adjustment: PathSearchAdjustment;
-          search: string;
-          changed: boolean;
+          normalizedSearch: string;
+          needsUrlReplacement: boolean;
       }
     | {
           mode: "invalid-result";
-          search: string;
+          normalizedSearch: string;
       };
 
 const MANAGED_PARAMS = [
@@ -62,12 +62,10 @@ const latLngSchema = z.object({
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
 });
-export const pathSearchDraftSchema = z.object({
-    waypoints: z.array(latLngSchema),
-    radiusKm: z.number(),
-});
-
-export type PathSearchDraft = z.infer<typeof pathSearchDraftSchema>;
+export type PathSearchCriteria = {
+    waypoints: LatLng[];
+    radiusKm: number;
+};
 
 export function parsePathSearchLocation(search: string): ParsedPathSearchLocation {
     const params = new URLSearchParams(search);
@@ -78,8 +76,8 @@ export function parsePathSearchLocation(search: string): ParsedPathSearchLocatio
         const normalized = createDraftSearch(params);
         return {
             mode: "draft",
-            search: toSearch(normalized),
-            changed: mode !== "draft" || modeValues.length !== 1 || toSearch(params) !== toSearch(normalized),
+            normalizedSearch: toSearch(normalized),
+            needsUrlReplacement: mode !== "draft" || modeValues.length !== 1 || toSearch(params) !== toSearch(normalized),
         };
     }
 
@@ -91,7 +89,7 @@ export function parsePathSearchLocation(search: string): ParsedPathSearchLocatio
     if (waypoints.length === 0 || waypoints.some((waypoint) => waypoint === null) || radiusKm === null) {
         return {
             mode: "invalid-result",
-            search: toSearch(createDraftSearch(params)),
+            normalizedSearch: toSearch(createDraftSearch(params)),
         };
     }
 
@@ -114,8 +112,8 @@ export function parsePathSearchLocation(search: string): ParsedPathSearchLocatio
             waypointCount: waypointValues.length > MAX_PATH_SEARCH_WAYPOINT_COUNT,
             radius: normalizedRadiusKm !== radiusKm,
         },
-        search: toSearch(normalized),
-        changed: modeValues.length !== 1 || toSearch(params) !== toSearch(normalized),
+        normalizedSearch: toSearch(normalized),
+        needsUrlReplacement: modeValues.length !== 1 || toSearch(params) !== toSearch(normalized),
     };
 }
 
@@ -142,23 +140,6 @@ export function createResultSearch(
     });
     params.append(PATH_SEARCH_LOCAL_CURRENCY_PARAM, criteria.localCurrencyOnly ? "1" : "0");
     return params;
-}
-
-export function normalizeDraft(value: unknown): { draft: PathSearchDraft; adjustment: PathSearchAdjustment } | null {
-    const parsed = pathSearchDraftSchema.safeParse(value);
-    if (!parsed.success) return null;
-
-    const radiusKm = normalizeRadiusKm(parsed.data.radiusKm);
-    return {
-        draft: {
-            waypoints: parsed.data.waypoints.slice(0, MAX_PATH_SEARCH_WAYPOINT_COUNT).map(normalizeLatLng),
-            radiusKm,
-        },
-        adjustment: {
-            waypointCount: parsed.data.waypoints.length > MAX_PATH_SEARCH_WAYPOINT_COUNT,
-            radius: radiusKm !== parsed.data.radiusKm,
-        },
-    };
 }
 
 export function normalizeLatLng(latLng: LatLng): LatLng {
