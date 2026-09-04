@@ -245,6 +245,35 @@ flowchart TD
 
 `usePathSearchLocation`은 navigation을 실행할 수 있는 함수를 제공하지만, 어떤 상황에서 호출할지는 `usePathSearchSynchronization`이 결정한다. 따라서 invalid-result에서는 draft 복원과 오류 toast 이후에 URL을 교체한다.
 
+## 결정 9. 명시적 저장 연결의 개발자 실수는 계층별 테스트로 방지한다
+
+사용자가 검색 조건을 편집하면 페이지의 `persistCriteria`를 거쳐 sessionStorage에 저장한다. 이 방식은 흐름이 명시적이고 단순하지만, 새로운 편집 경로를 추가할 때 개발자가 저장 호출이나 callback 연결을 빠뜨릴 가능성이 있다.
+
+이 위험을 없애기 위해 모든 검색 조건과 editor action을 다시 감싸는 상위 hook은 도입하지 않는다. 현재 저장 진입점은 다음 두 곳으로 제한되어 있어 별도 추상화가 주는 복잡성이 더 크다고 판단한다.
+
+- 모든 waypoint 확정 편집 → `useWaypointEditor.onWaypointsCommit`
+- 반경 편집 → `changeRadius`
+
+대신 저장 계약과 페이지 연결을 서로 다른 테스트 계층에서 검증한다.
+
+| 테스트 계층 | 검증하는 계약 | 방지하는 실수 |
+| --- | --- | --- |
+| `useWaypointEditor` 단위 테스트 | 추가·삭제·이동 commit·undo·redo가 `onWaypointsCommit`을 호출한다 | 새 editor action에서 commit callback을 누락하는 실수 |
+| `useWaypointEditor` 단위 테스트 | 선택·이동 중 갱신·실패한 명령·외부 복원은 callback을 호출하지 않는다 | 외부 복원이나 임시 상태를 사용자 편집으로 오인하는 실수 |
+| sessionStorage 단위 테스트 | draft 읽기·검증·정규화·쓰기 계약을 지킨다 | 저장 형식이나 정규화 정책을 깨뜨리는 실수 |
+| Playwright E2E | waypoint와 반경 편집이 실제 sessionStorage에 저장되고 새로고침 후 복원된다 | 페이지에서 callback 또는 `persistCriteria` 연결을 빠뜨리는 실수 |
+| Playwright E2E | result URL 복원은 기존 draft를 덮어쓰지 않는다 | URL 복원을 사용자 commit으로 처리하는 실수 |
+| Playwright E2E | result에서 조건을 편집하면 저장 후 draft URL로 전환한다 | 저장 또는 mode 전환 중 하나를 누락하는 실수 |
+
+이 테스트 전략은 구현 세부사항보다 사용자에게 관찰되는 상태 계약을 우선한다. editor의 모든 action을 E2E로 반복하지 않고, action별 callback 계약은 빠른 단위 테스트로 검증하며 페이지 wiring은 대표 E2E 시나리오로 검증한다.
+
+새로운 검색 조건이나 편집 진입점이 추가되면 다음을 함께 수행한다.
+
+1. 해당 변경이 사용자 commit인지 외부 복원인지 결정한다.
+2. 사용자 commit이면 기존 저장 진입점에 연결하거나 새로운 명시적 진입점을 정의한다.
+3. 단위 테스트에 commit/non-commit 계약을 추가한다.
+4. 새로운 페이지 wiring 경로라면 대표 E2E를 추가한다.
+
 ## 고려한 대안
 
 ### draft와 result를 React state로만 구분한다
@@ -290,7 +319,8 @@ flowchart TD
 
 - URL codec 단위 테스트에서 직렬화 왕복, 파라미터 순서, 좌표 반올림, 개수 제한, 반경 clamp, 필터 정규화, 무관한 쿼리 보존을 검증한다.
 - sessionStorage 단위 테스트에서 복원, 정규화된 반환, 읽기 중 저장소 불변, 빈 draft를 검증한다.
-- 웨이포인트 hook 테스트에서 복원 상태가 undo 기준점인지, 사용자 commit callback과 외부 복원이 구분되는지 검증한다.
+- 웨이포인트 hook 테스트에서 추가·삭제·단일/다중 이동 commit·undo·redo callback과 선택·실패·외부 복원 non-commit을 검증한다.
+- Playwright 테스트에서 waypoint·반경 저장과 새로고침 복원, result URL의 storage 불변, result 조건 편집 후 저장과 draft 전환을 검증한다.
 - Playwright 테스트에서 result URL 직접 진입, StrictMode 취소 후 결과 표시, API 요청 body, 필터 변경 시 무재요청을 검증한다.
 - 기존 웨이포인트 편집, 요청 취소와 race condition, 결과 필터 테스트를 함께 유지한다.
 
