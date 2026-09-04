@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import {
-    useSearchStationByPath,
-    type SearchStationByPathFailurePolicy,
-} from "@/features/search-station-by-path/model/useSearchStationByPath";
+import { useSearchStationByPath } from "@/features/search-station-by-path/model/useSearchStationByPath";
 import {
     MAX_PATH_SEARCH_WAYPOINT_COUNT,
     normalizeLatLng,
@@ -187,7 +184,7 @@ export function SearchStationByPathPage() {
     const selectedIds = getSelectedWaypointIds(status);
     const lassoEnabled = editorMode === "lasso" && !loading;
     const hasResult = mode === "result" && result.isOpen && result.stations !== null;
-    const barState = getBarState(request.status, failurePolicy, hasWaypoint);
+    const barState = getBarState(request.status, hasWaypoint);
     const failureMessage =
         failure && failurePolicy?.presentation === "inline" ? getSearchStationByPathFailureMessage(failure) : null;
     const { searchOverlayRef, searchOverlayVisibleHeight, maxSearchSheetHeight, setSearchOverlayVisibleHeight } =
@@ -198,7 +195,6 @@ export function SearchStationByPathPage() {
             radiusKm={effectiveRadiusKm}
             onRadiusChange={changeRadius}
             onSearch={startSearch}
-            onRetry={retry}
             searchState={barState}
             errorMessage={failureMessage}
         />
@@ -335,11 +331,10 @@ function getInitialCriteria(parsed: ParsedPathSearchLocation): PathSearchCriteri
 
 function getBarState(
     status: "idle" | "loading" | "success" | "error",
-    policy: SearchStationByPathFailurePolicy | null,
     hasWaypoint: boolean,
-): "ready" | "disabled" | "loading" | "retryable" | "error" {
+): "ready" | "disabled" | "loading" | "error" {
     if (status === "loading") return "loading";
-    if (status === "error") return policy?.recovery === "manual-retry" ? "retryable" : "error";
+    if (status === "error") return "error";
     return hasWaypoint ? "ready" : "disabled";
 }
 

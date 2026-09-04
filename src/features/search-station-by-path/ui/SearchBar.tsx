@@ -15,8 +15,7 @@ type Props = {
     onRadiusChange: (radius: number) => void;
 
     onSearch: (radius: number) => void;
-    onRetry?: () => void;
-    searchState: "ready" | "disabled" | "loading" | "retryable" | "error";
+    searchState: "ready" | "disabled" | "loading" | "error";
     errorMessage: string | null;
     className?: string;
 };
@@ -26,7 +25,6 @@ export function SearchBar({
     onRadiusChange,
     radiusKm,
     onSearch,
-    onRetry,
     errorMessage,
     searchState,
 }: Props) {
@@ -61,10 +59,6 @@ export function SearchBar({
             <button
                 type="button"
                 onClick={() => {
-                    if (searchState === "retryable") {
-                        onRetry?.();
-                        return;
-                    }
                     if (searchState !== "ready") {
                         return;
                     }
@@ -72,15 +66,15 @@ export function SearchBar({
                     onSearch(radiusKm);
                 }}
                 disabled={searchState === "loading" || searchState === "disabled" || searchState === "error"}
-                aria-label={searchState === "loading" ? "탐색 중" : searchState === "retryable" ? "다시 시도" : "찾기"}
+                aria-label={searchState === "loading" ? "탐색 중" : "찾기"}
                 className={cn(
                     "flex min-w-20 items-center justify-center rounded-2xl px-6 text-lg font-bold shadow-lg transition-colors",
-                    searchState === "ready" || searchState === "retryable"
+                    searchState === "ready"
                         ? "bg-gil-yellow-400 text-gil-brown-900"
                         : "bg-gil-gray-850 text-gil-gray-600",
                 )}
             >
-                {searchState === "loading" ? <LoadingSpinner /> : searchState === "retryable" ? "다시 시도" : "찾기"}
+                {searchState === "loading" ? <LoadingSpinner /> : "찾기"}
             </button>
         </div>
     );
