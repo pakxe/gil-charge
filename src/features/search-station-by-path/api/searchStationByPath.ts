@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { createRequestFailure } from "@/shared/lib/requestFailure";
-import { PathSet } from "@/shared/types/map";
+import { PathSet } from "@/shared/model/map";
 
 import { httpClient } from "@/shared/api/httpClient";
 import { baseStationSchema } from "@/shared/api/stationSchemas";

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { Station } from "@/shared/types/map";
-import { clamp, getResultSheetDefaultHeight } from "@/features/search-station-by-path/model/resultBottomSheet";
+import type { Station } from "@/shared/model/map";
+import { getResultSheetDefaultHeight } from "@/features/search-station-by-path/model/resultBottomSheet";
+import { clamp } from "@/shared/lib/number";
 
 type Params = {
     hasSearchResult: boolean;

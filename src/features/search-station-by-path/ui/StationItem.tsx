@@ -1,4 +1,4 @@
-import type { Station } from "@/shared/types/map";
+import type { Station } from "@/shared/model/map";
 import { cn } from "@/shared/lib/cn";
 import { BRAND_BY_CODE } from "@/features/search-station-by-path/ui/stationBrand";
 

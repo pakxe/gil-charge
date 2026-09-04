@@ -23,6 +23,24 @@ export function KakaoMapAdapter(props: Props) {
             setZoom(level) {
                 kakaoMap.setLevel(level);
             },
+            fitPoints(points, padding = {}) {
+                if (points.length === 0) return;
+
+                if (points.length === 1) {
+                    const point = points[0]!;
+                    kakaoMap.setCenter(new kakao.maps.LatLng(point.lat, point.lng));
+                    return;
+                }
+
+                const bounds = new kakao.maps.LatLngBounds();
+                points.forEach((point) => bounds.extend(new kakao.maps.LatLng(point.lat, point.lng)));
+
+                const top = padding.top ?? 32;
+                const right = padding.right ?? top;
+                const bottom = padding.bottom ?? top;
+                const left = padding.left ?? right;
+                kakaoMap.setBounds(bounds, top, right, bottom, left);
+            },
             getLevel() {
                 return kakaoMap.getLevel();
             },

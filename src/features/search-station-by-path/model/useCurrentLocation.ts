@@ -1,4 +1,4 @@
-import { LatLng } from "@/shared/types/map";
+import { LatLng } from "@/shared/model/map";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
     type CurrentLocationEvent,

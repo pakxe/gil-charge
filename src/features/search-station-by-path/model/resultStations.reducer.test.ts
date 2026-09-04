@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Station } from "@/shared/types/map";
+import type { Station } from "@/shared/model/map";
 import {
     getBrandCodes,
     getVisibleStations,
@@ -25,6 +25,21 @@ describe("resultStationsReducer", () => {
 
         expect(nextState.stations?.map((station) => station.id)).toEqual(["station-2"]);
         expect(nextState.selection).toBeNull();
+    });
+
+    it("URL에서 복원한 브랜드 필터를 응답에 해당 브랜드가 없어도 유지한다", () => {
+        const filteredState = resultStationsReducer(INITIAL_RESULT_STATIONS_STATE, {
+            type: "FILTER_REPLACED",
+            filter: { localCurrencyOnly: false, selectedBrandCodes: ["GSC"] },
+        });
+
+        const nextState = resultStationsReducer(filteredState, {
+            type: "STATIONS_REPLACED",
+            stations: [createStation("ske", { brandCode: "SKE" })],
+        });
+
+        expect(nextState.filter.selectedBrandCodes).toEqual(["GSC"]);
+        expect(getVisibleStations(nextState.stations ?? [], nextState.filter)).toEqual([]);
     });
 
     it("지역화폐 필터로 선택된 주유소가 보이지 않게 되면 선택을 해제한다", () => {

@@ -1,3 +1,5 @@
+import { clamp } from "@/shared/lib/number";
+
 export const DEFAULT_RESULT_SHEET_HEIGHT_RATIO = 0.5;
 export const CLOSE_RESULT_SHEET_HEIGHT_PX = 56;
 export const FULL_RESULT_SHEET_EXTRA_HEIGHT_PX = 150;
@@ -36,8 +38,4 @@ export function snapResultSheetHeight(visibleHeight: number, maxHeight: number) 
     }
 
     return clampedVisibleHeight;
-}
-
-export function clamp(value: number, min: number, max: number) {
-    return Math.min(Math.max(value, min), max);
 }

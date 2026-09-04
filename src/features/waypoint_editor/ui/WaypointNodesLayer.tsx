@@ -12,6 +12,7 @@ import { Map } from "@/shared/ui/Map/Map";
 const MOVE_BEGIN_THRESHOLD_PX = 4;
 
 type Props = {
+    disabled?: boolean;
     waypoints: WaypointNode[];
     status: WaypointEditorStatus;
     onWaypointClick: (id: WaypointNodeId) => void;
@@ -25,6 +26,7 @@ type Props = {
 };
 
 export function WaypointNodesLayer({
+    disabled = false,
     waypoints,
     status,
     onWaypointClick,
@@ -54,7 +56,7 @@ export function WaypointNodesLayer({
     const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>, waypointId: WaypointNodeId) => {
         event.stopPropagation();
 
-        if (event.button !== 0 || !map) {
+        if (disabled || event.button !== 0 || !map) {
             return;
         }
 
@@ -145,6 +147,8 @@ export function WaypointNodesLayer({
                             onClick={(event) => {
                                 event.stopPropagation();
 
+                                if (disabled) return;
+
                                 if (isDraggingRef.current) {
                                     event.preventDefault();
                                     isDraggingRef.current = false;
@@ -157,6 +161,7 @@ export function WaypointNodesLayer({
                         >
                             <button
                                 type="button"
+                                disabled={disabled}
                                 aria-label={`${index + 1}번째 웨이포인트`}
                                 className={[
                                     "flex h-8 min-w-8 cursor-grab items-center justify-center rounded-full border-2 px-2 text-xs font-black shadow-lg active:cursor-grabbing",
@@ -171,6 +176,7 @@ export function WaypointNodesLayer({
                             {isSelected && (
                                 <button
                                     type="button"
+                                    disabled={disabled}
                                     aria-label={`${index + 1}번째 웨이포인트 삭제`}
                                     className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-gray-950 text-xs font-bold leading-none text-white shadow-md"
                                     onPointerDown={(event) => {

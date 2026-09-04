@@ -1,6 +1,7 @@
 import type { ComponentPropsWithRef, CSSProperties, ReactNode } from "react";
 
 import { cn } from "@/shared/lib/cn";
+import { clamp } from "@/shared/lib/number";
 
 type Props = Omit<ComponentPropsWithRef<"input">, "children" | "className" | "max" | "min" | "step" | "style" | "type" | "value"> & {
     value: number;
@@ -61,5 +62,5 @@ export function Slider({
 function getProgressPercentage(value: number, min: number, max: number) {
     if (max <= min) return 0;
 
-    return Math.min(Math.max(((value - min) / (max - min)) * 100, 0), 100);
+    return clamp(((value - min) / (max - min)) * 100, 0, 100);
 }

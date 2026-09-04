@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { searchStationByPath, type SearchStationByPathErrorCode } from "@/features/search-station-by-path/api/searchStationByPath";
 import { type ClientRequestFailureCode, RequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
-import { PathSet, Station } from "@/shared/types/map";
+import { PathSet, Station } from "@/shared/model/map";
 
 type SearchStationByPathInput = {
     paths: PathSet[];
@@ -119,7 +119,14 @@ export function useSearchStationByPath() {
         void search(failedSearchInput.paths, failedSearchInput.radiusKm);
     }, [search]);
 
-    return { state, retry, search };
+    const reset = useCallback(() => {
+        abortControllerRef.current?.abort();
+        abortControllerRef.current = null;
+        failedSearchInputRef.current = null;
+        setState(INITIAL_STATIONS_SEARCH_STATE);
+    }, []);
+
+    return { state, retry, reset, search };
 }
 
 function decideSearchStationByPathFailurePolicy(code: string): SearchStationByPathFailurePolicy {

@@ -1,4 +1,4 @@
-import type { LatLng } from "@/shared/types/map";
+import type { LatLng } from "@/shared/model/map";
 
 export type CurrentLocationStatus =
     | "idle"

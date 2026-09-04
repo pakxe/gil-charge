@@ -4,13 +4,18 @@ import { InlineFailurePresentation } from "@/shared/ui/InlineFailurePresentation
 import { LoadingSpinner } from "@/shared/ui/LoadingSpinner/LoadingSpinner";
 import { Slider } from "@/shared/ui/Slider/Slider";
 import { ChangeEvent } from "react";
+import {
+    MAX_PATH_SEARCH_RADIUS_KM,
+    MIN_PATH_SEARCH_RADIUS_KM,
+    PATH_SEARCH_RADIUS_STEP_KM,
+} from "@/features/search-station-by-path/model/pathSearchState";
 
 type Props = {
     radiusKm: number;
     onRadiusChange: (radius: number) => void;
 
     onSearch: (radius: number) => void;
-    searchState: "ready" | "disabled" | "loading";
+    searchState: "ready" | "disabled" | "loading" | "error";
     errorMessage: string | null;
     className?: string;
 };
@@ -34,10 +39,11 @@ export function SearchBar({
             <Box className="h-fit min-w-0 flex-1 flex flex-col rounded-2xl gap-0">
                 <Slider
                     id="radius-range"
-                    min={1}
-                    max={5}
-                    step={0.1}
+                    min={MIN_PATH_SEARCH_RADIUS_KM}
+                    max={MAX_PATH_SEARCH_RADIUS_KM}
+                    step={PATH_SEARCH_RADIUS_STEP_KM}
                     value={radiusKm}
+                    disabled={searchState === "loading"}
                     onChange={handleRadiusChange}
                     topSlot={
                         <>
@@ -59,7 +65,7 @@ export function SearchBar({
 
                     onSearch(radiusKm);
                 }}
-                disabled={searchState === "loading" || searchState === "disabled"}
+                disabled={searchState === "loading" || searchState === "disabled" || searchState === "error"}
                 aria-label={searchState === "loading" ? "탐색 중" : "찾기"}
                 className={cn(
                     "flex min-w-20 items-center justify-center rounded-2xl px-6 text-lg font-bold shadow-lg transition-colors",

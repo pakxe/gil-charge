@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useReducer } from "react";
 
 import type { MapInstance } from "@/shared/model/map";
-import type { Station } from "@/shared/types/map";
+import type { Station } from "@/shared/model/map";
 import { centerStationOnMap } from "@/features/search-station-by-path/model/stationMap";
 import {
     getBrandCodes,
@@ -9,6 +9,7 @@ import {
     INITIAL_RESULT_STATIONS_STATE,
     resultStationsReducer,
     type ResultStationsAction,
+    type StationFilter,
     type StationSelection,
 } from "@/features/search-station-by-path/model/resultStations";
 
@@ -26,6 +27,14 @@ export function useResultStations({ map }: Params) {
 
     const replaceStations = useCallback((stations: Station[]) => {
         dispatch({ type: "STATIONS_REPLACED", stations });
+    }, []);
+
+    const reset = useCallback((filter: StationFilter) => {
+        dispatch({ type: "RESULT_RESET", filter });
+    }, []);
+
+    const replaceFilter = useCallback((filter: StationFilter) => {
+        dispatch({ type: "FILTER_REPLACED", filter });
     }, []);
 
     const close = useCallback(() => {
@@ -75,11 +84,13 @@ export function useResultStations({ map }: Params) {
         stations: state.stations,
         visibleStations,
         filter: state.filter,
-        brandCodes: getBrandCodes(state.stations ?? []),
+        brandCodes: Array.from(new Set([...getBrandCodes(state.stations ?? []), ...state.filter.selectedBrandCodes])),
         isOpen: state.isOpen,
         selectedStationId: state.selection?.stationId ?? null,
         selectionSource: state.selection?.source ?? null,
         replaceStations,
+        reset,
+        replaceFilter,
         selectStation,
         close,
         toggleBrandFilter,
