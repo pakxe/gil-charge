@@ -232,3 +232,24 @@ function createStation(id: string): Station {
         lng: 126.978,
     };
 }
+
+it("reset은 진행 중인 요청을 취소하고 늦은 실패와 재시도 입력을 남기지 않는다", async () => {
+    const request = createDeferred<Station[]>();
+    searchStationByPathMock.mockImplementationOnce(() => request.promise);
+    const { result } = renderHook(() => useSearchStationByPath());
+    let search!: Promise<void>;
+    act(() => {
+        search = result.current.search([createPath("path-a")], 2);
+    });
+    const signal = getRequest(0).signal;
+    act(() => { result.current.reset(); });
+    expect(signal?.aborted).toBe(true);
+    expect(result.current.state).toEqual({ status: "idle", stations: null, failure: null, policy: null });
+    await act(async () => {
+        request.reject(createRequestFailure("TIMEOUT"));
+        await search;
+    });
+    act(() => { result.current.retry(); });
+    expect(result.current.state).toEqual({ status: "idle", stations: null, failure: null, policy: null });
+    expect(searchStationByPathMock).toHaveBeenCalledTimes(1);
+});
