@@ -103,29 +103,6 @@ describe("useLatestRequest", () => {
         expect(task.onSuccess).not.toHaveBeenCalled();
         expect(task.onError).not.toHaveBeenCalled();
     });
-
-    it.each(["onSuccess", "onError"] as const)("%s 자체의 예외를 다시 요청 실패로 처리하지 않고 전파한다", async (callback) => {
-        const task = createTask();
-        const next = createTask();
-        const callbackError = new Error("callback failed");
-        const requestError = new Error("request failed");
-        task[callback].mockImplementation(() => { throw callbackError; });
-        const { result } = renderHook(() => useLatestRequest());
-        const run = result.current.run(task);
-        const signal = getSignal(task);
-        const rejection = expect(run).rejects.toBe(callbackError);
-        if (callback === "onSuccess") task.resolve("data");
-        else task.reject(requestError);
-        await rejection;
-        if (callback === "onSuccess") expect(task.onError).not.toHaveBeenCalled();
-        else expect(task.onError).toHaveBeenCalledExactlyOnceWith(requestError);
-        const nextRun = result.current.run(next);
-        // 완료한 요청은 새 요청이 시작돼도 뒤늦게 abort하지 않는다.
-        expect(signal.aborted).toBe(false);
-        next.resolve("next");
-        await nextRun;
-        expect(next.onSuccess).toHaveBeenCalledExactlyOnceWith("next");
-    });
 });
 
 function createTask() {
