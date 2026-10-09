@@ -2,6 +2,7 @@
 
 - 상태: 채택
 - 작성일: 2026-08-26
+- 수정일: 2026-10-10
 
 ## 배경
 
@@ -38,7 +39,12 @@ Controller의 요청 취소는 호출 경로와 관계없이 상태 일관성을
 
 ## 결정 2. 요청 생애주기는 Controller에서 AbortController로 관리한다
 
-`useSearchStationByName`과 `useSearchStationByPath`는 현재 요청의 `AbortController`를 ref에 보관한다.
+`shared/model/useLatestRequest`가 현재 요청의 `AbortController`를 ref에 보관한다.
+`useSearchStationByName`과 `useSearchStationByPath`는 공통 훅의 `run({ request, onSuccess, onError })`을 사용한다.
+공통 훅은 취소되지 않은 요청의 콜백만 실행하고, 검색별 훅은 입력 검증·화면 상태·실패 정책·재시도 입력을 관리한다.
+경로 검색의 `reset`은 공통 훅의 `cancel()`을 호출한 뒤 검색 상태와 재시도 입력을 초기화한다.
+
+`onSuccess`와 `onError`는 동기 콜백이다. 콜백 자체의 예외는 요청 실패로 변환하지 않고 `run`의 rejection으로 전달하며, `finally` 정리는 항상 실행한다.
 
 각 요청은 다음 순서로 실행한다.
 
@@ -66,15 +72,15 @@ Request layer는 signal의 전달만 책임지고, 어떤 요청을 언제 취�
 
 ## 결정 4. unmount 시 진행 중인 요청을 취소한다
 
-검색 훅은 effect cleanup에서 현재 컨트롤러의 `abort()`를 호출한다.
+공통 `useLatestRequest` 훅은 effect cleanup에서 `cancel()`을 호출하여 현재 컨트롤러를 취소하고 ref를 비운다.
 화면을 벗어난 뒤 필요하지 않은 네트워크 응답을 기다리지 않고, unmount된 화면의 상태를 갱신하려는 후속 작업도 중단한다.
 
 이전 요청의 `finally`에서는 ref를 무조건 비우지 않는다.
 아래처럼 현재 컨트롤러와 자신의 컨트롤러가 같은지 확인한다.
 
 ```ts
-if (abortControllerRef.current === abortController) {
-    abortControllerRef.current = null;
+if (currentControllerRef.current === controller) {
+    currentControllerRef.current = null;
 }
 ```
 
@@ -105,6 +111,6 @@ if (abortControllerRef.current === abortController) {
 
 ## 감수할 점
 
-- 각 검색 훅에서 컨트롤러 ref, 취소 확인, cleanup 코드를 관리해야 한다.
+- 공통 훅이 컨트롤러 ref, 취소 확인, cleanup 코드를 관리한다. 각 검색 훅은 전달받은 signal을 API로 연결하고 상태 변경은 콜백 안에서 수행해야 한다.
 - 브라우저가 요청을 취소해도 이미 요청을 받은 서버의 내부 작업까지 항상 중단되는 것은 아니다.
 - 취소가 정상적인 생애주기 동작이므로 오류 보고나 사용자 피드백에서 제외해야 한다.

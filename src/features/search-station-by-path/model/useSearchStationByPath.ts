@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { searchStationByPath, type SearchStationByPathErrorCode } from "@/features/search-station-by-path/api/searchStationByPath";
 import { type ClientRequestFailureCode, RequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
 import { PathSet, Station } from "@/shared/model/map";
+import { useLatestRequest } from "@/shared/model/useLatestRequest";
 
 type SearchStationByPathInput = {
     paths: PathSet[];
@@ -52,14 +53,9 @@ const INITIAL_STATIONS_SEARCH_STATE: SearchStationByPathState = {
 export function useSearchStationByPath() {
     const [state, setState] = useState<SearchStationByPathState>(INITIAL_STATIONS_SEARCH_STATE);
     const failedSearchInputRef = useRef<SearchStationByPathInput | null>(null);
-    const abortControllerRef = useRef<AbortController | null>(null);
+    const { run, cancel } = useLatestRequest();
 
     const search = useCallback(async (allPaths: PathSet[], radiusKm: number) => {
-        abortControllerRef.current?.abort();
-
-        const abortController = new AbortController();
-        abortControllerRef.current = abortController;
-
         failedSearchInputRef.current = null;
         setState((current) => ({
             status: "loading",
@@ -68,48 +64,29 @@ export function useSearchStationByPath() {
             policy: null,
         }));
 
-        try {
-            const stations = await searchStationByPath({
-                paths: allPaths,
-                radiusKm,
-                signal: abortController.signal,
-            });
-
-            if (abortController.signal.aborted) return;
-
-            setState({
-                status: "success",
-                stations,
-                failure: null,
-                policy: null,
-            });
-        } catch (error) {
-            if (abortController.signal.aborted) return;
-
-            const requestFailure = toRequestFailure(error);
-            const policy = decideSearchStationByPathFailurePolicy(requestFailure.code);
-            failedSearchInputRef.current = {
-                paths: allPaths,
-                radiusKm,
-            };
-            setState({
-                status: "error",
-                stations: null,
-                failure: requestFailure,
-                policy,
-            });
-        } finally {
-            if (abortControllerRef.current === abortController) {
-                abortControllerRef.current = null;
-            }
-        }
-    }, []);
-
-    useEffect(() => {
-        return () => {
-            abortControllerRef.current?.abort();
-        };
-    }, []);
+        await run({
+            request: (signal) => searchStationByPath({ paths: allPaths, radiusKm, signal }),
+            onSuccess: (stations) => {
+                setState({
+                    status: "success",
+                    stations,
+                    failure: null,
+                    policy: null,
+                });
+            },
+            onError: (error) => {
+                const requestFailure = toRequestFailure(error);
+                const policy = decideSearchStationByPathFailurePolicy(requestFailure.code);
+                failedSearchInputRef.current = { paths: allPaths, radiusKm };
+                setState({
+                    status: "error",
+                    stations: null,
+                    failure: requestFailure,
+                    policy,
+                });
+            },
+        });
+    }, [run]);
 
     const retry = useCallback(() => {
         const failedSearchInput = failedSearchInputRef.current;
@@ -120,11 +97,10 @@ export function useSearchStationByPath() {
     }, [search]);
 
     const reset = useCallback(() => {
-        abortControllerRef.current?.abort();
-        abortControllerRef.current = null;
+        cancel();
         failedSearchInputRef.current = null;
         setState(INITIAL_STATIONS_SEARCH_STATE);
-    }, []);
+    }, [cancel]);
 
     return { state, retry, reset, search };
 }

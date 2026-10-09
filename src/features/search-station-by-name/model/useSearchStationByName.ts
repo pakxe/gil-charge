@@ -4,7 +4,8 @@ import {
     type SearchStationByNameResult,
 } from "@/features/search-station-by-name/api/searchStationByName";
 import { type ClientRequestFailureCode, type RequestFailure, toRequestFailure } from "@/shared/lib/requestFailure";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useLatestRequest } from "@/shared/model/useLatestRequest";
 
 export const MIN_STATION_NAME_SEARCH_LENGTH = 2;
 export const MAX_STATION_NAME_SEARCH_LENGTH = 30;
@@ -82,15 +83,9 @@ export function useSearchStationByName() {
 
     const failedRequestInputRef = useRef<SearchStationByNameRequestInput | null>(null);
 
-    const abortControllerRef = useRef<AbortController | null>(null);
+    const { run } = useLatestRequest();
 
     const requestStationsByName = useCallback(async ({ osnm, area }: SearchStationByNameRequestInput) => {
-        abortControllerRef.current?.abort();
-
-        const abortController = new AbortController();
-
-        abortControllerRef.current = abortController;
-
         failedRequestInputRef.current = null;
 
         setState((current) => ({
@@ -100,60 +95,32 @@ export function useSearchStationByName() {
             policy: null,
         }));
 
-        try {
-            const stations = await searchStationByName({
-                osnm,
-                area,
-                signal: abortController.signal,
-            });
-
-            if (abortController.signal.aborted) {
-                return;
-            }
-
-            setState({
-                status: "success",
-                stations,
-                failure: null,
-                policy: null,
-            });
-        } catch (error) {
-            if (abortController.signal.aborted) {
-                return;
-            }
-
-            const requestFailure = toRequestFailure(error);
-
-            const failure: SearchStationByNameFailure = {
-                type: "request",
-                failure: requestFailure,
-            };
-
-            const policy = decideFailurePolicy(failure);
-
-            failedRequestInputRef.current = {
-                osnm,
-                area,
-            };
-
-            setState({
-                status: "failure",
-                stations: null,
-                failure,
-                policy,
-            });
-        } finally {
-            if (abortControllerRef.current === abortController) {
-                abortControllerRef.current = null;
-            }
-        }
-    }, []);
-
-    useEffect(() => {
-        return () => {
-            abortControllerRef.current?.abort();
-        };
-    }, []);
+        await run({
+            request: (signal) => searchStationByName({ osnm, area, signal }),
+            onSuccess: (stations) => {
+                setState({
+                    status: "success",
+                    stations,
+                    failure: null,
+                    policy: null,
+                });
+            },
+            onError: (error) => {
+                const failure: SearchStationByNameFailure = {
+                    type: "request",
+                    failure: toRequestFailure(error),
+                };
+                const policy = decideFailurePolicy(failure);
+                failedRequestInputRef.current = { osnm, area };
+                setState({
+                    status: "failure",
+                    stations: null,
+                    failure,
+                    policy,
+                });
+            },
+        });
+    }, [run]);
 
     const search = useCallback(
         async (stationName: string, area?: string) => {
